@@ -16,6 +16,10 @@ canvas {
   image-rendering: crisp-edges;
   border: 4px solid #3a5a3a;
   box-shadow: 0 0 30px rgba(58, 180, 58, 0.3);
+  /* Scale down on small screens while keeping aspect ratio */
+  width: min(800px, 100vw);
+  height: auto;
+  aspect-ratio: 800 / 480;
 }
 
 #controls {
@@ -25,4 +29,105 @@ canvas {
   text-align: center;
   max-width: 800px;
   opacity: 0.8;
+}
+
+/* ===== TOUCH CONTROLS ===== */
+#touch-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 12px 20px 20px;
+  pointer-events: none;
+  /* Only show on touch devices */
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  #touch-controls { display: flex; }
+  #controls { display: none; }
+  body { padding-bottom: 160px; }
+}
+
+#touch-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+#touch-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.touch-row {
+  display: flex;
+  gap: 8px;
+}
+
+.touch-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border: 2px solid rgba(58, 180, 58, 0.55);
+  background: rgba(10, 25, 10, 0.72);
+  color: #8bc48b;
+  font-size: 22px;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Prevent ghost clicks */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn:active {
+  background: rgba(58, 180, 58, 0.35);
+  border-color: rgba(58, 180, 58, 0.9);
+}
+
+#btn-down {
+  font-size: 11px;
+  letter-spacing: 1px;
+  width: 136px; /* span both columns */
+}
+
+#btn-spray {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #ff8800;
+  border-color: rgba(255, 136, 0, 0.55);
+}
+
+#btn-spray:active {
+  background: rgba(255, 136, 0, 0.3);
+  border-color: rgba(255, 136, 0, 0.9);
+}
+
+.touch-btn-jump {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #FFD700;
+  border-color: rgba(255, 215, 0, 0.6);
+  border-width: 3px;
+}
+
+.touch-btn-jump:active {
+  background: rgba(255, 215, 0, 0.25);
+  border-color: rgba(255, 215, 0, 0.95);
 }

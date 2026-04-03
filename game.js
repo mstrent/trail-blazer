@@ -1314,7 +1314,45 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
+// ==================== TOUCH CONTROLS ====================
+function setupTouch() {
+  const bindings = {
+    'btn-left':  'ArrowLeft',
+    'btn-right': 'ArrowRight',
+    'btn-down':  'ArrowDown',
+    'btn-jump':  'Space',
+    'btn-spray': 'KeyX',
+  };
+
+  Object.entries(bindings).forEach(([id, code]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const press   = e => { e.preventDefault(); keys[code] = true; };
+    const release = e => { e.preventDefault(); keys[code] = false; };
+    el.addEventListener('touchstart',  press,   { passive: false });
+    el.addEventListener('touchend',    release, { passive: false });
+    el.addEventListener('touchcancel', release, { passive: false });
+  });
+
+  // POGO button sets down + schedules a jump on the next frame
+  // (player must be holding POGO btn then tap JUMP, or use POGO alone to
+  // auto-trigger: hold POGO → it also briefly pulses Space so the buffer fires)
+  const pogoEl = document.getElementById('btn-down');
+  if (pogoEl) {
+    pogoEl.addEventListener('touchstart', e => {
+      e.preventDefault();
+      keys['ArrowDown'] = true;
+      // Pulse Space so jump buffer picks it up immediately
+      keys['Space'] = true;
+      setTimeout(() => { keys['Space'] = false; }, 80);
+    }, { passive: false });
+    pogoEl.addEventListener('touchend',    e => { e.preventDefault(); keys['ArrowDown'] = false; }, { passive: false });
+    pogoEl.addEventListener('touchcancel', e => { e.preventDefault(); keys['ArrowDown'] = false; }, { passive: false });
+  }
+}
+
 // ==================== BOOT ====================
+setupTouch();
 requestAnimationFrame(loop);
 
 })();
