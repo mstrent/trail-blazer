@@ -54,17 +54,18 @@ canvas {
 
 #touch-left {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 10px;
   pointer-events: auto;
+  align-items: center;
 }
 
 #touch-right {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   pointer-events: auto;
+  align-items: flex-end;
 }
 
 .touch-row {
@@ -73,13 +74,13 @@ canvas {
 }
 
 .touch-btn {
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
   border: 2px solid rgba(58, 180, 58, 0.55);
   background: rgba(10, 25, 10, 0.72);
   color: #8bc48b;
-  font-size: 22px;
+  font-size: 24px;
   font-family: 'Courier New', monospace;
   font-weight: bold;
   cursor: pointer;
@@ -89,7 +90,6 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Prevent ghost clicks */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -101,7 +101,6 @@ canvas {
 #btn-down {
   font-size: 11px;
   letter-spacing: 1px;
-  width: 136px; /* span both columns */
 }
 
 #btn-spray {
@@ -117,11 +116,11 @@ canvas {
 }
 
 .touch-btn-jump {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+  width: 136px; /* span both columns */
+  height: 68px;
+  border-radius: 14px;
   font-size: 13px;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   color: #FFD700;
   border-color: rgba(255, 215, 0, 0.6);
   border-width: 3px;
