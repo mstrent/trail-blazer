@@ -49,15 +49,22 @@ canvas {
 @media (hover: none) and (pointer: coarse) {
   #touch-controls { display: flex; }
   #controls { display: none; }
-  body { padding-bottom: 160px; }
+  body { padding-bottom: 220px; }
 }
 
 #touch-left {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 10px;
   pointer-events: auto;
   align-items: center;
+}
+
+#btn-left,
+#btn-right {
+  width: 96px;
+  height: 96px;
+  font-size: 34px;
 }
 
 #touch-right {
