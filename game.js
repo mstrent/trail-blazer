@@ -1,0 +1,1315 @@
+// TRAIL BLAZER: An Ultralight Backpacking Adventure
+// Commander Keen-style platformer
+
+(function () {
+'use strict';
+
+// ==================== SETUP ====================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = 800, H = 480;
+canvas.width = W;
+canvas.height = H;
+const TS = 32; // tile size in pixels
+
+// ==================== INPUT ====================
+const keys = {}, prev = {};
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+const jp = c => keys[c] && !prev[c]; // just-pressed
+function syncPrev() { for (let k in keys) prev[k] = keys[k]; }
+
+const isLeft  = () => keys['ArrowLeft']  || keys['KeyA'];
+const isRight = () => keys['ArrowRight'] || keys['KeyD'];
+const isDown  = () => keys['ArrowDown']  || keys['KeyS'];
+const isJump  = () => keys['ArrowUp'] || keys['KeyW'] || keys['Space'] || keys['KeyZ'];
+const wasJump = () => (prev['ArrowUp'] || prev['KeyW'] || prev['Space'] || prev['KeyZ']);
+const isSpray = () => (keys['KeyX'] || keys['KeyF']) && !(prev['KeyX'] || prev['KeyF']);
+
+// ==================== TILE TYPES ====================
+const T_EMPTY    = 0;
+const T_SOLID    = 1;
+const T_PLATFORM = 2; // one-way
+const T_WATER    = 3;
+
+// ==================== UTILITIES ====================
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rnd = (a, b) => Math.random() * (b - a) + a;
+
+function aabb(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ==================== LEVEL ====================
+function buildLevel() {
+  const COLS = 120, ROWS = 15;
+  const map = Array.from({length: ROWS}, () => new Uint8Array(COLS));
+
+  const set = (x, y, t) => { if (x >= 0 && x < COLS && y >= 0 && y < ROWS) map[y][x] = t; };
+  const hline = (x1, x2, y, t) => { for (let x = x1; x <= x2; x++) set(x, y, t); };
+  const fill  = (x1, y1, x2, y2, t) => { for (let y = y1; y <= y2; y++) hline(x1, x2, y, t); };
+
+  // Solid ground base (rows 11–14)
+  fill(0, 11, COLS - 1, 14, T_SOLID);
+
+  // ---- MEADOW (x: 0–25) ----
+  // Small hill
+  hline(12, 18, 10, T_SOLID);
+  hline(14, 16, 9, T_SOLID);
+  // Log platforms
+  hline(5, 10, 8, T_PLATFORM);
+  hline(20, 25, 7, T_PLATFORM);
+
+  // ---- FOREST (x: 25–55) ----
+  hline(28, 34, 9, T_PLATFORM);
+  hline(33, 39, 7, T_PLATFORM);
+  hline(42, 48, 8, T_PLATFORM);
+  hline(38, 43, 5, T_PLATFORM);
+  hline(45, 50, 6, T_PLATFORM);
+  // Rock outcroppings
+  fill(30, 9, 33, 10, T_SOLID);
+  fill(46, 9, 49, 10, T_SOLID);
+
+  // ---- CREEK (x: 55–70) ----
+  // Carve out creek bed
+  fill(56, 11, 67, 11, T_EMPTY);
+  fill(56, 12, 67, 13, T_WATER);
+  // Stepping stones
+  hline(56, 57, 10, T_SOLID);
+  hline(60, 61, 9,  T_SOLID);
+  hline(63, 64, 8,  T_SOLID);
+  hline(65, 66, 9,  T_SOLID);
+  hline(68, 69, 10, T_SOLID);
+
+  // ---- ROCKY SLOPE (x: 70–95) ----
+  // Ascending ledges
+  fill(70, 9, 74, 10, T_SOLID);
+  fill(75, 8, 79, 10, T_SOLID);
+  fill(80, 7, 84, 10, T_SOLID);
+  fill(85, 6, 89, 10, T_SOLID);
+  // Platforms between ledges
+  hline(72, 75, 7, T_PLATFORM);
+  hline(79, 83, 6, T_PLATFORM);
+  hline(83, 87, 5, T_PLATFORM);
+  hline(88, 93, 7, T_PLATFORM);
+  hline(91, 95, 5, T_PLATFORM);
+
+  // ---- SUMMIT APPROACH (x: 95–119) ----
+  hline(97, 103, 8,  T_PLATFORM);
+  hline(102, 107, 6, T_PLATFORM);
+  hline(107, 112, 4, T_PLATFORM);
+  hline(111, 116, 6, T_PLATFORM);
+
+  // Summit block
+  fill(116, 4, 119, 14, T_SOLID);
+
+  // Left wall
+  for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+
+  return { map, COLS, ROWS };
+}
+
+const level = buildLevel();
+
+function getTile(tx, ty) {
+  if (tx < 0 || tx >= level.COLS || ty < 0 || ty >= level.ROWS) return T_SOLID;
+  return level.map[ty][tx];
+}
+
+function isSolid(tx, ty) { return getTile(tx, ty) === T_SOLID; }
+function isPlatform(tx, ty) { return getTile(tx, ty) === T_PLATFORM; }
+function isWater(tx, ty) { return getTile(tx, ty) === T_WATER; }
+
+// ==================== CAMERA ====================
+const cam = { x: 0, y: 0 };
+function updateCamera(px, py) {
+  const targetX = px - W / 2 + 16;
+  const targetY = py - H / 2 + 16;
+  cam.x += (targetX - cam.x) * 0.12;
+  cam.y += (targetY - cam.y) * 0.12;
+  cam.x = clamp(cam.x, 0, level.COLS * TS - W);
+  cam.y = clamp(cam.y, 0, level.ROWS * TS - H);
+}
+
+// ==================== PARTICLES ====================
+const particles = [];
+function spawnParticles(x, y, color, count, spread) {
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x, y,
+      vx: rnd(-spread, spread),
+      vy: rnd(-spread * 2, -spread * 0.5),
+      life: 1.0,
+      decay: rnd(0.03, 0.07),
+      r: rnd(2, 6),
+      color
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.2;
+    p.life -= p.decay;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x - cam.x, p.y - cam.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ==================== ITEMS ====================
+const ITEM_DEFS = {
+  spork:  { label: 'Ti Spork',    pts: 100, color: '#C0C0C0', r: 8 },
+  bar:    { label: 'Protein Bar', pts: 50,  color: '#D2691E', r: 8 },
+  filter: { label: 'Water Filter',pts: 200, color: '#4169E1', r: 9 },
+  tent:   { label: 'Cuben Tent',  pts: 500, color: '#DAA520', r: 10 },
+  spray:  { label: 'Bear Spray',  pts: 150, color: '#FF4500', r: 9 },
+};
+
+function makeItem(type, tx, ty) {
+  const def = ITEM_DEFS[type];
+  return { type, tx, ty, x: tx * TS + 8, y: ty * TS, w: 20, h: 20, pts: def.pts, collected: false, bobOffset: rnd(0, Math.PI * 2) };
+}
+
+let items = [];
+function spawnItems() {
+  items = [
+    makeItem('spork',  7,  7),
+    makeItem('bar',    11, 8),
+    makeItem('spork',  22, 6),
+    makeItem('filter', 36, 6),
+    makeItem('tent',   41, 4),
+    makeItem('bar',    47, 5),
+    makeItem('spork',  58, 9),
+    makeItem('filter', 63, 7),
+    makeItem('bar',    69, 9),
+    makeItem('spork',  73, 6),
+    makeItem('spray',  83, 5),
+    makeItem('tent',   90, 6),
+    makeItem('spork',  98, 7),
+    makeItem('filter', 104,5),
+    makeItem('tent',   110,3),
+    makeItem('spork',  113,5),
+  ];
+}
+
+// ==================== FLOATING TEXT ====================
+const floatTexts = [];
+function addFloatText(x, y, str, color) {
+  floatTexts.push({ x, y, str, color, life: 1.2, vy: -1.5 });
+}
+function updateFloatTexts() {
+  for (let i = floatTexts.length - 1; i >= 0; i--) {
+    const f = floatTexts[i];
+    f.y += f.vy;
+    f.life -= 0.025;
+    if (f.life <= 0) floatTexts.splice(i, 1);
+  }
+}
+
+// ==================== ENEMIES ====================
+function makeMarmot(tx, ty) {
+  return {
+    type: 'marmot',
+    x: tx * TS, y: ty * TS - 4,
+    w: 26, h: 22,
+    vx: -1, vy: 0,
+    onGround: false,
+    alive: true,
+    stunTimer: 0,
+    frame: 0, frameTimer: 0,
+    patrolX1: (tx - 4) * TS,
+    patrolX2: (tx + 4) * TS,
+  };
+}
+
+function makeMosquito(tx, ty) {
+  return {
+    type: 'mosquito',
+    x: tx * TS, y: ty * TS,
+    w: 20, h: 14,
+    baseY: ty * TS,
+    phase: rnd(0, Math.PI * 2),
+    vx: rnd(-0.5, 0.5) < 0 ? -1.2 : 1.2,
+    alive: true,
+    stunTimer: 0,
+  };
+}
+
+function makeHiker(tx, ty) {
+  return {
+    type: 'hiker',
+    x: tx * TS, y: ty * TS - 12,
+    w: 24, h: 36,
+    vx: -0.8, vy: 0,
+    onGround: false,
+    alive: true,
+    stunTimer: 0,
+    frame: 0, frameTimer: 0,
+    patrolX1: (tx - 3) * TS,
+    patrolX2: (tx + 3) * TS,
+  };
+}
+
+let enemies = [];
+function spawnEnemies() {
+  enemies = [
+    makeMarmot(20, 10),
+    makeMarmot(27, 8),
+    makeMarmot(52, 8),
+    makeMarmot(72, 8),
+    makeMarmot(95, 10),
+    makeMosquito(40, 6),
+    makeMosquito(50, 5),
+    makeMosquito(67, 7),
+    makeMosquito(88, 6),
+    makeMosquito(104,5),
+    makeHiker(33, 6),
+    makeHiker(80, 5),
+    makeHiker(109, 3),
+  ];
+}
+
+function moveEntityHoriz(e, vx) {
+  e.x += vx;
+  const left  = Math.floor(e.x / TS);
+  const right = Math.floor((e.x + e.w - 1) / TS);
+  const top   = Math.floor(e.y / TS);
+  const bot   = Math.floor((e.y + e.h - 1) / TS);
+  if (vx > 0) {
+    for (let ty = top; ty <= bot; ty++) {
+      if (isSolid(right, ty)) { e.x = right * TS - e.w; return true; }
+    }
+  } else if (vx < 0) {
+    for (let ty = top; ty <= bot; ty++) {
+      if (isSolid(left, ty)) { e.x = (left + 1) * TS; return true; }
+    }
+  }
+  return false;
+}
+
+function moveEntityVert(e, vy, checkPlatform) {
+  e.y += vy;
+  const left  = Math.floor(e.x / TS);
+  const right = Math.floor((e.x + e.w - 1) / TS);
+  const top   = Math.floor(e.y / TS);
+  const bot   = Math.floor((e.y + e.h - 1) / TS);
+  e.onGround = false;
+  if (vy > 0) {
+    for (let tx = left; tx <= right; tx++) {
+      if (isSolid(tx, bot)) {
+        e.y = bot * TS - e.h;
+        e.onGround = true;
+        return true;
+      }
+      if (checkPlatform && isPlatform(tx, bot) && Math.floor((e.y + e.h - vy - 1) / TS) < bot) {
+        e.y = bot * TS - e.h;
+        e.onGround = true;
+        return true;
+      }
+    }
+  } else if (vy < 0) {
+    for (let tx = left; tx <= right; tx++) {
+      if (isSolid(tx, top)) { e.y = (top + 1) * TS; return true; }
+    }
+  }
+  return false;
+}
+
+function updateEnemy(e) {
+  if (!e.alive) return;
+  if (e.stunTimer > 0) { e.stunTimer--; return; }
+
+  if (e.type === 'mosquito') {
+    e.phase += 0.04;
+    e.y = e.baseY + Math.sin(e.phase) * 28;
+    e.x += e.vx;
+    if (e.x < 1 * TS || e.x > (level.COLS - 2) * TS) e.vx *= -1;
+    // Reverse at walls
+    if (isSolid(Math.floor(e.x / TS), Math.floor(e.y / TS))) e.vx *= -1;
+    return;
+  }
+
+  // Gravity for ground enemies
+  e.vy += 0.55;
+  if (e.vy > 14) e.vy = 14;
+
+  e.frameTimer++;
+  if (e.frameTimer > 10) { e.frameTimer = 0; e.frame ^= 1; }
+
+  const hitWall = moveEntityHoriz(e, e.vx);
+  if (hitWall) e.vx *= -1;
+
+  // Turn at patrol edges
+  if (e.x < e.patrolX1) { e.vx = Math.abs(e.vx); }
+  if (e.x + e.w > e.patrolX2) { e.vx = -Math.abs(e.vx); }
+
+  moveEntityVert(e, e.vy, true);
+  if (e.onGround) e.vy = 0;
+
+  // Turn at ledge edges
+  const frontTx = Math.floor((e.x + (e.vx > 0 ? e.w : 0)) / TS);
+  const belowTy = Math.floor((e.y + e.h + 1) / TS);
+  if (!isSolid(frontTx, belowTy) && !isPlatform(frontTx, belowTy) && e.onGround) {
+    e.vx *= -1;
+  }
+}
+
+// ==================== PLAYER ====================
+const PLAYER_W = 20, PLAYER_H = 30;
+const GRAVITY_FORCE = 0.55;
+const JUMP_FORCE = -12.5;
+const POGO_FORCE = -16;
+const MOVE_SPEED = 3.5;
+const MAX_FALL = 15;
+
+function makePlayer() {
+  return {
+    x: 2 * TS, y: 9 * TS,
+    w: PLAYER_W, h: PLAYER_H,
+    vx: 0, vy: 0,
+    onGround: false,
+    facing: 1,
+    pogoing: false,
+    jumpHeld: false,
+    lives: 3,
+    score: 0,
+    health: 3,
+    sprayCooldown: 0,
+    sprayTimer: 0,
+    hurtTimer: 0,
+    frame: 0, frameTimer: 0,
+    dead: false,
+  };
+}
+
+let player;
+
+function updatePlayer() {
+  if (player.dead) return;
+  if (player.hurtTimer > 0) player.hurtTimer--;
+  if (player.sprayCooldown > 0) player.sprayCooldown--;
+  if (player.sprayTimer > 0) player.sprayTimer--;
+
+  // Horizontal movement
+  let dx = 0;
+  if (isLeft())  { dx = -MOVE_SPEED; player.facing = -1; }
+  if (isRight()) { dx =  MOVE_SPEED; player.facing =  1; }
+  player.vx = dx;
+
+  // Walk animation
+  if (dx !== 0 && player.onGround) {
+    player.frameTimer++;
+    if (player.frameTimer > 8) { player.frameTimer = 0; player.frame ^= 1; }
+  } else if (player.onGround) {
+    player.frame = 0; player.frameTimer = 0;
+  }
+
+  // Jump / Pogo
+  const jumpJustPressed = isJump() && !wasJump();
+  player.pogoing = false;
+
+  if (jumpJustPressed && player.onGround) {
+    if (isDown()) {
+      // Trekking pole pogo
+      player.vy = POGO_FORCE;
+      player.pogoing = true;
+      spawnParticles(player.x + player.w / 2, player.y + player.h, '#aaf', 6, 3);
+    } else {
+      player.vy = JUMP_FORCE;
+      player.jumpHeld = true;
+    }
+  }
+
+  // Variable jump height
+  if (player.jumpHeld) {
+    if (!isJump()) { player.jumpHeld = false; }
+    else if (player.vy < -6) { player.vy += 0.4; } // cut short if button released
+  }
+
+  // Bear spray
+  if (isSpray() && player.sprayCooldown === 0) {
+    player.sprayCooldown = 60;
+    player.sprayTimer = 20;
+    const sprayX = player.x + (player.facing > 0 ? player.w : -80);
+    const sprayY = player.y + 8;
+    const sprayRect = { x: sprayX, y: sprayY, w: 80, h: 20 };
+    spawnParticles(player.x + player.w / 2, player.y + 8, '#ff8800', 12, 4);
+    enemies.forEach(e => {
+      if (e.alive && e.stunTimer === 0 && aabb(e, sprayRect)) {
+        e.stunTimer = 120;
+        spawnParticles(e.x + e.w / 2, e.y, '#ff6600', 8, 3);
+      }
+    });
+  }
+
+  // Gravity
+  player.vy += GRAVITY_FORCE;
+  if (player.vy > MAX_FALL) player.vy = MAX_FALL;
+
+  // Move horizontally
+  moveEntityHoriz(player, player.vx);
+
+  // Move vertically, check platform stomp vs ceiling
+  const prevVy = player.vy;
+  const hitVert = moveEntityVert(player, player.vy, !isDown());
+  if (hitVert && player.vy >= 0) {
+    player.vy = 0;
+  } else if (hitVert) {
+    player.vy = 0;
+  }
+
+  // Water damage
+  const cx = Math.floor((player.x + player.w / 2) / TS);
+  const cy = Math.floor((player.y + player.h - 2) / TS);
+  if (isWater(cx, cy) || isWater(cx, cy + 1)) {
+    hurtPlayer();
+  }
+
+  // Enemy collisions
+  enemies.forEach(e => {
+    if (!e.alive || player.hurtTimer > 0) return;
+    if (!aabb(player, e)) return;
+
+    // Stomp if falling onto enemy
+    const stomping = prevVy > 0 && player.y + player.h < e.y + e.h * 0.6;
+    if (stomping) {
+      if (e.stunTimer > 0) {
+        // Stomp stunned enemy = kill
+        killEnemy(e);
+        player.score += e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : 150);
+        addFloatText(e.x + e.w / 2, e.y - 10, `+${e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : 150)}`, '#ffff44');
+      } else {
+        // Bounce off (stuns enemy briefly)
+        e.stunTimer = 60;
+        player.vy = -8;
+      }
+    } else {
+      hurtPlayer();
+    }
+  });
+
+  // Item collection
+  items.forEach(item => {
+    if (item.collected) return;
+    if (aabb(player, { x: item.x, y: item.y, w: item.w, h: item.h })) {
+      item.collected = true;
+      player.score += item.pts;
+      spawnParticles(item.x + 10, item.y + 10, ITEM_DEFS[item.type].color, 8, 3);
+      addFloatText(item.x + 10, item.y - 8, `+${item.pts}`, '#ffff44');
+    }
+  });
+
+  // Goal check (summit flag)
+  const goalX = 117 * TS, goalY = 2 * TS;
+  if (player.x + player.w > goalX && player.y < goalY + 48) {
+    game.state = 'win';
+  }
+
+  // Fallen off bottom
+  if (player.y > level.ROWS * TS + 64) {
+    hurtPlayer(true);
+  }
+}
+
+function hurtPlayer(instant) {
+  if (player.hurtTimer > 0 && !instant) return;
+  player.health--;
+  spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ff4444', 10, 4);
+  if (player.health <= 0) {
+    player.lives--;
+    if (player.lives <= 0) {
+      game.state = 'gameover';
+    } else {
+      // Respawn
+      player.x = 2 * TS;
+      player.y = 9 * TS;
+      player.vx = 0;
+      player.vy = 0;
+      player.health = 3;
+      player.hurtTimer = 120;
+      cam.x = 0;
+    }
+  } else {
+    player.hurtTimer = 90;
+  }
+}
+
+function killEnemy(e) {
+  e.alive = false;
+  spawnParticles(e.x + e.w / 2, e.y + e.h / 2, '#aaff44', 12, 4);
+}
+
+// ==================== GAME STATE ====================
+const game = {
+  state: 'menu', // menu, playing, gameover, win
+  tick: 0,
+  hiScore: 0,
+};
+
+function initGame() {
+  player = makePlayer();
+  spawnItems();
+  spawnEnemies();
+  particles.length = 0;
+  floatTexts.length = 0;
+  cam.x = 0;
+  cam.y = 0;
+  game.tick = 0;
+  game.state = 'playing';
+}
+
+// ==================== DRAWING ====================
+
+// Color palette
+const C = {
+  skyTop:    '#5B9BD5',
+  skyBot:    '#A8D8F0',
+  mountain:  '#7A9E7E',
+  ground:    '#6B4F2A',
+  groundTop: '#4E7D3A',
+  rock:      '#7A7A7A',
+  rockLight: '#999',
+  platform:  '#8B6914',
+  water:     '#1E90FF',
+  waterFoam: '#87CEFA',
+  leaf:      '#2E8B2E',
+  leafLight: '#3CB343',
+};
+
+function drawBackground() {
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, C.skyTop);
+  grad.addColorStop(1, C.skyBot);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Far mountains (parallax)
+  const mx = -cam.x * 0.15;
+  ctx.fillStyle = '#8BA89E';
+  for (let i = 0; i < 6; i++) {
+    const bx = ((i * 180 + mx) % (W + 200)) - 100;
+    const bh = 80 + i * 25;
+    ctx.beginPath();
+    ctx.moveTo(bx, H * 0.55);
+    ctx.lineTo(bx + 100, H * 0.55 - bh);
+    ctx.lineTo(bx + 200, H * 0.55);
+    ctx.fill();
+    // Snow cap
+    ctx.fillStyle = '#E8F4F8';
+    ctx.beginPath();
+    ctx.moveTo(bx + 100, H * 0.55 - bh);
+    ctx.lineTo(bx + 80,  H * 0.55 - bh + 20);
+    ctx.lineTo(bx + 120, H * 0.55 - bh + 20);
+    ctx.fill();
+    ctx.fillStyle = '#8BA89E';
+  }
+
+  // Pine trees (parallax)
+  ctx.fillStyle = '#1A5E1A';
+  for (let i = 0; i < 20; i++) {
+    const tx2 = ((i * 95 - cam.x * 0.3 + 3000) % (W + 60)) - 30;
+    const ty2 = H * 0.5 - 20;
+    ctx.beginPath();
+    ctx.moveTo(tx2, ty2 + 60);
+    ctx.lineTo(tx2 - 22, ty2 + 60);
+    ctx.lineTo(tx2, ty2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(tx2, ty2 + 40);
+    ctx.lineTo(tx2 - 28, ty2 + 40);
+    ctx.lineTo(tx2, ty2 - 20);
+    ctx.fill();
+  }
+}
+
+function drawTile(tx, ty) {
+  const tile = getTile(tx, ty);
+  if (tile === T_EMPTY) return;
+
+  const sx = tx * TS - cam.x;
+  const sy = ty * TS - cam.y;
+
+  if (tile === T_SOLID) {
+    // Check if top face (tile above is empty)
+    const topEmpty = getTile(tx, ty - 1) !== T_SOLID;
+    ctx.fillStyle = C.ground;
+    ctx.fillRect(sx, sy, TS, TS);
+    // Grassy top
+    if (topEmpty) {
+      ctx.fillStyle = C.groundTop;
+      ctx.fillRect(sx, sy, TS, 6);
+      // Grass blades
+      ctx.fillStyle = '#5E9A40';
+      for (let i = 2; i < TS - 2; i += 5) {
+        ctx.fillRect(sx + i, sy - 2, 2, 4);
+      }
+    }
+    // Rock texture dots
+    ctx.fillStyle = '#5A3D1A';
+    ctx.fillRect(sx + 6, sy + 10, 4, 3);
+    ctx.fillRect(sx + 18, sy + 18, 3, 4);
+
+  } else if (tile === T_PLATFORM) {
+    // Wooden log platform
+    ctx.fillStyle = C.platform;
+    ctx.fillRect(sx, sy + 4, TS, 10);
+    ctx.fillStyle = '#6B4E1A';
+    ctx.fillRect(sx, sy + 4, TS, 3);
+    ctx.fillStyle = '#A0784A';
+    ctx.fillRect(sx + 4, sy + 6, 3, 6);
+    ctx.fillRect(sx + 14, sy + 6, 3, 6);
+    ctx.fillRect(sx + 24, sy + 6, 3, 6);
+
+  } else if (tile === T_WATER) {
+    const wave = Math.sin(game.tick * 0.05 + tx * 0.5) * 2;
+    ctx.fillStyle = C.water;
+    ctx.fillRect(sx, sy, TS, TS);
+    ctx.fillStyle = C.waterFoam;
+    ctx.fillRect(sx, sy + wave, TS, 4);
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(sx + 4, sy + 8 + wave, TS - 8, 2);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawLevel() {
+  const startX = Math.max(0, Math.floor(cam.x / TS));
+  const endX   = Math.min(level.COLS - 1, Math.ceil((cam.x + W) / TS));
+  const startY = Math.max(0, Math.floor(cam.y / TS));
+  const endY   = Math.min(level.ROWS - 1, Math.ceil((cam.y + H) / TS));
+  for (let ty = startY; ty <= endY; ty++)
+    for (let tx = startX; tx <= endX; tx++)
+      drawTile(tx, ty);
+}
+
+function drawPlayer() {
+  if (player.dead) return;
+  const sx = Math.round(player.x - cam.x);
+  const sy = Math.round(player.y - cam.y);
+  const f  = player.facing;
+
+  // Hurt flash
+  if (player.hurtTimer > 0 && Math.floor(player.hurtTimer / 6) % 2 === 0) return;
+
+  ctx.save();
+  ctx.translate(sx + player.w / 2, sy + player.h);
+
+  // Legs
+  const legY = player.onGround ? 0 : -2;
+  const legSwing = player.onGround && player.frame ? 4 : 0;
+  ctx.fillStyle = '#5B8C5A'; // pant color
+  ctx.fillRect(-8, legY - 14, 6, 14);   // left leg
+  ctx.fillRect(2,  legY - 14 + legSwing, 6, 14); // right leg
+  // Boots
+  ctx.fillStyle = '#3B2A1A';
+  ctx.fillRect(-10, legY - 4, 8, 5);
+  ctx.fillRect(0, legY - 4 + legSwing, 8, 5);
+
+  // Body / shirt
+  ctx.fillStyle = '#4A8C6A';
+  ctx.fillRect(-9, -28, 18, 16);
+
+  // Backpack (tiny ultralight pack!)
+  ctx.fillStyle = '#2E5A8E';
+  ctx.fillRect(-9 * f - 2 * f, -28, 7, 14);
+  // Pack hip belt
+  ctx.fillStyle = '#1A3A6E';
+  ctx.fillRect(-9 * f - 2 * f, -14, 7, 3);
+
+  // Head
+  ctx.fillStyle = '#FDBCB4';
+  ctx.beginPath();
+  ctx.arc(0, -36, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sunhat brim
+  ctx.fillStyle = '#8B6914';
+  ctx.fillRect(-12, -44, 24, 4);
+  // Hat top
+  ctx.fillStyle = '#A07828';
+  ctx.fillRect(-7, -54, 14, 11);
+
+  // Eyes
+  ctx.fillStyle = '#333';
+  ctx.fillRect(2 * f, -39, 3, 3);
+
+  // Trekking poles (pogo or walking)
+  if (player.pogoing || !player.onGround) {
+    // Pole pointing down
+    ctx.strokeStyle = '#AAA';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(f * 8, -10);
+    ctx.lineTo(f * 12, 6);
+    ctx.stroke();
+  } else {
+    // Poles held to side
+    ctx.strokeStyle = '#AAA';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(f * 8, -22);
+    ctx.lineTo(f * 18, 0);
+    ctx.stroke();
+  }
+
+  // Bear spray effect
+  if (player.sprayTimer > 0) {
+    ctx.globalAlpha = 0.6;
+    const spx = (player.facing > 0 ? 12 : -80);
+    const grad = ctx.createLinearGradient(spx, 0, spx + 70 * player.facing, 0);
+    grad.addColorStop(0, '#ff8800');
+    grad.addColorStop(1, 'rgba(255,136,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(spx, -8, 70 * player.facing, 18);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+function drawMarmot(e) {
+  const sx = Math.round(e.x - cam.x);
+  const sy = Math.round(e.y - cam.y);
+  const stunned = e.stunTimer > 0;
+  ctx.save();
+  ctx.translate(sx + e.w / 2, sy + e.h);
+
+  if (stunned) {
+    ctx.globalAlpha = 0.6 + Math.sin(game.tick * 0.3) * 0.3;
+  }
+
+  // Body
+  ctx.fillStyle = stunned ? '#FFD700' : '#8B6914';
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 13, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = stunned ? '#FFD700' : '#A07828';
+  ctx.beginPath();
+  ctx.arc(0, -22, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears
+  ctx.fillStyle = '#7A5810';
+  ctx.beginPath();
+  ctx.arc(-6, -28, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(6, -28, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.fillRect(-3, -25, 3, 3);
+  ctx.fillRect(1, -25, 3, 3);
+  if (stunned) {
+    // Dizzy X eyes
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-4, -26); ctx.lineTo(-1, -23); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1, -26); ctx.lineTo(-4, -23); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(1, -26); ctx.lineTo(4, -23); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, -26); ctx.lineTo(1, -23); ctx.stroke();
+  }
+
+  // Feet
+  ctx.fillStyle = '#6A4810';
+  ctx.fillRect(-10, -2, 8, 4);
+  ctx.fillRect(2,   -2 + (e.frame ? 2 : 0), 8, 4);
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawMosquito(e) {
+  const sx = Math.round(e.x - cam.x);
+  const sy = Math.round(e.y - cam.y);
+  const stunned = e.stunTimer > 0;
+  ctx.save();
+  ctx.translate(sx + e.w / 2, sy + e.h / 2);
+
+  ctx.globalAlpha = stunned ? 0.5 : 1;
+
+  // Wings (animated)
+  const wingFlap = Math.sin(game.tick * 0.4) * 4;
+  ctx.fillStyle = 'rgba(180,220,255,0.7)';
+  ctx.beginPath();
+  ctx.ellipse(-10, -6 + wingFlap, 9, 5, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(10, -6 + wingFlap, 9, 5, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = stunned ? '#FFD700' : '#555';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 6, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#444';
+  ctx.beginPath();
+  ctx.arc(0, -10, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Proboscis
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -14);
+  ctx.lineTo(0, -22);
+  ctx.stroke();
+
+  // Eyes (red)
+  ctx.fillStyle = '#CC0000';
+  ctx.fillRect(-4, -12, 3, 3);
+  ctx.fillRect(2, -12, 3, 3);
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawHiker(e) {
+  const sx = Math.round(e.x - cam.x);
+  const sy = Math.round(e.y - cam.y);
+  const stunned = e.stunTimer > 0;
+  const f = e.vx > 0 ? 1 : -1;
+  ctx.save();
+  ctx.translate(sx + e.w / 2, sy + e.h);
+
+  ctx.globalAlpha = stunned ? 0.6 : 1;
+
+  // Legs
+  const legSwing = e.frame ? 5 : 0;
+  ctx.fillStyle = '#4A3A2A';
+  ctx.fillRect(-7, -16, 6, 16);
+  ctx.fillRect(1, -16 + legSwing, 6, 16);
+
+  // Body
+  ctx.fillStyle = stunned ? '#FFD700' : '#8B3A3A';
+  ctx.fillRect(-8, -32, 16, 18);
+
+  // GIANT pack (the joke - very heavy pack)
+  ctx.fillStyle = '#5A3A7A';
+  ctx.fillRect(-8 * f - 3 * f, -34, 10, 24);
+  // Multiple gear attachments on pack
+  ctx.fillStyle = '#888';
+  ctx.fillRect(-8 * f - 2 * f, -30, 4, 4); // pot
+  ctx.fillStyle = '#C84';
+  ctx.fillRect(-8 * f - 2 * f, -22, 4, 4); // stuff sack
+  ctx.fillStyle = '#4C8';
+  ctx.fillRect(-8 * f - 2 * f, -14, 4, 4); // another pouch
+
+  // Head (red, tired)
+  ctx.fillStyle = '#CC8866';
+  ctx.beginPath();
+  ctx.arc(0, -40, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Hat (big floppy sun hat)
+  ctx.fillStyle = '#8B8B00';
+  ctx.fillRect(-14, -47, 28, 4);
+  ctx.fillRect(-9, -56, 18, 10);
+
+  // Eyes (annoyed)
+  ctx.fillStyle = '#333';
+  ctx.fillRect(-4, -43, 3, 2);
+  ctx.fillRect(2, -43, 3, 2);
+  // Sweat drops
+  if (!stunned) {
+    ctx.fillStyle = '#88CCFF';
+    ctx.fillRect(f * 10, -44, 3, 4);
+    ctx.fillRect(f * 13, -40, 2, 3);
+  }
+
+  // Trekking poles (lots of them!)
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(f * 9, -30);
+  ctx.lineTo(f * 14, 0);
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawItems() {
+  const t = game.tick * 0.05;
+  items.forEach(item => {
+    if (item.collected) return;
+    const sx = item.x - cam.x;
+    const sy = item.y - cam.y + Math.sin(t + item.bobOffset) * 4;
+    const def = ITEM_DEFS[item.type];
+
+    // Glow
+    ctx.save();
+    ctx.shadowColor = def.color;
+    ctx.shadowBlur = 10;
+
+    ctx.fillStyle = def.color;
+    ctx.beginPath();
+    ctx.arc(sx + 10, sy + 10, def.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Icon
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Courier New';
+    ctx.textAlign = 'center';
+    const icons = { spork: '🥄', bar: '🍫', filter: '💧', tent: '⛺', spray: '🌿' };
+    ctx.fillText(
+      item.type === 'spork'  ? 'TI' :
+      item.type === 'bar'    ? 'B'  :
+      item.type === 'filter' ? 'W'  :
+      item.type === 'tent'   ? 'T'  : '!',
+      sx + 10, sy + 14
+    );
+
+    ctx.restore();
+  });
+}
+
+function drawGoalFlag() {
+  const fx = 117 * TS - cam.x;
+  const fy = 4 * TS - cam.y;
+
+  // Pole
+  ctx.fillStyle = '#CCC';
+  ctx.fillRect(fx, fy, 4, 48);
+
+  // Flag (waving)
+  const wave = Math.sin(game.tick * 0.08);
+  ctx.fillStyle = '#FF4444';
+  ctx.beginPath();
+  ctx.moveTo(fx + 4, fy);
+  ctx.lineTo(fx + 4 + 24 + wave * 4, fy + 8);
+  ctx.lineTo(fx + 4, fy + 18);
+  ctx.fill();
+
+  // Summit marker text
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('SUMMIT', fx + 14, fy - 8);
+}
+
+function drawHUD() {
+  // HUD background
+  ctx.fillStyle = 'rgba(20,40,20,0.75)';
+  ctx.fillRect(0, 0, W, 36);
+
+  // Lives (boot icons)
+  ctx.fillStyle = '#AAF';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText('LIVES:', 8, 22);
+  for (let i = 0; i < player.lives; i++) {
+    ctx.fillStyle = i < player.lives ? '#88FF88' : '#444';
+    ctx.fillRect(64 + i * 18, 8, 14, 20);
+  }
+
+  // Health (water drops)
+  ctx.fillStyle = '#AAF';
+  ctx.fillText('H2O:', 160, 22);
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = i < player.health ? '#4169E1' : '#333';
+    ctx.beginPath();
+    ctx.arc(210 + i * 20, 18, 7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Score
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 14px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(`SCORE: ${player.score}`, W / 2, 22);
+
+  // Trail progress bar
+  const progress = clamp(player.x / (level.COLS * TS), 0, 1);
+  ctx.fillStyle = '#333';
+  ctx.fillRect(W - 180, 8, 170, 12);
+  ctx.fillStyle = '#4E7D3A';
+  ctx.fillRect(W - 180, 8, 170 * progress, 12);
+  ctx.fillStyle = '#88FF88';
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'right';
+  ctx.fillText(`TRAIL ${Math.floor(progress * 100)}%`, W - 8, 24);
+
+  // Bear spray indicator
+  if (player.sprayCooldown > 0) {
+    ctx.fillStyle = 'rgba(20,40,20,0.75)';
+    ctx.fillRect(8, 40, 80, 16);
+    ctx.fillStyle = '#FF8800';
+    ctx.fillRect(10, 42, 76 * (1 - player.sprayCooldown / 60), 12);
+    ctx.fillStyle = '#FFF';
+    ctx.font = '9px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('SPRAY', 12, 52);
+  }
+}
+
+function drawFloatTexts() {
+  floatTexts.forEach(f => {
+    ctx.globalAlpha = f.life;
+    ctx.fillStyle = f.color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.str, f.x - cam.x, f.y - cam.y);
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ==================== SCREENS ====================
+function drawMenu() {
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#2B4F6A');
+  grad.addColorStop(1, '#1A2E3A');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Mountains
+  ctx.fillStyle = '#3A6A5A';
+  for (let i = 0; i < 5; i++) {
+    const bx = i * 200 - 50;
+    const bh = 120 + i * 20;
+    ctx.beginPath();
+    ctx.moveTo(bx, H * 0.7);
+    ctx.lineTo(bx + 100, H * 0.7 - bh);
+    ctx.lineTo(bx + 200, H * 0.7);
+    ctx.fill();
+    ctx.fillStyle = '#D0E8F0';
+    ctx.beginPath();
+    ctx.moveTo(bx + 100, H * 0.7 - bh);
+    ctx.lineTo(bx + 82, H * 0.7 - bh + 28);
+    ctx.lineTo(bx + 118, H * 0.7 - bh + 28);
+    ctx.fill();
+    ctx.fillStyle = '#3A6A5A';
+  }
+
+  // Title
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 52px Courier New';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#AA8800';
+  ctx.shadowBlur = 10;
+  ctx.fillText('TRAIL BLAZER', W / 2, 120);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#88DDFF';
+  ctx.font = 'bold 20px Courier New';
+  ctx.fillText('An Ultralight Backpacking Adventure', W / 2, 160);
+
+  ctx.fillStyle = '#4E7D3A';
+  ctx.font = '13px Courier New';
+  ctx.fillText('Reach the summit with the lightest pack!', W / 2, 195);
+
+  // Blinking start
+  if (Math.floor(game.tick / 30) % 2 === 0) {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 22px Courier New';
+    ctx.fillText('PRESS  SPACE  TO  START', W / 2, 280);
+  }
+
+  // Controls
+  ctx.fillStyle = '#8BC48B';
+  ctx.font = '13px Courier New';
+  const controls = [
+    '← → / A D   :  Move',
+    '↑ / W / Z / SPACE  :  Jump',
+    '↓ + Jump  :  Trekking Pole POGO',
+    'X  :  Bear Spray (stun enemies)',
+    'Stomp stunned enemies to defeat them!',
+  ];
+  controls.forEach((line, i) => {
+    ctx.fillText(line, W / 2, 330 + i * 22);
+  });
+
+  // High score
+  if (game.hiScore > 0) {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillText(`HI SCORE: ${game.hiScore}`, W / 2, H - 20);
+  }
+}
+
+function drawGameOver() {
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#FF4444';
+  ctx.font = 'bold 56px Courier New';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#880000';
+  ctx.shadowBlur = 12;
+  ctx.fillText('TRAIL FAILED', W / 2, H / 2 - 40);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 22px Courier New';
+  ctx.fillText(`Final Score: ${player.score}`, W / 2, H / 2 + 20);
+
+  ctx.fillStyle = '#88FF88';
+  ctx.font = '16px Courier New';
+  ctx.fillText('Your pack was too heavy and your will too light...', W / 2, H / 2 + 60);
+
+  if (Math.floor(game.tick / 30) % 2 === 0) {
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 18px Courier New';
+    ctx.fillText('PRESS SPACE TO TRY AGAIN', W / 2, H / 2 + 110);
+  }
+}
+
+function drawWin() {
+  ctx.fillStyle = 'rgba(0,20,0,0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 52px Courier New';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#AA8800';
+  ctx.shadowBlur = 12;
+  ctx.fillText('SUMMIT!', W / 2, H / 2 - 60);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#88FF88';
+  ctx.font = 'bold 20px Courier New';
+  ctx.fillText('You blazed the trail!', W / 2, H / 2 - 10);
+
+  ctx.fillStyle = '#88DDFF';
+  ctx.font = '16px Courier New';
+  ctx.fillText(`Final Score: ${player.score}`, W / 2, H / 2 + 35);
+  ctx.fillText('Gear Collected: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, H / 2 + 60);
+
+  // Stars
+  for (let i = 0; i < 20; i++) {
+    const sx = (Math.sin(i * 137.5) * 0.5 + 0.5) * W;
+    const sy = (Math.cos(i * 137.5) * 0.5 + 0.5) * H * 0.8;
+    const r = 2 + Math.sin(game.tick * 0.1 + i) * 2;
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (Math.floor(game.tick / 30) % 2 === 0) {
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 18px Courier New';
+    ctx.fillText('PRESS SPACE FOR NEW TRAIL', W / 2, H / 2 + 110);
+  }
+}
+
+// ==================== MAIN LOOP ====================
+function update() {
+  game.tick++;
+
+  if (game.state === 'menu') {
+    if (jp('Space') || jp('KeyZ') || jp('ArrowUp') || jp('KeyW')) {
+      initGame();
+    }
+
+  } else if (game.state === 'playing') {
+    updatePlayer();
+    enemies.forEach(updateEnemy);
+    updateParticles();
+    updateFloatTexts();
+    updateCamera(player.x, player.y);
+
+  } else if (game.state === 'gameover') {
+    if (game.hiScore < player.score) game.hiScore = player.score;
+    if (jp('Space') || jp('KeyZ')) {
+      game.state = 'menu';
+    }
+
+  } else if (game.state === 'win') {
+    if (game.hiScore < player.score) game.hiScore = player.score;
+    if (jp('Space') || jp('KeyZ')) {
+      game.state = 'menu';
+    }
+  }
+
+  syncPrev();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  if (game.state === 'menu') {
+    drawMenu();
+    return;
+  }
+  if (game.state === 'gameover') {
+    // Draw game behind
+    drawBackground();
+    drawLevel();
+    drawItems();
+    drawGoalFlag();
+    enemies.forEach(e => {
+      if (!e.alive) return;
+      if (e.type === 'marmot') drawMarmot(e);
+      else if (e.type === 'mosquito') drawMosquito(e);
+      else if (e.type === 'hiker') drawHiker(e);
+    });
+    drawPlayer();
+    drawParticles();
+    drawFloatTexts();
+    drawHUD();
+    drawGameOver();
+    return;
+  }
+  if (game.state === 'win') {
+    drawBackground();
+    drawLevel();
+    drawGoalFlag();
+    drawWin();
+    return;
+  }
+
+  // Playing
+  drawBackground();
+  drawLevel();
+  drawItems();
+  drawGoalFlag();
+  enemies.forEach(e => {
+    if (!e.alive) return;
+    if (e.type === 'marmot') drawMarmot(e);
+    else if (e.type === 'mosquito') drawMosquito(e);
+    else if (e.type === 'hiker') drawHiker(e);
+  });
+  drawPlayer();
+  drawParticles();
+  drawFloatTexts();
+  drawHUD();
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ==================== BOOT ====================
+requestAnimationFrame(loop);
+
+})();

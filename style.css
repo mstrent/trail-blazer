@@ -1,0 +1,28 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1a2e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'Courier New', monospace;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border: 4px solid #3a5a3a;
+  box-shadow: 0 0 30px rgba(58, 180, 58, 0.3);
+}
+
+#controls {
+  margin-top: 12px;
+  color: #8bc48b;
+  font-size: 12px;
+  text-align: center;
+  max-width: 800px;
+  opacity: 0.8;
+}
