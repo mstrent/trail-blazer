@@ -309,7 +309,7 @@ function moveEntityVert(e, vy, checkPlatform) {
   const left  = Math.floor(e.x / TS);
   const right = Math.floor((e.x + e.w - 1) / TS);
   const top   = Math.floor(e.y / TS);
-  const bot   = Math.floor((e.y + e.h - 1) / TS);
+  const bot   = Math.floor((e.y + e.h) / TS);
   e.onGround = false;
   if (vy > 0) {
     for (let tx = left; tx <= right; tx++) {
@@ -318,7 +318,7 @@ function moveEntityVert(e, vy, checkPlatform) {
         e.onGround = true;
         return true;
       }
-      if (checkPlatform && isPlatform(tx, bot) && Math.floor((e.y + e.h - vy - 1) / TS) < bot) {
+      if (checkPlatform && isPlatform(tx, bot) && Math.floor((e.y + e.h - vy) / TS) < bot) {
         e.y = bot * TS - e.h;
         e.onGround = true;
         return true;
@@ -388,6 +388,7 @@ function makePlayer() {
     facing: 1,
     pogoing: false,
     jumpHeld: false,
+    jumpBuffer: 0,
     lives: 3,
     score: 0,
     health: 3,
@@ -422,10 +423,12 @@ function updatePlayer() {
   }
 
   // Jump / Pogo
-  const jumpJustPressed = isJump() && !wasJump();
+  if (isJump() && !wasJump()) player.jumpBuffer = 8; // buffer press for 8 frames
+  if (player.jumpBuffer > 0) player.jumpBuffer--;
   player.pogoing = false;
 
-  if (jumpJustPressed && player.onGround) {
+  if (player.jumpBuffer > 0 && player.onGround) {
+    player.jumpBuffer = 0;
     if (isDown()) {
       // Trekking pole pogo
       player.vy = POGO_FORCE;
@@ -437,10 +440,12 @@ function updatePlayer() {
     }
   }
 
-  // Variable jump height
+  // Variable jump height: cut upward speed when button released early
   if (player.jumpHeld) {
-    if (!isJump()) { player.jumpHeld = false; }
-    else if (player.vy < -6) { player.vy += 0.4; } // cut short if button released
+    if (!isJump()) {
+      player.jumpHeld = false;
+      if (player.vy < -5) player.vy = -5;
+    }
   }
 
   // Bear spray
