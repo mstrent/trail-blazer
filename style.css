@@ -57,14 +57,18 @@ canvas {
   flex-direction: row;
   gap: 10px;
   pointer-events: auto;
-  align-items: center;
+  align-self: stretch;   /* fill the full height of the control bar */
+  align-items: stretch;  /* stretch buttons to match */
+  flex: 1;               /* take all remaining width on the left */
+  margin-right: 16px;
 }
 
 #btn-left,
 #btn-right {
-  width: 96px;
-  height: 96px;
-  font-size: 34px;
+  flex: 1;               /* each button gets half the available width */
+  width: auto;
+  height: auto;
+  font-size: clamp(28px, 7vw, 44px);
 }
 
 #touch-right {
