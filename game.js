@@ -2128,11 +2128,6 @@ function drawLevelComplete() {
   ctx.font = 'bold 22px Courier New';
   ctx.fillText(def.name, W / 2, H / 2 - 25);
 
-  ctx.fillStyle = '#88DDFF';
-  ctx.font = '16px Courier New';
-  ctx.fillText(`Score: ${player.score}`, W / 2, H / 2 + 15);
-  ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, H / 2 + 40);
-
   // Time and time bonus
   const timeSeconds = Math.floor(game.levelCompletionTime / 60);
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
@@ -2165,12 +2160,13 @@ function drawLevelComplete() {
     ctx.fillStyle = '#AAAAFF';
     ctx.font = '14px Courier New';
     ctx.fillText('Next: ' + nextDef.name + ' \u2014 ' + nextDef.subtitle, W / 2, infoY);
+    infoY += lineHeight;
   }
 
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFF';
     ctx.font = 'bold 18px Courier New';
-    ctx.fillText('TAP  OR  PRESS  SPACE  TO  CONTINUE', W / 2, H / 2 + 125);
+    ctx.fillText('TAP  OR  PRESS  SPACE  TO  CONTINUE', W / 2, infoY + 10);
   }
 }
 
