@@ -117,6 +117,7 @@ const LEVELS = [
       return [
         makeMarmot(20, 10), makeMarmot(27, 8), makeMarmot(52, 8),
         makeMarmot(72, 8), makeMarmot(95, 10),
+        makeMouse(45, 10), makeMouse(85, 8),
         makeMosquito(40, 6), makeMosquito(50, 5), makeMosquito(67, 7),
         makeMosquito(88, 6), makeMosquito(104, 5),
         makeHiker(33, 6), makeHiker(80, 5), makeHiker(109, 3),
@@ -214,6 +215,7 @@ const LEVELS = [
       return [
         makeMarmot(15, 10), makeMarmot(35, 7), makeMarmot(70, 8),
         makeMarmot(90, 10), makeMarmot(108, 8), makeMarmot(130, 6),
+        makeMouse(25, 10), makeMouse(60, 8), makeMouse(100, 10),
         makeMosquito(28, 5), makeMosquito(43, 4), makeMosquito(57, 5),
         makeMosquito(75, 4), makeMosquito(99, 5), makeMosquito(120, 4),
         makeMosquito(137, 4),
@@ -323,6 +325,7 @@ const LEVELS = [
       return [
         makeMarmot(14, 10), makeMarmot(38, 7), makeMarmot(72, 8),
         makeMarmot(105, 10), makeMarmot(142, 8), makeMarmot(162, 8),
+        makeMouse(22, 10), makeMouse(55, 8), makeMouse(95, 10), makeMouse(140, 8),
         makeMosquito(20, 6), makeMosquito(45, 5), makeMosquito(58, 4),
         makeMosquito(80, 4), makeMosquito(96, 3), makeMosquito(112, 4),
         makeMosquito(126, 3), makeMosquito(150, 4), makeMosquito(170, 3),
@@ -470,6 +473,21 @@ function makeHiker(tx, ty) {
   };
 }
 
+function makeMouse(tx, ty) {
+  return {
+    type: 'mouse',
+    x: tx * TS, y: ty * TS + 8,
+    w: 16, h: 12,
+    vx: -1.8, vy: 0,
+    onGround: false,
+    alive: true,
+    stunTimer: 0,
+    frame: 0, frameTimer: 0,
+    patrolX1: (tx - 5) * TS,
+    patrolX2: (tx + 5) * TS,
+  };
+}
+
 let enemies = [];
 function spawnEnemies() {
   enemies = LEVELS[game.levelNum].spawnEnemies();
@@ -564,9 +582,10 @@ function updateEnemy(e) {
 const PLAYER_W = 20, PLAYER_H = 30;
 const GRAVITY_FORCE = 0.55;
 const JUMP_FORCE = -12.5;
-const POGO_FORCE = -16;
 const MOVE_SPEED = 3.5;
 const MAX_FALL = 15;
+const GLISSADE_SPEED = 7;
+const GLISSADE_DURATION = 24;
 
 function makePlayer() {
   return {
@@ -575,7 +594,7 @@ function makePlayer() {
     vx: 0, vy: 0,
     onGround: false,
     facing: 1,
-    pogoing: false,
+    glissading: 0,
     jumpHeld: false,
     jumpBuffer: 0,
     lives: 3,
@@ -611,22 +630,31 @@ function updatePlayer() {
     player.frame = 0; player.frameTimer = 0;
   }
 
-  // Jump / Pogo
-  if (isJump() && !wasJump()) player.jumpBuffer = 8; // buffer press for 8 frames
-  if (player.jumpBuffer > 0) player.jumpBuffer--;
-  player.pogoing = false;
-
-  if (player.jumpBuffer > 0 && player.onGround) {
-    player.jumpBuffer = 0;
-    if (isDown()) {
-      // Trekking pole pogo
-      player.vy = POGO_FORCE;
-      player.pogoing = true;
-      spawnParticles(player.x + player.w / 2, player.y + player.h, '#aaf', 6, 3);
-    } else {
-      player.vy = JUMP_FORCE;
-      player.jumpHeld = true;
+  // Glissade (down while moving on ground)
+  if (player.glissading > 0) {
+    player.glissading--;
+    player.vx = player.facing * GLISSADE_SPEED;
+    // Spawn dust trail
+    if (player.glissading % 3 === 0) {
+      spawnParticles(player.x + player.w / 2 - player.facing * 8, player.y + player.h, '#aa8855', 2, 1.5);
     }
+    // Clear glissade stun tracking when slide ends
+    if (player.glissading === 0) {
+      enemies.forEach(e => { e.stunnedByGlissade = false; });
+    }
+  } else if (isDown() && player.onGround && (isLeft() || isRight()) && player.hurtTimer === 0) {
+    player.glissading = GLISSADE_DURATION;
+    spawnParticles(player.x + player.w / 2, player.y + player.h, '#aa8855', 6, 3);
+  }
+
+  // Jump
+  if (isJump() && !wasJump()) player.jumpBuffer = 8;
+  if (player.jumpBuffer > 0) player.jumpBuffer--;
+
+  if (player.jumpBuffer > 0 && player.onGround && player.glissading === 0) {
+    player.jumpBuffer = 0;
+    player.vy = JUMP_FORCE;
+    player.jumpHeld = true;
   }
 
   // Variable jump height: cut upward speed when button released early
@@ -641,9 +669,9 @@ function updatePlayer() {
   if (isSpray() && player.sprayCooldown === 0) {
     player.sprayCooldown = 60;
     player.sprayTimer = 20;
-    const sprayX = player.x + (player.facing > 0 ? player.w : -80);
-    const sprayY = player.y + 8;
-    const sprayRect = { x: sprayX, y: sprayY, w: 80, h: 20 };
+    const sprayX = player.x + (player.facing > 0 ? player.w : -120);
+    const sprayY = player.y - 10;
+    const sprayRect = { x: sprayX, y: sprayY, w: 120, h: 50 };
     spawnParticles(player.x + player.w / 2, player.y + 8, '#ff8800', 12, 4);
     enemies.forEach(e => {
       if (e.alive && e.stunTimer === 0 && aabb(e, sprayRect)) {
@@ -662,7 +690,7 @@ function updatePlayer() {
 
   // Move vertically, check platform stomp vs ceiling
   const prevVy = player.vy;
-  const hitVert = moveEntityVert(player, player.vy, !isDown());
+  const hitVert = moveEntityVert(player, player.vy, true);
   if (hitVert && player.vy >= 0) {
     player.vy = 0;
   } else if (hitVert) {
@@ -681,20 +709,34 @@ function updatePlayer() {
     if (!e.alive || player.hurtTimer > 0) return;
     if (!aabb(player, e)) return;
 
+    // Glissade: kill already-stunned enemies, stun others
+    if (player.glissading > 0) {
+      if (e.stunTimer > 0 && !e.stunnedByGlissade) {
+        killEnemy(e);
+        player.score += e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150));
+        addFloatText(e.x + e.w / 2, e.y - 10, `+${e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150))}`, '#ffff44');
+      } else if (e.stunTimer === 0) {
+        e.stunTimer = 120;
+        e.stunnedByGlissade = true;
+        spawnParticles(e.x + e.w / 2, e.y, '#ff6600', 8, 3);
+      }
+      return;
+    }
+
     // Stomp if falling onto enemy
-    const stomping = prevVy > 0 && player.y + player.h < e.y + e.h * 0.6;
+    const stomping = prevVy > 0 && player.y + player.h < e.y + e.h * 0.75;
     if (stomping) {
       if (e.stunTimer > 0) {
         // Stomp stunned enemy = kill
         killEnemy(e);
-        player.score += e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : 150);
-        addFloatText(e.x + e.w / 2, e.y - 10, `+${e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : 150)}`, '#ffff44');
+        player.score += e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150));
+        addFloatText(e.x + e.w / 2, e.y - 10, `+${e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150))}`, '#ffff44');
       } else {
         // Bounce off (stuns enemy briefly)
         e.stunTimer = 60;
         player.vy = -8;
       }
-    } else {
+    } else if (e.stunTimer === 0) {
       hurtPlayer();
     }
   });
@@ -707,6 +749,14 @@ function updatePlayer() {
       player.score += item.pts;
       spawnParticles(item.x + 10, item.y + 10, ITEM_DEFS[item.type].color, 8, 3);
       addFloatText(item.x + 10, item.y - 8, `+${item.pts}`, '#ffff44');
+
+      // Leave No Trace award — all items collected
+      if (items.every(i => i.collected)) {
+        const bonus = 1000;
+        player.score += bonus;
+        addFloatText(player.x + player.w / 2, player.y - 30, 'LEAVE NO TRACE! +' + bonus, '#44ffaa');
+        spawnParticles(player.x + player.w / 2, player.y, '#44ffaa', 20, 5);
+      }
     }
   });
 
@@ -714,6 +764,7 @@ function updatePlayer() {
   const gDef = LEVELS[game.levelNum].goalTile;
   const goalX = gDef[0] * TS, goalY = gDef[1] * TS;
   if (player.x + player.w > goalX && player.y < goalY + 48) {
+    game.leaveNoTrace[game.levelNum] = items.every(i => i.collected);
     game.levelTick = 0;
     game.state = 'levelcomplete';
   }
@@ -760,6 +811,7 @@ const game = {
   hiScore: 0,
   levelNum: 0,
   levelTick: 0,
+  leaveNoTrace: [],  // per-level: true if all items collected
 };
 
 function loadLevel(num) {
@@ -776,6 +828,7 @@ function loadLevel(num) {
 
 function initGame() {
   game.levelNum = 0;
+  game.leaveNoTrace = [];
   loadLevel(0);
   player = makePlayer();
   const spawn = LEVELS[0].spawnTile;
@@ -1101,9 +1154,17 @@ function drawPlayer() {
   ctx.fillStyle = '#333';
   ctx.fillRect(2 * f, -39, 3, 3);
 
-  // Trekking poles (pogo or walking)
-  if (player.pogoing || !player.onGround) {
-    // Pole pointing down
+  // Trekking poles (glissade, airborne, or walking)
+  if (player.glissading > 0) {
+    // Poles dragging behind during slide
+    ctx.strokeStyle = '#AAA';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-f * 4, -18);
+    ctx.lineTo(-f * 20, 2);
+    ctx.stroke();
+  } else if (!player.onGround) {
+    // Pole pointing down in air
     ctx.strokeStyle = '#AAA';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1123,12 +1184,12 @@ function drawPlayer() {
   // Bear spray effect
   if (player.sprayTimer > 0) {
     ctx.globalAlpha = 0.6;
-    const spx = (player.facing > 0 ? 12 : -80);
-    const grad = ctx.createLinearGradient(spx, 0, spx + 70 * player.facing, 0);
+    const spx = (player.facing > 0 ? 12 : -120);
+    const grad = ctx.createLinearGradient(spx, 0, spx + 110 * player.facing, 0);
     grad.addColorStop(0, '#ff8800');
     grad.addColorStop(1, 'rgba(255,136,0,0)');
     ctx.fillStyle = grad;
-    ctx.fillRect(spx, -8, 70 * player.facing, 18);
+    ctx.fillRect(spx, -8, 110 * player.facing, 18);
     ctx.globalAlpha = 1;
   }
 
@@ -1185,6 +1246,67 @@ function drawMarmot(e) {
   ctx.fillStyle = '#6A4810';
   ctx.fillRect(-10, -2, 8, 4);
   ctx.fillRect(2,   -2 + (e.frame ? 2 : 0), 8, 4);
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawMouse(e) {
+  const sx = Math.round(e.x - cam.x);
+  const sy = Math.round(e.y - cam.y);
+  const stunned = e.stunTimer > 0;
+  ctx.save();
+  ctx.translate(sx + e.w / 2, sy + e.h);
+
+  if (stunned) {
+    ctx.globalAlpha = 0.6 + Math.sin(game.tick * 0.3) * 0.3;
+  }
+
+  // Body (small oval)
+  ctx.fillStyle = stunned ? '#FFD700' : '#888';
+  ctx.beginPath();
+  ctx.ellipse(0, -6, 7, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = stunned ? '#FFD700' : '#999';
+  ctx.beginPath();
+  ctx.arc(e.vx > 0 ? 6 : -6, -8, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears (round)
+  ctx.fillStyle = '#C8A';
+  const headX = e.vx > 0 ? 6 : -6;
+  ctx.beginPath();
+  ctx.arc(headX - 2, -12, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(headX + 2, -12, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.fillRect(headX + (e.vx > 0 ? 1 : -3), -9, 2, 2);
+  if (stunned) {
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(headX - 1, -10); ctx.lineTo(headX + 1, -8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(headX + 1, -10); ctx.lineTo(headX - 1, -8); ctx.stroke();
+  }
+
+  // Tail (thin curve)
+  ctx.strokeStyle = stunned ? '#FFD700' : '#777';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const tailDir = e.vx > 0 ? -1 : 1;
+  ctx.moveTo(tailDir * 7, -5);
+  ctx.quadraticCurveTo(tailDir * 12, -10, tailDir * 10, -14);
+  ctx.stroke();
+
+  // Feet
+  ctx.fillStyle = '#C8A';
+  ctx.fillRect(-5, -2, 3, 2);
+  ctx.fillRect(2, -2 + (e.frame ? 1 : 0), 3, 2);
 
   ctx.globalAlpha = 1;
   ctx.restore();
@@ -1303,6 +1425,103 @@ function drawHiker(e) {
   ctx.restore();
 }
 
+function drawItemIcon(type, cx, cy) {
+  // Draw a recognizable pixel-art icon centered at (cx, cy)
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(1.25, 1.25);
+
+  if (type === 'spork') {
+    // Titanium spork: handle + prongs, scaled up
+    ctx.fillStyle = '#E0E0E0';
+    ctx.fillRect(-2, -2, 3, 14);        // handle
+    ctx.fillRect(-6, -9, 3, 8);         // left prong
+    ctx.fillRect(-2, -9, 3, 8);         // middle prong
+    ctx.fillRect(3, -9, 3, 8);          // right prong
+    ctx.fillStyle = '#BBB';
+    ctx.fillRect(-6, -10, 12, 2);       // top edge
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-5, -8, 1, 5);         // shine
+
+  } else if (type === 'bar') {
+    // Protein bar: wrapper with stripe and text
+    ctx.fillStyle = '#8B5A2B';
+    ctx.fillRect(-9, -5, 18, 11);       // bar body
+    ctx.fillStyle = '#D4A045';
+    ctx.fillRect(-9, -2, 18, 4);        // stripe
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-5, -1, 2, 2);         // text dot 1
+    ctx.fillRect(-1, -1, 2, 2);         // text dot 2
+    ctx.fillRect(3, -1, 2, 2);          // text dot 3
+    ctx.fillStyle = '#6B3A1B';
+    ctx.fillRect(-9, -5, 2, 11);        // left edge
+    ctx.fillRect(7, -5, 2, 11);         // right edge
+    ctx.fillStyle = '#A0722B';
+    ctx.fillRect(-7, 3, 14, 2);         // bottom fold
+
+  } else if (type === 'filter') {
+    // Water filter: bottle shape with pump handle
+    ctx.fillStyle = '#2255CC';
+    ctx.fillRect(-4, -2, 8, 13);        // body
+    ctx.fillStyle = '#3377EE';
+    ctx.fillRect(-3, -1, 5, 10);        // highlight
+    ctx.fillStyle = '#1144AA';
+    ctx.fillRect(-4, 8, 8, 3);          // base
+    ctx.fillStyle = '#88BBFF';
+    ctx.fillRect(-2, -8, 3, 7);         // pump tube
+    ctx.fillStyle = '#DDD';
+    ctx.fillRect(-4, -10, 7, 3);        // pump handle
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-3, 1, 2, 2);          // water drop
+
+  } else if (type === 'tent') {
+    // Cuben tent: triangle with ridge line and stakes
+    ctx.fillStyle = '#C8960F';
+    ctx.beginPath();
+    ctx.moveTo(0, -10);                 // peak
+    ctx.lineTo(-10, 7);                 // left base
+    ctx.lineTo(10, 7);                  // right base
+    ctx.fill();
+    ctx.fillStyle = '#A07808';
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.lineTo(0, 7);
+    ctx.lineTo(10, 7);
+    ctx.fill();
+    // Door flap
+    ctx.fillStyle = '#E8B830';
+    ctx.beginPath();
+    ctx.moveTo(-2, 7);
+    ctx.lineTo(0, -2);
+    ctx.lineTo(2, 7);
+    ctx.fill();
+    // Guy lines
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-10, 7); ctx.lineTo(-12, 9);
+    ctx.moveTo(10, 7); ctx.lineTo(12, 9);
+    ctx.stroke();
+
+  } else if (type === 'spray') {
+    // Bear spray: canister with nozzle and label
+    ctx.fillStyle = '#DD3300';
+    ctx.fillRect(-4, -4, 8, 14);        // canister
+    ctx.fillStyle = '#FF5500';
+    ctx.fillRect(-3, -3, 5, 11);        // highlight
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-3, 2, 6, 3);          // label
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-3, -8, 6, 5);         // top cap
+    ctx.fillStyle = '#666';
+    ctx.fillRect(-2, -11, 3, 4);        // nozzle
+    ctx.fillStyle = '#FF8800';
+    ctx.fillRect(-2, -12, 4, 2);        // trigger
+  }
+
+  ctx.restore();
+}
+
 function drawItems() {
   const t = game.tick * 0.05;
   items.forEach(item => {
@@ -1311,30 +1530,11 @@ function drawItems() {
     const sy = item.y - cam.y + Math.sin(t + item.bobOffset) * 4;
     const def = ITEM_DEFS[item.type];
 
-    // Glow
+    // Glow around the icon itself
     ctx.save();
     ctx.shadowColor = def.color;
-    ctx.shadowBlur = 10;
-
-    ctx.fillStyle = def.color;
-    ctx.beginPath();
-    ctx.arc(sx + 10, sy + 10, def.r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Icon
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px Courier New';
-    ctx.textAlign = 'center';
-    const icons = { spork: '🥄', bar: '🍫', filter: '💧', tent: '⛺', spray: '🌿' };
-    ctx.fillText(
-      item.type === 'spork'  ? 'TI' :
-      item.type === 'bar'    ? 'B'  :
-      item.type === 'filter' ? 'W'  :
-      item.type === 'tent'   ? 'T'  : '!',
-      sx + 10, sy + 14
-    );
-
+    ctx.shadowBlur = 12;
+    drawItemIcon(item.type, sx + 10, sy + 10);
     ctx.restore();
   });
 }
@@ -1494,7 +1694,7 @@ function drawMenu() {
   const controls = [
     '← → / A D   :  Move',
     '↑ / W / Z / SPACE  :  Jump',
-    '↓ + Jump  :  Trekking Pole POGO',
+    '↓ + Move  :  Glissade (slide & stun)',
     'X  :  Bear Spray (stun enemies)',
     'Stomp stunned enemies to defeat them!',
   ];
@@ -1561,16 +1761,22 @@ function drawLevelComplete() {
   ctx.fillText(`Score: ${player.score}`, W / 2, H / 2 + 15);
   ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, H / 2 + 40);
 
+  if (game.leaveNoTrace[game.levelNum]) {
+    ctx.fillStyle = '#44ffaa';
+    ctx.font = 'bold 16px Courier New';
+    ctx.fillText('LEAVE NO TRACE +1000', W / 2, H / 2 + 62);
+  }
+
   if (nextDef) {
     ctx.fillStyle = '#AAAAFF';
     ctx.font = '14px Courier New';
-    ctx.fillText('Next: ' + nextDef.name + ' \u2014 ' + nextDef.subtitle, W / 2, H / 2 + 75);
+    ctx.fillText('Next: ' + nextDef.name + ' \u2014 ' + nextDef.subtitle, W / 2, H / 2 + 88);
   }
 
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFF';
     ctx.font = 'bold 18px Courier New';
-    ctx.fillText('TAP  OR  PRESS  SPACE  TO  CONTINUE', W / 2, H / 2 + 115);
+    ctx.fillText('TAP  OR  PRESS  SPACE  TO  CONTINUE', W / 2, H / 2 + 125);
   }
 }
 
@@ -1594,10 +1800,11 @@ function drawWin() {
   ctx.font = '16px Courier New';
   ctx.fillText(`Final Score: ${player.score}`, W / 2, H / 2 + 10);
 
-  ctx.fillStyle = '#AAAAFF';
   ctx.font = '14px Courier New';
   LEVELS.forEach((l, i) => {
-    ctx.fillText((i + 1) + '. ' + l.name, W / 2, H / 2 + 40 + i * 20);
+    const lnt = game.leaveNoTrace[i];
+    ctx.fillStyle = lnt ? '#44ffaa' : '#AAAAFF';
+    ctx.fillText((i + 1) + '. ' + l.name + (lnt ? '  -  Leave No Trace!' : ''), W / 2, H / 2 + 40 + i * 20);
   });
 
   // Stars
@@ -1706,6 +1913,7 @@ function draw() {
   enemies.forEach(e => {
     if (!e.alive) return;
     if (e.type === 'marmot') drawMarmot(e);
+    else if (e.type === 'mouse') drawMouse(e);
     else if (e.type === 'mosquito') drawMosquito(e);
     else if (e.type === 'hiker') drawHiker(e);
   });
@@ -1750,20 +1958,12 @@ function setupTouch() {
     el.addEventListener('touchcancel', release, { passive: false });
   });
 
-  // POGO button sets down + schedules a jump on the next frame
-  // (player must be holding POGO btn then tap JUMP, or use POGO alone to
-  // auto-trigger: hold POGO → it also briefly pulses Space so the buffer fires)
-  const pogoEl = document.getElementById('btn-down');
-  if (pogoEl) {
-    pogoEl.addEventListener('touchstart', e => {
-      e.preventDefault();
-      keys['ArrowDown'] = true;
-      // Pulse Space so jump buffer picks it up immediately
-      keys['Space'] = true;
-      setTimeout(() => { keys['Space'] = false; }, 80);
-    }, { passive: false });
-    pogoEl.addEventListener('touchend',    e => { e.preventDefault(); keys['ArrowDown'] = false; }, { passive: false });
-    pogoEl.addEventListener('touchcancel', e => { e.preventDefault(); keys['ArrowDown'] = false; }, { passive: false });
+  // Glissade button — hold down while pressing a direction to slide
+  const slideEl = document.getElementById('btn-down');
+  if (slideEl) {
+    slideEl.addEventListener('touchstart',  e => { e.preventDefault(); keys['ArrowDown'] = true; },  { passive: false });
+    slideEl.addEventListener('touchend',    e => { e.preventDefault(); keys['ArrowDown'] = false; }, { passive: false });
+    slideEl.addEventListener('touchcancel', e => { e.preventDefault(); keys['ArrowDown'] = false; }, { passive: false });
   }
 }
 
