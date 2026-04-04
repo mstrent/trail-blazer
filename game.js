@@ -1900,15 +1900,15 @@ function drawMenu() {
   if (leaderboardLoaded && leaderboard.length > 0) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 14px Courier New';
-    ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, 320);
+    ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, 310);
 
-    ctx.font = '13px Courier New';
+    ctx.font = '12px Courier New';
     leaderboard.forEach((entry, i) => {
       const rank = (i + 1).toString().padStart(2, ' ');
       const name = (entry.name || '???').padEnd(3, ' ');
       const score = entry.score.toString().padStart(7, ' ');
       ctx.fillStyle = i === 0 ? '#FFD700' : (i < 3 ? '#C0C0C0' : '#8BC48B');
-      ctx.fillText(`${rank}. ${name}  ${score}`, W / 2, 342 + i * 17);
+      ctx.fillText(`${rank}. ${name}  ${score}`, W / 2, 326 + i * 14);
     });
   } else {
     // Show controls if no leaderboard yet
