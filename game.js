@@ -2011,7 +2011,8 @@ function drawMenu() {
   if (showLeaderboard) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 14px Courier New';
-    ctx.fillText('TOP  TRAIL  BLAZERS', LOGI_W / 2, panelY + 18);
+    // Issue #30: Clarify that this is the global cloud leaderboard, not local
+    ctx.fillText('GLOBAL  TOP  TRAIL  BLAZERS', LOGI_W / 2, panelY + 18);
 
     ctx.font = '12px Courier New';
     const rowHeight = 16;
@@ -2044,10 +2045,11 @@ function drawMenu() {
   }
 
   // High score
+  // Issue #30: Clarify that this is device-local score stored in localStorage
   if (game.hiScore > 0) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 14px Courier New';
-    ctx.fillText(`HI SCORE: ${game.hiScore}`, LOGI_W / 2, LOGI_H - 20);
+    ctx.fillText(`DEVICE HI SCORE: ${game.hiScore}`, LOGI_W / 2, LOGI_H - 20);
   }
 
   ctx.restore();
