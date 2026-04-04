@@ -7,10 +7,28 @@
 // ==================== SETUP ====================
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const W = 800, H = 480;
+let W = 800, H = 480;
 canvas.width = W;
 canvas.height = H;
 const TS = 32; // tile size in pixels
+
+// Resize canvas to match viewport aspect ratio on mobile landscape
+function resizeCanvas() {
+  const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+  const isLandscape = window.innerWidth > window.innerHeight;
+  if (isTouch && isLandscape) {
+    const aspect = window.innerWidth / window.innerHeight;
+    H = 480;
+    W = Math.round(H * aspect);
+  } else {
+    W = 800;
+    H = 480;
+  }
+  canvas.width = W;
+  canvas.height = H;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // ==================== INPUT ====================
 const keys = {}, prev = {};
