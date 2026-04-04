@@ -318,7 +318,7 @@ function moveEntityVert(e, vy, checkPlatform) {
         e.onGround = true;
         return true;
       }
-      if (checkPlatform && isPlatform(tx, bot) && Math.floor((e.y + e.h - vy) / TS) < bot) {
+      if (checkPlatform && isPlatform(tx, bot) && Math.floor((e.y + e.h - vy - 1) / TS) < bot) {
         e.y = bot * TS - e.h;
         e.onGround = true;
         return true;
@@ -1134,7 +1134,7 @@ function drawMenu() {
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 22px Courier New';
-    ctx.fillText('PRESS  SPACE  TO  START', W / 2, 280);
+    ctx.fillText('TAP  OR  PRESS  SPACE  TO  START', W / 2, 280);
   }
 
   // Controls
@@ -1182,7 +1182,7 @@ function drawGameOver() {
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFF';
     ctx.font = 'bold 18px Courier New';
-    ctx.fillText('PRESS SPACE TO TRY AGAIN', W / 2, H / 2 + 110);
+    ctx.fillText('TAP  OR  PRESS  SPACE  TO  TRY  AGAIN', W / 2, H / 2 + 110);
   }
 }
 
@@ -1221,7 +1221,7 @@ function drawWin() {
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFF';
     ctx.font = 'bold 18px Courier New';
-    ctx.fillText('PRESS SPACE FOR NEW TRAIL', W / 2, H / 2 + 110);
+    ctx.fillText('TAP  OR  PRESS  SPACE  FOR  NEW  TRAIL', W / 2, H / 2 + 110);
   }
 }
 
@@ -1316,6 +1316,15 @@ function loop() {
 
 // ==================== TOUCH CONTROLS ====================
 function setupTouch() {
+  // Tap the canvas itself to advance menu / gameover / win screens
+  canvas.addEventListener('touchstart', e => {
+    if (game.state !== 'playing') {
+      e.preventDefault();
+      keys['Space'] = true;
+      setTimeout(() => { keys['Space'] = false; }, 100);
+    }
+  }, { passive: false });
+
   const bindings = {
     'btn-left':  'ArrowLeft',
     'btn-right': 'ArrowRight',
