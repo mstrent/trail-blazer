@@ -760,6 +760,7 @@ function updatePlayer() {
   const goalX = gDef[0] * TS, goalY = gDef[1] * TS;
   if (player.x + player.w > goalX && player.y < goalY + 48) {
     game.leaveNoTrace[game.levelNum] = items.every(i => i.collected);
+    game.trailAngel[game.levelNum] = enemies.every(en => !en.alive);
     game.levelTick = 0;
     game.state = 'levelcomplete';
   }
@@ -811,6 +812,14 @@ function scoreEnemy(e) {
   killEnemy(e);
   player.score += def.pts;
   addFloatText(e.x + e.w / 2, e.y - 10, `${def.label} +${def.pts}`, '#ffff44');
+
+  // Trail Angel award — all enemies defeated
+  if (enemies.every(en => !en.alive)) {
+    const bonus = 1500;
+    player.score += bonus;
+    addFloatText(player.x + player.w / 2, player.y - 30, 'TRAIL ANGEL! +' + bonus, '#ff88ff');
+    spawnParticles(player.x + player.w / 2, player.y, '#ff88ff', 20, 5);
+  }
 }
 
 // ==================== GAME STATE ====================
@@ -821,6 +830,7 @@ const game = {
   levelNum: 0,
   levelTick: 0,
   leaveNoTrace: [],  // per-level: true if all items collected
+  trailAngel: [],    // per-level: true if all enemies defeated
 };
 
 function saveHiScore() {
@@ -880,6 +890,7 @@ function loadLevel(num) {
 function initGame() {
   game.levelNum = 0;
   game.leaveNoTrace = [];
+  game.trailAngel = [];
   loadLevel(0);
   player = makePlayer();
   const spawn = LEVELS[0].spawnTile;
@@ -1973,16 +1984,24 @@ function drawLevelComplete() {
   ctx.fillText(`Score: ${player.score}`, W / 2, H / 2 + 15);
   ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, H / 2 + 40);
 
+  let awardY = H / 2 + 62;
   if (game.leaveNoTrace[game.levelNum]) {
     ctx.fillStyle = '#44ffaa';
     ctx.font = 'bold 16px Courier New';
-    ctx.fillText('LEAVE NO TRACE +1000', W / 2, H / 2 + 62);
+    ctx.fillText('LEAVE NO TRACE +1000', W / 2, awardY);
+    awardY += 22;
+  }
+  if (game.trailAngel[game.levelNum]) {
+    ctx.fillStyle = '#ff88ff';
+    ctx.font = 'bold 16px Courier New';
+    ctx.fillText('TRAIL ANGEL +1500', W / 2, awardY);
+    awardY += 22;
   }
 
   if (nextDef) {
     ctx.fillStyle = '#AAAAFF';
     ctx.font = '14px Courier New';
-    ctx.fillText('Next: ' + nextDef.name + ' \u2014 ' + nextDef.subtitle, W / 2, H / 2 + 88);
+    ctx.fillText('Next: ' + nextDef.name + ' \u2014 ' + nextDef.subtitle, W / 2, awardY + 4);
   }
 
   if (Math.floor(game.tick / 30) % 2 === 0) {
@@ -2015,8 +2034,13 @@ function drawWin() {
   ctx.font = '14px Courier New';
   LEVELS.forEach((l, i) => {
     const lnt = game.leaveNoTrace[i];
-    ctx.fillStyle = lnt ? '#44ffaa' : '#AAAAFF';
-    ctx.fillText((i + 1) + '. ' + l.name + (lnt ? '  -  Leave No Trace!' : ''), W / 2, H / 2 + 40 + i * 20);
+    const ta = game.trailAngel[i];
+    const awards = [];
+    if (lnt) awards.push('Leave No Trace');
+    if (ta) awards.push('Trail Angel');
+    const suffix = awards.length ? '  -  ' + awards.join(', ') + '!' : '';
+    ctx.fillStyle = (lnt || ta) ? '#44ffaa' : '#AAAAFF';
+    ctx.fillText((i + 1) + '. ' + l.name + suffix, W / 2, H / 2 + 40 + i * 20);
   });
 
   // Stars
