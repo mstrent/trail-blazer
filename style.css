@@ -183,22 +183,22 @@ canvas {
     gap: 3px;
   }
   .touch-btn {
-    background: rgba(10, 25, 10, 0.12);
-    border-color: rgba(58, 180, 58, 0.15);
+    background: rgba(10, 25, 10, 0.30);
+    border-color: rgba(58, 180, 58, 0.30);
     font-size: clamp(14px, 3vw, 20px);
-    color: rgba(139, 196, 139, 0.5);
+    color: rgba(139, 196, 139, 0.7);
   }
   .touch-btn:active {
-    background: rgba(58, 180, 58, 0.18);
+    background: rgba(58, 180, 58, 0.30);
   }
   #btn-spray {
-    border-color: rgba(255, 136, 0, 0.15);
-    color: rgba(255, 136, 0, 0.5);
+    border-color: rgba(255, 136, 0, 0.30);
+    color: rgba(255, 136, 0, 0.7);
   }
   .touch-btn-jump {
-    border-color: rgba(255, 215, 0, 0.18);
+    border-color: rgba(255, 215, 0, 0.35);
     border-width: 2px;
-    color: rgba(255, 215, 0, 0.5);
+    color: rgba(255, 215, 0, 0.7);
   }
   #btn-down, #btn-spray {
     font-size: clamp(8px, 1.8vw, 11px);
