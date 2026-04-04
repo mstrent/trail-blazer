@@ -2128,7 +2128,9 @@ function drawLevelComplete() {
   const levelDistances = [3744, 4704, 5664]; // goal x positions in pixels
   const theoreticalFrames = levelDistances[game.levelNum] / 3.5;
   const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8); // 1.8x buffer for obstacles, jumping, enemies
-  const timeBonus = Math.floor((targetTime - timeSeconds) * 10); // 10 points per second vs target (+bonus for fast, -penalty for slow)
+  // Exponential bonus/penalty: 100 points at target, scales with 1.1^seconds_diff
+  const timeDiff = targetTime - timeSeconds;
+  const timeBonus = Math.floor(100 * Math.pow(1.1, timeDiff));
   player.score += timeBonus; // Always apply, even if negative
   ctx.fillText(`Time: ${timeStr}`, W / 2, H / 2 + 65);
   ctx.fillStyle = timeBonus >= 0 ? '#FFFF88' : '#FF8888';
