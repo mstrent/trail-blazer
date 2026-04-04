@@ -170,8 +170,8 @@ canvas {
     position: fixed;
     bottom: 8px;
     left: 8px;
-    width: clamp(90px, 18vw, 140px);
-    height: clamp(44px, 9vw, 65px);
+    width: clamp(108px, 21.6vw, 168px);
+    height: clamp(53px, 10.8vw, 78px);
     gap: 4px;
   }
   #touch-right {
