@@ -255,7 +255,7 @@ const LEVELS = [
       // ---- WATERFALL GORGE (x: 45-70) ----
       fill(47, 11, 68, 11, T_EMPTY);
       fill(47, 12, 68, 13, T_WATER);
-      hline(47, 48, 10, T_SOLID);
+      hline(47, 70, 10, T_SOLID); // rescue ledge: player can jump from y=14 floor to y=10, then escape up
       hline(50, 51, 8, T_SOLID);
       hline(53, 53, 6, T_PLATFORM);
       hline(55, 56, 9, T_SOLID);
@@ -263,7 +263,6 @@ const LEVELS = [
       hline(61, 61, 5, T_PLATFORM);
       hline(63, 64, 8, T_SOLID);
       hline(66, 67, 6, T_PLATFORM);
-      hline(69, 70, 10, T_SOLID);
 
       // ---- SWITCHBACK ASCENT (x: 70-105) ----
       fill(70, 9, 75, 10, T_SOLID);
@@ -281,6 +280,7 @@ const LEVELS = [
       // ---- EXPOSED RIDGE (x: 105-140) ----
       fill(105, 11, 138, 11, T_EMPTY);
       fill(105, 12, 138, 13, T_WATER);
+      hline(105, 138, 10, T_SOLID); // rescue ledge: player can jump from y=14 floor to y=10, then reach platforms above
       hline(105, 108, 8, T_PLATFORM);
       hline(110, 112, 6, T_PLATFORM);
       hline(114, 116, 8, T_PLATFORM);
@@ -325,7 +325,7 @@ const LEVELS = [
       return [
         makeMarmot(14, 10), makeMarmot(38, 7), makeMarmot(72, 8),
         makeMarmot(105, 10), makeMarmot(142, 8), makeMarmot(162, 8),
-        makeMouse(22, 10), makeMouse(55, 8), makeMouse(95, 10), makeMouse(140, 8),
+        makeMouse(21, 10), makeMouse(55, 8), makeMouse(99, 10), makeMouse(140, 8),
         makeMosquito(20, 6), makeMosquito(45, 5), makeMosquito(58, 4),
         makeMosquito(80, 4), makeMosquito(96, 3), makeMosquito(112, 4),
         makeMosquito(126, 3), makeMosquito(150, 4), makeMosquito(170, 3),
