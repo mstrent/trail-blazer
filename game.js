@@ -318,7 +318,7 @@ function moveEntityVert(e, vy, checkPlatform) {
         e.onGround = true;
         return true;
       }
-      if (checkPlatform && isPlatform(tx, bot) && Math.floor((e.y + e.h - vy) / TS) < bot) {
+      if (checkPlatform && isPlatform(tx, bot) && Math.floor((e.y + e.h - vy - 1) / TS) < bot) {
         e.y = bot * TS - e.h;
         e.onGround = true;
         return true;
