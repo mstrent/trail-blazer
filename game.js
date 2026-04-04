@@ -1166,16 +1166,18 @@ function drawPlayer() {
   ctx.save();
   ctx.translate(sx + player.w / 2, sy + player.h);
 
-  // Legs
+  // Legs – alternate both feet while walking
   const legY = player.onGround ? 0 : -2;
-  const legSwing = player.onGround && player.frame ? 4 : 0;
+  const isWalking = player.onGround && player.vx !== 0;
+  const leftSwing  = isWalking && player.frame === 1 ? 4 : 0;
+  const rightSwing = isWalking && player.frame === 0 ? 4 : 0;
   ctx.fillStyle = '#5B8C5A'; // pant color
-  ctx.fillRect(-8, legY - 14, 6, 14);   // left leg
-  ctx.fillRect(2,  legY - 14 + legSwing, 6, 14); // right leg
+  ctx.fillRect(-8, legY - 14 + leftSwing, 6, 14);    // left leg
+  ctx.fillRect(2,  legY - 14 + rightSwing, 6, 14);    // right leg
   // Boots
   ctx.fillStyle = '#3B2A1A';
-  ctx.fillRect(-10, legY - 4, 8, 5);
-  ctx.fillRect(0, legY - 4 + legSwing, 8, 5);
+  ctx.fillRect(-10, legY - 4 + leftSwing, 8, 5);
+  ctx.fillRect(0, legY - 4 + rightSwing, 8, 5);
 
   // Body / shirt
   ctx.fillStyle = '#4A8C6A';
