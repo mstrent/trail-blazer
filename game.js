@@ -17,12 +17,14 @@ function resizeCanvas() {
   const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
   const isLandscape = window.innerWidth > window.innerHeight;
   if (isTouch && isLandscape) {
-    // Use actual viewport height so the canvas doesn't overflow on devices where
-    // 100vh > physical screen height (e.g. iOS Safari in landscape). This also
-    // makes H < level height (480px), enabling vertical camera scrolling.
-    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    // Use visualViewport dimensions which match 100dvh/100dvw — the actual visible
+    // area excluding Android/iOS browser chrome (address bar, nav bar). This keeps
+    // the canvas logical size in sync with the CSS dvh sizing so content isn't clipped.
+    const vp = window.visualViewport;
+    const vh = vp ? vp.height : window.innerHeight;
+    const vw = vp ? vp.width : window.innerWidth;
     H = Math.min(480, Math.round(vh));
-    W = Math.round(H * (window.innerWidth / vh));
+    W = Math.round(vw);
   } else {
     W = 800;
     H = 480;

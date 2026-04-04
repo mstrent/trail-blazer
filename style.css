@@ -33,7 +33,8 @@ canvas {
     position: fixed;
     top: 0; left: 0;
     width: 100vw !important;
-    height: 100vh !important;
+    height: 100vh !important;   /* fallback for older browsers */
+    height: 100dvh !important;  /* dvh = actual visible viewport, excludes Android browser chrome */
     border: none;
     box-shadow: none;
     z-index: 0;
