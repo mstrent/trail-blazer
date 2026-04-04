@@ -1964,13 +1964,25 @@ function drawMenu() {
     ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, 310);
 
     ctx.font = '12px Courier New';
-    leaderboard.forEach((entry, i) => {
+    const rowHeight = 16;
+    const firstRowY = 334;
+    const maxRows = Math.min(
+      leaderboard.length,
+      Math.max(1, Math.floor((H - firstRowY - 30) / rowHeight))
+    );
+
+    leaderboard.slice(0, maxRows).forEach((entry, i) => {
       const rank = (i + 1).toString().padStart(2, ' ');
-      const name = (entry.name || '???').padEnd(3, ' ');
+      const name = (entry.name || '???').toUpperCase().slice(0, 8).padEnd(8, ' ');
       const score = entry.score.toString().padStart(7, ' ');
       ctx.fillStyle = i === 0 ? '#FFD700' : (i < 3 ? '#C0C0C0' : '#8BC48B');
-      ctx.fillText(`${rank}. ${name}  ${score}`, W / 2, 326 + i * 14);
+      ctx.fillText(`${rank}. ${name} ${score}`, W / 2, firstRowY + i * rowHeight);
     });
+
+    if (leaderboard.length > maxRows) {
+      ctx.fillStyle = '#88DDFF';
+      ctx.fillText('... more top scores', W / 2, firstRowY + maxRows * rowHeight);
+    }
   } else {
     // Show controls if no leaderboard yet
     ctx.fillStyle = '#8BC48B';
