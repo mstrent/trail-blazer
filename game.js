@@ -276,6 +276,12 @@ const LEVELS = [
       fill(94, 5, 98, 10, T_SOLID);
       hline(97, 102, 3, T_PLATFORM);
       fill(100, 4, 104, 10, T_SOLID);
+      // Rescue platforms in the two inescapable 1-tile gaps:
+      // x=93 is boxed by fills at x=92 and x=94 with no landing spot above y=11 floor.
+      // x=99 is similarly boxed; nearest platform (y=3) is 8 tiles above — unreachable.
+      // A platform at y=7 in each gap is reachable from y=11 (4 tiles = 128px < 142px jump).
+      set(93, 7, T_PLATFORM);
+      set(99, 7, T_PLATFORM);
 
       // ---- EXPOSED RIDGE (x: 105-140) ----
       fill(105, 11, 138, 11, T_EMPTY);
