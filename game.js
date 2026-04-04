@@ -1933,6 +1933,10 @@ function drawMenu() {
   ctx.save();
   ctx.translate(ox, oy);
   ctx.scale(scale, scale);
+  // Clip so mountains and other elements don't bleed into letterbox bars
+  ctx.beginPath();
+  ctx.rect(0, 0, LOGI_W, LOGI_H);
+  ctx.clip();
 
   // Background
   const grad = ctx.createLinearGradient(0, 0, 0, LOGI_H);
@@ -2231,7 +2235,14 @@ function update() {
   syncPrev();
 }
 
+const touchControlsEl = document.getElementById('touch-controls');
+function setTouchControlsVisible(visible) {
+  if (touchControlsEl) touchControlsEl.style.display = visible ? '' : 'none';
+}
+
 function draw() {
+  // Hide touch controls on non-gameplay screens so they don't cover title/UI content
+  setTouchControlsVisible(game.state === 'playing');
   ctx.clearRect(0, 0, W, H);
 
   if (game.state === 'menu') {
