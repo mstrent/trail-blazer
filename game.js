@@ -1919,28 +1919,43 @@ function drawEnterInitials() {
 }
 
 function drawMenu() {
+  // Scale the title screen into a fixed 800×480 logical space so all content fits
+  // any viewport. Black letterbox bars fill gaps when aspect ratio differs.
+  const LOGI_W = 800, LOGI_H = 480;
+  const scale = Math.min(W / LOGI_W, H / LOGI_H);
+  const ox = (W - LOGI_W * scale) / 2;
+  const oy = (H - LOGI_H * scale) / 2;
+
+  // Letterbox fill
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(ox, oy);
+  ctx.scale(scale, scale);
+
   // Background
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  const grad = ctx.createLinearGradient(0, 0, 0, LOGI_H);
   grad.addColorStop(0, '#2B4F6A');
   grad.addColorStop(1, '#1A2E3A');
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, LOGI_W, LOGI_H);
 
-  // Mountains — loop until we cover full canvas width (handles wide mobile screens)
+  // Mountains
   ctx.fillStyle = '#3A6A5A';
-  for (let i = 0; i * 200 - 50 < W + 200; i++) {
+  for (let i = 0; i * 200 - 50 < LOGI_W + 200; i++) {
     const bx = i * 200 - 50;
     const bh = 120 + i * 20;
     ctx.beginPath();
-    ctx.moveTo(bx, H * 0.7);
-    ctx.lineTo(bx + 100, H * 0.7 - bh);
-    ctx.lineTo(bx + 200, H * 0.7);
+    ctx.moveTo(bx, LOGI_H * 0.7);
+    ctx.lineTo(bx + 100, LOGI_H * 0.7 - bh);
+    ctx.lineTo(bx + 200, LOGI_H * 0.7);
     ctx.fill();
     ctx.fillStyle = '#D0E8F0';
     ctx.beginPath();
-    ctx.moveTo(bx + 100, H * 0.7 - bh);
-    ctx.lineTo(bx + 82, H * 0.7 - bh + 28);
-    ctx.lineTo(bx + 118, H * 0.7 - bh + 28);
+    ctx.moveTo(bx + 100, LOGI_H * 0.7 - bh);
+    ctx.lineTo(bx + 82, LOGI_H * 0.7 - bh + 28);
+    ctx.lineTo(bx + 118, LOGI_H * 0.7 - bh + 28);
     ctx.fill();
     ctx.fillStyle = '#3A6A5A';
   }
@@ -1951,22 +1966,22 @@ function drawMenu() {
   ctx.textAlign = 'center';
   ctx.shadowColor = '#AA8800';
   ctx.shadowBlur = 10;
-  ctx.fillText('TRAIL BLAZER', W / 2, 120);
+  ctx.fillText('TRAIL BLAZER', LOGI_W / 2, 120);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#88DDFF';
   ctx.font = 'bold 20px Courier New';
-  ctx.fillText('An Ultralight Backpacking Adventure', W / 2, 160);
+  ctx.fillText('An Ultralight Backpacking Adventure', LOGI_W / 2, 160);
 
   ctx.fillStyle = '#4E7D3A';
   ctx.font = '13px Courier New';
-  ctx.fillText(LEVELS.length + ' trails to conquer \u2014 reach the summit!', W / 2, 195);
+  ctx.fillText(LEVELS.length + ' trails to conquer \u2014 reach the summit!', LOGI_W / 2, 195);
 
   // Blinking start
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 22px Courier New';
-    ctx.fillText('TAP  OR  PRESS  SPACE  TO  START', W / 2, 240);
+    ctx.fillText('TAP  OR  PRESS  SPACE  TO  START', LOGI_W / 2, 240);
   }
 
   // Arcade attract: flip between controls and leaderboard every 5 seconds (300 ticks)
@@ -1977,12 +1992,11 @@ function drawMenu() {
   // Panel header with indicator dots
   const panelY = 256;
   if (hasLeaderboard) {
-    // Draw two dots indicating which panel is shown
     const dotY = panelY - 4;
     [0, 1].forEach(idx => {
       const active = (showLeaderboard ? 1 : 0) === idx;
       ctx.beginPath();
-      ctx.arc(W / 2 - 8 + idx * 16, dotY, active ? 4 : 3, 0, Math.PI * 2);
+      ctx.arc(LOGI_W / 2 - 8 + idx * 16, dotY, active ? 4 : 3, 0, Math.PI * 2);
       ctx.fillStyle = active ? '#FFD700' : '#445566';
       ctx.fill();
     });
@@ -1991,7 +2005,7 @@ function drawMenu() {
   if (showLeaderboard) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 14px Courier New';
-    ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, panelY + 18);
+    ctx.fillText('TOP  TRAIL  BLAZERS', LOGI_W / 2, panelY + 18);
 
     ctx.font = '12px Courier New';
     const rowHeight = 16;
@@ -2002,13 +2016,12 @@ function drawMenu() {
       const name = (entry.name || '???').toUpperCase().slice(0, 8).padEnd(8, ' ');
       const score = entry.score.toString().padStart(7, ' ');
       ctx.fillStyle = i === 0 ? '#FFD700' : (i < 3 ? '#C0C0C0' : '#8BC48B');
-      ctx.fillText(`${rank}. ${name} ${score}`, W / 2, firstRowY + i * rowHeight);
+      ctx.fillText(`${rank}. ${name} ${score}`, LOGI_W / 2, firstRowY + i * rowHeight);
     });
   } else {
-    // Controls panel — always shown when leaderboard is absent, alternates when present
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 14px Courier New';
-    ctx.fillText('HOW  TO  PLAY', W / 2, panelY + 18);
+    ctx.fillText('HOW  TO  PLAY', LOGI_W / 2, panelY + 18);
 
     ctx.fillStyle = '#8BC48B';
     ctx.font = '13px Courier New';
@@ -2020,7 +2033,7 @@ function drawMenu() {
       'Stomp stunned enemies to score!',
     ];
     controls.forEach((line, i) => {
-      ctx.fillText(line, W / 2, panelY + 44 + i * 22);
+      ctx.fillText(line, LOGI_W / 2, panelY + 44 + i * 22);
     });
   }
 
@@ -2028,8 +2041,10 @@ function drawMenu() {
   if (game.hiScore > 0) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 14px Courier New';
-    ctx.fillText(`HI SCORE: ${game.hiScore}`, W / 2, H - 20);
+    ctx.fillText(`HI SCORE: ${game.hiScore}`, LOGI_W / 2, LOGI_H - 20);
   }
+
+  ctx.restore();
 }
 
 function drawGameOver() {
