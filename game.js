@@ -117,7 +117,7 @@ const LEVELS = [
       return [
         makeMarmot(20, 10), makeMarmot(27, 8), makeMarmot(52, 8),
         makeMarmot(72, 8), makeMarmot(95, 10),
-        makeMouse(45, 10), makeMouse(85, 8),
+        makeMouse(42, 10), makeMouse(85, 5),
         makeMosquito(40, 6), makeMosquito(50, 5), makeMosquito(67, 7),
         makeMosquito(88, 6), makeMosquito(104, 5),
         makeHiker(33, 6), makeHiker(80, 5), makeHiker(109, 3),
@@ -401,7 +401,7 @@ const ITEM_DEFS = {
   spork:  { label: 'Ti Spork',    pts: 100, color: '#C0C0C0', r: 8 },
   bar:    { label: 'Protein Bar', pts: 50,  color: '#D2691E', r: 8 },
   filter: { label: 'Water Filter',pts: 200, color: '#4169E1', r: 9 },
-  tent:   { label: 'Cuben Tent',  pts: 500, color: '#DAA520', r: 10 },
+  tent:   { label: 'DCF Tent',    pts: 500, color: '#DAA520', r: 10 },
   spray:  { label: 'Bear Spray',  pts: 150, color: '#FF4500', r: 9 },
 };
 
@@ -712,9 +712,7 @@ function updatePlayer() {
     // Glissade: kill already-stunned enemies, stun others
     if (player.glissading > 0) {
       if (e.stunTimer > 0 && !e.stunnedByGlissade) {
-        killEnemy(e);
-        player.score += e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150));
-        addFloatText(e.x + e.w / 2, e.y - 10, `+${e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150))}`, '#ffff44');
+        scoreEnemy(e);
       } else if (e.stunTimer === 0) {
         e.stunTimer = 120;
         e.stunnedByGlissade = true;
@@ -727,10 +725,7 @@ function updatePlayer() {
     const stomping = prevVy > 0 && player.y + player.h < e.y + e.h * 0.75;
     if (stomping) {
       if (e.stunTimer > 0) {
-        // Stomp stunned enemy = kill
-        killEnemy(e);
-        player.score += e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150));
-        addFloatText(e.x + e.w / 2, e.y - 10, `+${e.type === 'hiker' ? 300 : (e.type === 'marmot' ? 100 : (e.type === 'mouse' ? 75 : 150))}`, '#ffff44');
+        scoreEnemy(e);
       } else {
         // Bounce off (stuns enemy briefly)
         e.stunTimer = 60;
@@ -748,7 +743,7 @@ function updatePlayer() {
       item.collected = true;
       player.score += item.pts;
       spawnParticles(item.x + 10, item.y + 10, ITEM_DEFS[item.type].color, 8, 3);
-      addFloatText(item.x + 10, item.y - 8, `+${item.pts}`, '#ffff44');
+      addFloatText(item.x + 10, item.y - 8, `${ITEM_DEFS[item.type].label} +${item.pts}`, '#ffff44');
 
       // Leave No Trace award — all items collected
       if (items.every(i => i.collected)) {
@@ -799,20 +794,76 @@ function hurtPlayer(instant) {
   }
 }
 
+const ENEMY_DEFS = {
+  marmot:   { label: 'Marmot', pts: 100 },
+  mouse:    { label: 'Micro Bear', pts: 75 },
+  mosquito: { label: 'Mosquito', pts: 150 },
+  hiker:    { label: 'Heavy Packer', pts: 300 },
+};
+
 function killEnemy(e) {
   e.alive = false;
   spawnParticles(e.x + e.w / 2, e.y + e.h / 2, '#aaff44', 12, 4);
 }
 
+function scoreEnemy(e) {
+  const def = ENEMY_DEFS[e.type];
+  killEnemy(e);
+  player.score += def.pts;
+  addFloatText(e.x + e.w / 2, e.y - 10, `${def.label} +${def.pts}`, '#ffff44');
+}
+
 // ==================== GAME STATE ====================
 const game = {
-  state: 'menu', // menu, playing, gameover, levelcomplete, win
+  state: 'menu', // menu, playing, gameover, levelcomplete, win, enterInitials
   tick: 0,
-  hiScore: 0,
+  hiScore: parseInt(localStorage.getItem('trailBlazerHiScore')) || 0,
   levelNum: 0,
   levelTick: 0,
   leaveNoTrace: [],  // per-level: true if all items collected
 };
+
+function saveHiScore() {
+  localStorage.setItem('trailBlazerHiScore', game.hiScore);
+}
+
+// ==================== LEADERBOARD ====================
+let leaderboard = [];
+let leaderboardLoaded = false;
+let initialsInput = '';
+let initialsSubmitted = false;
+let pendingScore = 0;
+
+function fetchLeaderboard() {
+  if (!window.db) return;
+  window.db.collection('leaderboard')
+    .orderBy('score', 'desc')
+    .limit(10)
+    .get()
+    .then(snapshot => {
+      leaderboard = [];
+      snapshot.forEach(doc => leaderboard.push(doc.data()));
+      leaderboardLoaded = true;
+    })
+    .catch(err => console.warn('Leaderboard fetch failed:', err));
+}
+
+function submitScore(name, score) {
+  if (!window.db) return;
+  window.db.collection('leaderboard').add({
+    name: name.toUpperCase(),
+    score: score,
+    date: new Date().toISOString(),
+  })
+  .then(() => fetchLeaderboard())
+  .catch(err => console.warn('Score submit failed:', err));
+}
+
+function qualifiesForLeaderboard(score) {
+  if (score <= 0) return false;
+  if (!leaderboardLoaded || leaderboard.length < 10) return true;
+  return score > leaderboard[leaderboard.length - 1].score;
+}
 
 function loadLevel(num) {
   game.levelNum = num;
@@ -1426,100 +1477,195 @@ function drawHiker(e) {
 }
 
 function drawItemIcon(type, cx, cy) {
-  // Draw a recognizable pixel-art icon centered at (cx, cy)
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.scale(1.25, 1.25);
+  ctx.scale(1.44, 1.44);
 
   if (type === 'spork') {
-    // Titanium spork: handle + prongs, scaled up
+    // Spork: spoon bowl with tines at the top edge
+    // Handle
+    ctx.fillStyle = '#D0D0D0';
+    ctx.fillRect(-1.5, 2, 3, 10);
+    ctx.fillStyle = '#E8E8E8';
+    ctx.fillRect(-0.5, 3, 1.5, 8);
+    // Spoon bowl
     ctx.fillStyle = '#E0E0E0';
-    ctx.fillRect(-2, -2, 3, 14);        // handle
-    ctx.fillRect(-6, -9, 3, 8);         // left prong
-    ctx.fillRect(-2, -9, 3, 8);         // middle prong
-    ctx.fillRect(3, -9, 3, 8);          // right prong
-    ctx.fillStyle = '#BBB';
-    ctx.fillRect(-6, -10, 12, 2);       // top edge
-    ctx.fillStyle = '#FFF';
-    ctx.fillRect(-5, -8, 1, 5);         // shine
+    ctx.beginPath();
+    ctx.ellipse(0, -2, 7, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Inner bowl shading
+    ctx.fillStyle = '#CCC';
+    ctx.beginPath();
+    ctx.ellipse(1, -1, 4.5, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Tines (3 short notches at the top of the bowl)
+    ctx.fillStyle = '#E0E0E0';
+    ctx.fillRect(-5, -9, 2, 4);
+    ctx.fillRect(-1, -10, 2, 4);
+    ctx.fillRect(3, -9, 2, 4);
+    // Notch gaps between tines
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(-3, -8, 1.5, 3);
+    ctx.fillRect(1.5, -8, 1.5, 3);
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(-4, -5, 1.5, 5);
 
   } else if (type === 'bar') {
-    // Protein bar: wrapper with stripe and text
+    // Protein bar with torn wrapper
+    // Outer wrapper
+    ctx.fillStyle = '#7A4A1B';
+    roundRect(-10, -6, 20, 13, 2);
+    // Inner wrapper
     ctx.fillStyle = '#8B5A2B';
-    ctx.fillRect(-9, -5, 18, 11);       // bar body
+    roundRect(-9, -5, 18, 11, 1);
+    // Gold stripe
     ctx.fillStyle = '#D4A045';
-    ctx.fillRect(-9, -2, 18, 4);        // stripe
+    ctx.fillRect(-9, -2, 18, 4);
+    // "TRAIL" text dots
     ctx.fillStyle = '#FFF';
-    ctx.fillRect(-5, -1, 2, 2);         // text dot 1
-    ctx.fillRect(-1, -1, 2, 2);         // text dot 2
-    ctx.fillRect(3, -1, 2, 2);          // text dot 3
+    ctx.fillRect(-7, -1, 1, 2);
+    ctx.fillRect(-4, -1, 1, 2);
+    ctx.fillRect(-1, -1, 2, 2);
+    ctx.fillRect(3, -1, 1, 2);
+    ctx.fillRect(6, -1, 1, 2);
+    // Wrapper edges
     ctx.fillStyle = '#6B3A1B';
-    ctx.fillRect(-9, -5, 2, 11);        // left edge
-    ctx.fillRect(7, -5, 2, 11);         // right edge
-    ctx.fillStyle = '#A0722B';
-    ctx.fillRect(-7, 3, 14, 2);         // bottom fold
+    ctx.fillRect(-10, -6, 2, 13);
+    ctx.fillRect(8, -6, 2, 13);
+    // Torn foil peek
+    ctx.fillStyle = '#C0B090';
+    ctx.fillRect(-10, -3, 2, 4);
 
   } else if (type === 'filter') {
-    // Water filter: bottle shape with pump handle
+    // Water filter bottle with squeeze pump
+    // Bottle body
     ctx.fillStyle = '#2255CC';
-    ctx.fillRect(-4, -2, 8, 13);        // body
+    roundRect(-5, -1, 10, 14, 3);
+    // Highlight
     ctx.fillStyle = '#3377EE';
-    ctx.fillRect(-3, -1, 5, 10);        // highlight
+    roundRect(-4, 0, 6, 11, 2);
+    // Base ring
     ctx.fillStyle = '#1144AA';
-    ctx.fillRect(-4, 8, 8, 3);          // base
+    roundRect(-5, 10, 10, 3, 1);
+    // Neck
+    ctx.fillStyle = '#2255CC';
+    ctx.fillRect(-3, -5, 6, 5);
+    // Cap
+    ctx.fillStyle = '#44AA44';
+    roundRect(-4, -7, 8, 3, 1);
+    // Pump tube
     ctx.fillStyle = '#88BBFF';
-    ctx.fillRect(-2, -8, 3, 7);         // pump tube
+    ctx.fillRect(-1, -12, 2, 6);
+    // Pump handle
     ctx.fillStyle = '#DDD';
-    ctx.fillRect(-4, -10, 7, 3);        // pump handle
-    ctx.fillStyle = '#FFF';
-    ctx.fillRect(-3, 1, 2, 2);          // water drop
+    roundRect(-4, -14, 8, 3, 1);
+    // Water drops
+    ctx.fillStyle = 'rgba(150,200,255,0.8)';
+    ctx.beginPath();
+    ctx.arc(-2, 5, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(1, 8, 1, 0, Math.PI * 2);
+    ctx.fill();
 
   } else if (type === 'tent') {
-    // Cuben tent: triangle with ridge line and stakes
+    // Ultralight tent with guy lines and vestibule
+    // Main body
     ctx.fillStyle = '#C8960F';
     ctx.beginPath();
-    ctx.moveTo(0, -10);                 // peak
-    ctx.lineTo(-10, 7);                 // left base
-    ctx.lineTo(10, 7);                  // right base
+    ctx.moveTo(0, -12);
+    ctx.lineTo(-12, 8);
+    ctx.lineTo(12, 8);
     ctx.fill();
+    // Shadow side
     ctx.fillStyle = '#A07808';
     ctx.beginPath();
-    ctx.moveTo(0, -10);
-    ctx.lineTo(0, 7);
-    ctx.lineTo(10, 7);
+    ctx.moveTo(0, -12);
+    ctx.lineTo(0, 8);
+    ctx.lineTo(12, 8);
     ctx.fill();
-    // Door flap
+    // Ridge line highlight
+    ctx.strokeStyle = '#E8C840';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(0, 8);
+    ctx.stroke();
+    // Door
     ctx.fillStyle = '#E8B830';
     ctx.beginPath();
-    ctx.moveTo(-2, 7);
-    ctx.lineTo(0, -2);
-    ctx.lineTo(2, 7);
+    ctx.moveTo(-3, 8);
+    ctx.quadraticCurveTo(0, -1, 3, 8);
     ctx.fill();
-    // Guy lines
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1;
+    // Door mesh
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
-    ctx.moveTo(-10, 7); ctx.lineTo(-12, 9);
-    ctx.moveTo(10, 7); ctx.lineTo(12, 9);
+    ctx.moveTo(-1, 8); ctx.lineTo(0, 1); ctx.moveTo(1, 8); ctx.lineTo(0, 1);
+    ctx.stroke();
+    // Guy lines and stakes
+    ctx.strokeStyle = '#AAA';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(-12, 8); ctx.lineTo(-15, 11);
+    ctx.moveTo(12, 8); ctx.lineTo(15, 11);
+    ctx.moveTo(0, -12); ctx.lineTo(-4, -15);
+    ctx.moveTo(0, -12); ctx.lineTo(4, -15);
     ctx.stroke();
 
   } else if (type === 'spray') {
-    // Bear spray: canister with nozzle and label
+    // Bear spray canister with safety clip
+    // Main canister
     ctx.fillStyle = '#DD3300';
-    ctx.fillRect(-4, -4, 8, 14);        // canister
+    roundRect(-5, -4, 10, 16, 3);
+    // Highlight
     ctx.fillStyle = '#FF5500';
-    ctx.fillRect(-3, -3, 5, 11);        // highlight
+    roundRect(-4, -3, 6, 13, 2);
+    // Bear silhouette label area
     ctx.fillStyle = '#FFF';
-    ctx.fillRect(-3, 2, 6, 3);          // label
+    roundRect(-4, 2, 8, 5, 1);
+    // Bear icon on label
+    ctx.fillStyle = '#DD3300';
+    ctx.beginPath();
+    ctx.arc(0, 4, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-1, 5, 2, 1.5);
+    // Top cap
     ctx.fillStyle = '#333';
-    ctx.fillRect(-3, -8, 6, 5);         // top cap
-    ctx.fillStyle = '#666';
-    ctx.fillRect(-2, -11, 3, 4);        // nozzle
+    roundRect(-4, -8, 8, 5, 2);
+    // Nozzle
+    ctx.fillStyle = '#555';
+    ctx.fillRect(-2, -12, 4, 5);
+    // Safety trigger
     ctx.fillStyle = '#FF8800';
-    ctx.fillRect(-2, -12, 4, 2);        // trigger
+    roundRect(-3, -13, 6, 2, 1);
+    // Safety clip
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(4, -10);
+    ctx.lineTo(6, -12);
+    ctx.lineTo(6, -8);
+    ctx.stroke();
   }
 
   ctx.restore();
+}
+
+// Helper for rounded rectangles in item icons
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.fill();
 }
 
 function drawItems() {
@@ -1637,6 +1783,57 @@ function drawFloatTexts() {
 }
 
 // ==================== SCREENS ====================
+function drawEnterInitials() {
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 36px Courier New';
+  ctx.fillText('NEW HIGH SCORE!', W / 2, H / 2 - 90);
+
+  ctx.fillStyle = '#88DDFF';
+  ctx.font = 'bold 28px Courier New';
+  ctx.fillText(pendingScore.toString(), W / 2, H / 2 - 50);
+
+  ctx.fillStyle = '#FFF';
+  ctx.font = '18px Courier New';
+  ctx.fillText('ENTER YOUR INITIALS', W / 2, H / 2 - 10);
+
+  // Draw 3 boxes for initials
+  const boxW = 50, boxH = 60, gap = 15;
+  const startX = W / 2 - (boxW * 3 + gap * 2) / 2;
+  for (let i = 0; i < 3; i++) {
+    const bx = startX + i * (boxW + gap);
+    const by = H / 2 + 10;
+
+    ctx.strokeStyle = i === initialsInput.length ? '#FFD700' : '#555';
+    ctx.lineWidth = i === initialsInput.length ? 3 : 2;
+    ctx.strokeRect(bx, by, boxW, boxH);
+
+    if (initialsInput[i]) {
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 40px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(initialsInput[i], bx + boxW / 2, by + boxH - 12);
+    } else if (i === initialsInput.length && Math.floor(game.tick / 20) % 2 === 0) {
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(bx + 15, by + boxH - 15, 20, 3);
+    }
+  }
+
+  ctx.textAlign = 'center';
+  if (initialsSubmitted) {
+    ctx.fillStyle = '#88FF88';
+    ctx.font = 'bold 20px Courier New';
+    ctx.fillText('SCORE SUBMITTED!', W / 2, H / 2 + 110);
+  } else if (initialsInput.length === 3 && Math.floor(game.tick / 30) % 2 === 0) {
+    ctx.fillStyle = '#88FF88';
+    ctx.font = 'bold 16px Courier New';
+    ctx.fillText('PRESS ENTER TO SUBMIT', W / 2, H / 2 + 110);
+  }
+}
+
 function drawMenu() {
   // Background
   const grad = ctx.createLinearGradient(0, 0, 0, H);
@@ -1688,19 +1885,34 @@ function drawMenu() {
     ctx.fillText('TAP  OR  PRESS  SPACE  TO  START', W / 2, 280);
   }
 
-  // Controls
-  ctx.fillStyle = '#8BC48B';
-  ctx.font = '13px Courier New';
-  const controls = [
-    '← → / A D   :  Move',
-    '↑ / W / Z / SPACE  :  Jump',
-    '↓ + Move  :  Glissade (slide & stun)',
-    'X  :  Bear Spray (stun enemies)',
-    'Stomp stunned enemies to defeat them!',
-  ];
-  controls.forEach((line, i) => {
-    ctx.fillText(line, W / 2, 330 + i * 22);
-  });
+  // Leaderboard
+  if (leaderboardLoaded && leaderboard.length > 0) {
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, 320);
+
+    ctx.font = '13px Courier New';
+    leaderboard.forEach((entry, i) => {
+      const rank = (i + 1).toString().padStart(2, ' ');
+      const name = (entry.name || '???').padEnd(3, ' ');
+      const score = entry.score.toString().padStart(7, ' ');
+      ctx.fillStyle = i === 0 ? '#FFD700' : (i < 3 ? '#C0C0C0' : '#8BC48B');
+      ctx.fillText(`${rank}. ${name}  ${score}`, W / 2, 342 + i * 17);
+    });
+  } else {
+    // Show controls if no leaderboard yet
+    ctx.fillStyle = '#8BC48B';
+    ctx.font = '13px Courier New';
+    const controls = [
+      '\u2190 \u2192 / A D   :  Move',
+      '\u2191 / W / Z / SPACE  :  Jump',
+      '\u2193 + Move  :  Glissade (slide & stun)',
+      'X  :  Bear Spray (stun enemies)',
+    ];
+    controls.forEach((line, i) => {
+      ctx.fillText(line, W / 2, 330 + i * 22);
+    });
+  }
 
   // High score
   if (game.hiScore > 0) {
@@ -1842,23 +2054,40 @@ function update() {
     updateCamera(player.x, player.y);
 
   } else if (game.state === 'gameover') {
-    if (game.hiScore < player.score) game.hiScore = player.score;
+    if (game.hiScore < player.score) { game.hiScore = player.score; saveHiScore(); }
     if (jp('Space') || jp('KeyZ')) {
-      game.state = 'menu';
+      if (qualifiesForLeaderboard(player.score)) {
+        pendingScore = player.score;
+        initialsInput = '';
+        initialsSubmitted = false;
+        game.state = 'enterInitials';
+      } else {
+        game.state = 'menu';
+      }
     }
 
   } else if (game.state === 'levelcomplete') {
     game.levelTick++;
-    if (game.hiScore < player.score) game.hiScore = player.score;
+    if (game.hiScore < player.score) { game.hiScore = player.score; saveHiScore(); }
     if (jp('Space') || jp('KeyZ')) {
       advanceLevel();
     }
 
   } else if (game.state === 'win') {
-    if (game.hiScore < player.score) game.hiScore = player.score;
+    if (game.hiScore < player.score) { game.hiScore = player.score; saveHiScore(); }
     if (jp('Space') || jp('KeyZ')) {
-      game.state = 'menu';
+      if (qualifiesForLeaderboard(player.score)) {
+        pendingScore = player.score;
+        initialsInput = '';
+        initialsSubmitted = false;
+        game.state = 'enterInitials';
+      } else {
+        game.state = 'menu';
+      }
     }
+
+  } else if (game.state === 'enterInitials') {
+    // handled by keydown listener
   }
 
   syncPrev();
@@ -1871,6 +2100,10 @@ function draw() {
     drawMenu();
     return;
   }
+  if (game.state === 'enterInitials') {
+    drawEnterInitials();
+    return;
+  }
   if (game.state === 'gameover') {
     // Draw game behind
     drawBackground();
@@ -1880,6 +2113,7 @@ function draw() {
     enemies.forEach(e => {
       if (!e.alive) return;
       if (e.type === 'marmot') drawMarmot(e);
+      else if (e.type === 'mouse') drawMouse(e);
       else if (e.type === 'mosquito') drawMosquito(e);
       else if (e.type === 'hiker') drawHiker(e);
     });
@@ -1933,10 +2167,22 @@ function loop() {
 function setupTouch() {
   // Tap the canvas itself to advance menu / gameover / win screens
   canvas.addEventListener('touchstart', e => {
-    if (game.state !== 'playing') {
+    if (game.state !== 'playing' && game.state !== 'enterInitials') {
       e.preventDefault();
       keys['Space'] = true;
       setTimeout(() => { keys['Space'] = false; }, 100);
+    } else if (game.state === 'enterInitials' && !initialsSubmitted) {
+      // On mobile, use prompt for initials
+      e.preventDefault();
+      const name = prompt('Enter 3-letter initials:');
+      if (name && name.trim().length > 0) {
+        initialsInput = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3).padEnd(3, 'A');
+        initialsSubmitted = true;
+        submitScore(initialsInput, pendingScore);
+        setTimeout(() => { game.state = 'menu'; }, 1500);
+      } else {
+        game.state = 'menu';
+      }
     }
   }, { passive: false });
 
@@ -1967,8 +2213,34 @@ function setupTouch() {
   }
 }
 
+// ==================== INITIALS INPUT ====================
+addEventListener('keydown', e => {
+  if (game.state !== 'enterInitials' || initialsSubmitted) return;
+
+  if (e.code === 'Backspace') {
+    initialsInput = initialsInput.slice(0, -1);
+    e.preventDefault();
+    return;
+  }
+
+  if ((e.code === 'Enter' || e.code === 'Space') && initialsInput.length === 3) {
+    initialsSubmitted = true;
+    submitScore(initialsInput, pendingScore);
+    setTimeout(() => { game.state = 'menu'; }, 1500);
+    e.preventDefault();
+    return;
+  }
+
+  const match = e.code.match(/^Key([A-Z])$/);
+  if (match && initialsInput.length < 3) {
+    initialsInput += match[1];
+    e.preventDefault();
+  }
+});
+
 // ==================== BOOT ====================
 setupTouch();
+fetchLeaderboard();
 requestAnimationFrame(loop);
 
 })();
