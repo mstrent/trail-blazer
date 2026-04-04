@@ -1963,7 +1963,7 @@ function drawMenu() {
   const showLeaderboard = hasLeaderboard && Math.floor(game.tick / ATTRACT_FLIP) % 2 === 1;
 
   // Panel header with indicator dots
-  const panelY = 272;
+  const panelY = 256;
   if (hasLeaderboard) {
     // Draw two dots indicating which panel is shown
     const dotY = panelY - 4;
@@ -1982,25 +1982,16 @@ function drawMenu() {
     ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, panelY + 18);
 
     ctx.font = '12px Courier New';
-    const rowHeight = 18;
+    const rowHeight = 16;
     const firstRowY = panelY + 44;
-    const maxRows = Math.min(
-      leaderboard.length,
-      Math.max(1, Math.floor((H - firstRowY - 40) / rowHeight))
-    );
 
-    leaderboard.slice(0, maxRows).forEach((entry, i) => {
+    leaderboard.forEach((entry, i) => {
       const rank = (i + 1).toString().padStart(2, ' ');
       const name = (entry.name || '???').toUpperCase().slice(0, 8).padEnd(8, ' ');
       const score = entry.score.toString().padStart(7, ' ');
       ctx.fillStyle = i === 0 ? '#FFD700' : (i < 3 ? '#C0C0C0' : '#8BC48B');
       ctx.fillText(`${rank}. ${name} ${score}`, W / 2, firstRowY + i * rowHeight);
     });
-
-    if (leaderboard.length > maxRows) {
-      ctx.fillStyle = '#88DDFF';
-      ctx.fillText('... more top scores', W / 2, firstRowY + maxRows * rowHeight);
-    }
   } else {
     // Controls panel — always shown when leaderboard is absent, alternates when present
     ctx.fillStyle = '#FFD700';
