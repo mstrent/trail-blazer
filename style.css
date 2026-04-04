@@ -22,6 +22,26 @@ canvas {
   aspect-ratio: 800 / 480;
 }
 
+/* ===== LANDSCAPE MOBILE: full-screen canvas + overlay controls ===== */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  body {
+    padding-bottom: 0 !important;
+    justify-content: center;
+    overflow: hidden;
+  }
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    aspect-ratio: auto;
+    border: none;
+    box-shadow: none;
+    z-index: 0;
+  }
+  #controls { display: none; }
+}
+
 #controls {
   margin-top: 12px;
   color: #8bc48b;
@@ -51,6 +71,58 @@ canvas {
   #touch-controls { display: flex; }
   #controls { display: none; }
   body { padding-bottom: clamp(160px, 40vw, 240px); }
+}
+
+/* Landscape touch: overlay controls on top of full-screen canvas */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  #touch-controls {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: auto;
+    padding: 0;
+    z-index: 10;
+    background: none;
+    pointer-events: none;
+    gap: 0;
+    justify-content: space-between;
+  }
+  #touch-left {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    width: clamp(140px, 28vw, 220px);
+    height: clamp(70px, 14vw, 100px);
+    gap: 6px;
+  }
+  #touch-right {
+    position: fixed;
+    bottom: 12px;
+    right: 12px;
+    width: clamp(180px, 32vw, 260px);
+    height: clamp(110px, 20vw, 150px);
+    gap: 4px;
+  }
+  .touch-btn {
+    background: rgba(10, 25, 10, 0.40);
+    border-color: rgba(58, 180, 58, 0.35);
+    font-size: clamp(18px, 4vw, 28px);
+  }
+  .touch-btn:active {
+    background: rgba(58, 180, 58, 0.30);
+  }
+  #btn-spray {
+    border-color: rgba(255, 136, 0, 0.35);
+  }
+  .touch-btn-jump {
+    border-color: rgba(255, 215, 0, 0.40);
+  }
+  #btn-down, #btn-spray {
+    font-size: clamp(10px, 2.5vw, 14px);
+  }
+  .touch-btn-jump {
+    font-size: clamp(11px, 3vw, 16px);
+  }
 }
 
 #touch-left {
