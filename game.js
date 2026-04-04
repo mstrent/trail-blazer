@@ -723,8 +723,11 @@ function updatePlayer() {
   }
 
   // Enemy collisions
+  // Issue #16: Allow defeating enemies even during invincibility frames.
+  // Players can stomp, glissade, and spray during hurtTimer, but can't take additional damage.
+  // This maintains challenge and allows defeating water-spawned enemies.
   enemies.forEach(e => {
-    if (!e.alive || player.hurtTimer > 0) return;
+    if (!e.alive) return;
     if (!aabb(player, e)) return;
 
     // Glissade: kill already-stunned enemies, stun others
@@ -749,7 +752,8 @@ function updatePlayer() {
         e.stunTimer = 60;
         player.vy = -8;
       }
-    } else if (e.stunTimer === 0) {
+    } else if (e.stunTimer === 0 && player.hurtTimer === 0) {
+      // Only take damage if not currently invincible
       hurtPlayer();
     }
   });
