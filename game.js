@@ -586,6 +586,7 @@ const MOVE_SPEED = 3.5;
 const MAX_FALL = 15;
 const GLISSADE_SPEED = 7;
 const GLISSADE_DURATION = 24;
+const GLISSADE_COOLDOWN = 90;
 
 function makePlayer() {
   return {
@@ -595,6 +596,7 @@ function makePlayer() {
     onGround: false,
     facing: 1,
     glissading: 0,
+    glissadeCooldown: 0,
     jumpHeld: false,
     jumpBuffer: 0,
     lives: 3,
@@ -615,6 +617,7 @@ function updatePlayer() {
   if (player.hurtTimer > 0) player.hurtTimer--;
   if (player.sprayCooldown > 0) player.sprayCooldown--;
   if (player.sprayTimer > 0) player.sprayTimer--;
+  if (player.glissadeCooldown > 0) player.glissadeCooldown--;
 
   // Horizontal movement
   let dx = 0;
@@ -641,8 +644,9 @@ function updatePlayer() {
     // Clear glissade stun tracking when slide ends
     if (player.glissading === 0) {
       enemies.forEach(e => { e.stunnedByGlissade = false; });
+      player.glissadeCooldown = GLISSADE_COOLDOWN;
     }
-  } else if (isDown() && player.onGround && (isLeft() || isRight()) && player.hurtTimer === 0) {
+  } else if (isDown() && player.onGround && (isLeft() || isRight()) && player.hurtTimer === 0 && player.glissadeCooldown === 0) {
     player.glissading = GLISSADE_DURATION;
     spawnParticles(player.x + player.w / 2, player.y + player.h, '#aa8855', 6, 3);
   }
@@ -1177,57 +1181,99 @@ function drawPlayer() {
   ctx.save();
   ctx.translate(sx + player.w / 2, sy + player.h);
 
-  // Legs – alternate both feet while walking
-  const legY = player.onGround ? 0 : -2;
-  const isWalking = player.onGround && player.vx !== 0;
-  const leftSwing  = isWalking && player.frame === 1 ? 4 : 0;
-  const rightSwing = isWalking && player.frame === 0 ? 4 : 0;
-  ctx.fillStyle = '#5B8C5A'; // pant color
-  ctx.fillRect(-8, legY - 14 + leftSwing, 6, 14);    // left leg
-  ctx.fillRect(2,  legY - 14 + rightSwing, 6, 14);    // right leg
-  // Boots
-  ctx.fillStyle = '#3B2A1A';
-  ctx.fillRect(-10, legY - 4 + leftSwing, 8, 5);
-  ctx.fillRect(0, legY - 4 + rightSwing, 8, 5);
+  const sliding = player.glissading > 0;
 
-  // Body / shirt
-  ctx.fillStyle = '#4A8C6A';
-  ctx.fillRect(-9, -28, 18, 16);
+  if (sliding) {
+    // Lean BACK — classic sit-glissade posture
+    ctx.rotate(-f * 0.55);
 
-  // Backpack (tiny ultralight pack!)
-  ctx.fillStyle = '#2E5A8E';
-  ctx.fillRect(-9 * f - 2 * f, -28, 7, 14);
-  // Pack hip belt
-  ctx.fillStyle = '#1A3A6E';
-  ctx.fillRect(-9 * f - 2 * f, -14, 7, 3);
+    // Legs extended forward (in direction of travel)
+    ctx.fillStyle = '#5B8C5A';
+    ctx.fillRect(f * 4, -10, 7, 12);    // front leg
+    ctx.fillRect(f * 4, -10, 7, 12);    // (mirrored close together)
+    ctx.fillRect(-2, -10, 7, 12);       // rear leg slightly tucked
+    ctx.fillStyle = '#3B2A1A';
+    ctx.fillRect(f * 6, -2, 9, 5);      // front boot
+    ctx.fillRect(-4, -2, 9, 5);         // rear boot
 
-  // Head
-  ctx.fillStyle = '#FDBCB4';
-  ctx.beginPath();
-  ctx.arc(0, -36, 9, 0, Math.PI * 2);
-  ctx.fill();
+    // Body / shirt (reclined)
+    ctx.fillStyle = '#4A8C6A';
+    ctx.fillRect(-9, -24, 18, 14);
 
-  // Sunhat brim
-  ctx.fillStyle = '#8B6914';
-  ctx.fillRect(-12, -44, 24, 4);
-  // Hat top
-  ctx.fillStyle = '#A07828';
-  ctx.fillRect(-7, -54, 14, 11);
+    // Backpack (now behind/below due to lean)
+    ctx.fillStyle = '#2E5A8E';
+    ctx.fillRect(-9 * f - 2 * f, -24, 7, 12);
+    ctx.fillStyle = '#1A3A6E';
+    ctx.fillRect(-9 * f - 2 * f, -12, 7, 3);
 
-  // Eyes
-  ctx.fillStyle = '#333';
-  ctx.fillRect(2 * f, -39, 3, 3);
+    // Head tilted back
+    ctx.fillStyle = '#FDBCB4';
+    ctx.beginPath();
+    ctx.arc(-f * 3, -32, 9, 0, Math.PI * 2);
+    ctx.fill();
 
-  // Trekking poles (glissade, airborne, or walking)
-  if (player.glissading > 0) {
-    // Poles dragging behind during slide
+    // Sunhat brim
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(-14 - f * 3, -40, 24, 4);
+    ctx.fillStyle = '#A07828';
+    ctx.fillRect(-9 - f * 3, -50, 14, 11);
+
+    // Eyes
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-f * 3 + f * 2, -37, 3, 3);
+
+    // Pole digging in behind as brake
     ctx.strokeStyle = '#AAA';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(-f * 4, -18);
-    ctx.lineTo(-f * 20, 2);
+    ctx.lineTo(-f * 24, 4);
     ctx.stroke();
-  } else if (!player.onGround) {
+  } else {
+    // Legs – alternate both feet while walking
+    const legY = player.onGround ? 0 : -2;
+    const isWalking = player.onGround && player.vx !== 0;
+    const leftSwing  = isWalking && player.frame === 1 ? 4 : 0;
+    const rightSwing = isWalking && player.frame === 0 ? 4 : 0;
+    ctx.fillStyle = '#5B8C5A'; // pant color
+    ctx.fillRect(-8, legY - 14 + leftSwing, 6, 14);    // left leg
+    ctx.fillRect(2,  legY - 14 + rightSwing, 6, 14);    // right leg
+    // Boots
+    ctx.fillStyle = '#3B2A1A';
+    ctx.fillRect(-10, legY - 4 + leftSwing, 8, 5);
+    ctx.fillRect(0, legY - 4 + rightSwing, 8, 5);
+
+    // Body / shirt
+    ctx.fillStyle = '#4A8C6A';
+    ctx.fillRect(-9, -28, 18, 16);
+
+    // Backpack (tiny ultralight pack!)
+    ctx.fillStyle = '#2E5A8E';
+    ctx.fillRect(-9 * f - 2 * f, -28, 7, 14);
+    // Pack hip belt
+    ctx.fillStyle = '#1A3A6E';
+    ctx.fillRect(-9 * f - 2 * f, -14, 7, 3);
+
+    // Head
+    ctx.fillStyle = '#FDBCB4';
+    ctx.beginPath();
+    ctx.arc(0, -36, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sunhat brim
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(-12, -44, 24, 4);
+    // Hat top
+    ctx.fillStyle = '#A07828';
+    ctx.fillRect(-7, -54, 14, 11);
+
+    // Eyes
+    ctx.fillStyle = '#333';
+    ctx.fillRect(2 * f, -39, 3, 3);
+  }
+
+  // Trekking poles (airborne or walking) — only when not sliding
+  if (!sliding && !player.onGround) {
     // Pole pointing down in air
     ctx.strokeStyle = '#AAA';
     ctx.lineWidth = 2;
@@ -1235,8 +1281,8 @@ function drawPlayer() {
     ctx.moveTo(f * 8, -10);
     ctx.lineTo(f * 12, 6);
     ctx.stroke();
-  } else {
-    // Poles held to side
+  } else if (!sliding) {
+    // Poles held to side while walking/standing
     ctx.strokeStyle = '#AAA';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1781,6 +1827,19 @@ function drawHUD() {
     ctx.font = '9px Courier New';
     ctx.textAlign = 'left';
     ctx.fillText('SPRAY', 12, 52);
+  }
+
+  // Glissade cooldown indicator
+  if (player.glissadeCooldown > 0) {
+    const gx = player.sprayCooldown > 0 ? 96 : 8;
+    ctx.fillStyle = 'rgba(20,40,20,0.75)';
+    ctx.fillRect(gx, 40, 86, 16);
+    ctx.fillStyle = '#88AAEE';
+    ctx.fillRect(gx + 2, 42, 82 * (1 - player.glissadeCooldown / GLISSADE_COOLDOWN), 12);
+    ctx.fillStyle = '#FFF';
+    ctx.font = '9px Courier New';
+    ctx.textAlign = 'left';
+    ctx.fillText('GLISSADE', gx + 4, 52);
   }
 }
 
