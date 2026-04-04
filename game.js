@@ -1832,7 +1832,9 @@ function drawHUD() {
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
   ctx.fillStyle = '#88DDFF';
   ctx.font = 'bold 12px Courier New';
-  ctx.fillText(`TIME: ${timeStr}`, W / 2, 34);
+  ctx.textAlign = 'left';
+  ctx.fillText(`TIME: ${timeStr}`, 260, 22);
+  ctx.textAlign = 'right';
 
   // Trail progress bar
   const progress = clamp(player.x / (level.COLS * TS), 0, 1);
