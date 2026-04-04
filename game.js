@@ -616,49 +616,170 @@ const C = {
   leafLight: '#3CB343',
 };
 
+// Seeded pseudo-random for deterministic background elements
+function seededRand(seed) {
+  let s = seed | 0;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0x7fffffff;
+    return s / 0x7fffffff;
+  };
+}
+
+// Pre-generate background elements once so they stay consistent
+const bgFarMountains = (function() {
+  const r = seededRand(42);
+  const peaks = [];
+  for (let i = 0; i < 20; i++) {
+    peaks.push({
+      offset: i * 160 + r() * 60 - 30,
+      height: 70 + r() * 90,
+      width: 140 + r() * 120,
+      skew: r() * 0.3 - 0.15,
+    });
+  }
+  return peaks;
+})();
+
+const bgNearMountains = (function() {
+  const r = seededRand(99);
+  const peaks = [];
+  for (let i = 0; i < 16; i++) {
+    peaks.push({
+      offset: i * 200 + r() * 80 - 40,
+      height: 50 + r() * 60,
+      width: 120 + r() * 100,
+      skew: r() * 0.2 - 0.1,
+    });
+  }
+  return peaks;
+})();
+
+const bgTrees = (function() {
+  const r = seededRand(137);
+  const trees = [];
+  for (let i = 0; i < 40; i++) {
+    trees.push({
+      offset: i * 80 + r() * 40 - 20,
+      height: 40 + r() * 35,
+      width: 16 + r() * 14,
+    });
+  }
+  return trees;
+})();
+
+const bgClouds = (function() {
+  const r = seededRand(77);
+  const clouds = [];
+  for (let i = 0; i < 12; i++) {
+    clouds.push({
+      offset: i * 280 + r() * 120,
+      y: 20 + r() * 80,
+      w: 60 + r() * 80,
+      h: 18 + r() * 14,
+    });
+  }
+  return clouds;
+})();
+
 function drawBackground() {
   // Sky gradient
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, C.skyTop);
-  grad.addColorStop(1, C.skyBot);
+  grad.addColorStop(0.7, C.skyBot);
+  grad.addColorStop(1, '#C8E6C8');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Far mountains (parallax)
-  const mx = -cam.x * 0.15;
-  ctx.fillStyle = '#8BA89E';
-  for (let i = 0; i < 6; i++) {
-    const bx = ((i * 180 + mx) % (W + 200)) - 100;
-    const bh = 80 + i * 25;
+  // Clouds (very slow parallax)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  const cx = -cam.x * 0.05;
+  for (const c of bgClouds) {
+    const x = c.offset + cx;
+    // Wrap across the full scrollable range
+    const wrapW = bgClouds.length * 280;
+    const wx = ((x % wrapW) + wrapW) % wrapW - 140;
+    if (wx > W + 100 || wx + c.w < -100) continue;
     ctx.beginPath();
-    ctx.moveTo(bx, H * 0.55);
-    ctx.lineTo(bx + 100, H * 0.55 - bh);
-    ctx.lineTo(bx + 200, H * 0.55);
+    ctx.ellipse(wx + c.w / 2, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(wx + c.w * 0.3, c.y + 4, c.w * 0.35, c.h * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(wx + c.w * 0.7, c.y + 2, c.w * 0.3, c.h * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Far mountains (slow parallax)
+  const farX = -cam.x * 0.1;
+  const baseY = H * 0.55;
+  ctx.fillStyle = '#9BB5A8';
+  const farWrap = bgFarMountains.length * 160;
+  for (const m of bgFarMountains) {
+    const raw = m.offset + farX;
+    const x = ((raw % farWrap) + farWrap) % farWrap - m.width;
+    if (x > W + 50 || x + m.width < -50) continue;
+    const peak = m.width * (0.5 + m.skew);
+    ctx.beginPath();
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x + peak, baseY - m.height);
+    ctx.lineTo(x + m.width, baseY);
     ctx.fill();
     // Snow cap
     ctx.fillStyle = '#E8F4F8';
     ctx.beginPath();
-    ctx.moveTo(bx + 100, H * 0.55 - bh);
-    ctx.lineTo(bx + 80,  H * 0.55 - bh + 20);
-    ctx.lineTo(bx + 120, H * 0.55 - bh + 20);
+    ctx.moveTo(x + peak, baseY - m.height);
+    ctx.lineTo(x + peak - 18, baseY - m.height + 18);
+    ctx.lineTo(x + peak + 18, baseY - m.height + 18);
     ctx.fill();
-    ctx.fillStyle = '#8BA89E';
+    ctx.fillStyle = '#9BB5A8';
   }
 
-  // Pine trees (parallax)
-  ctx.fillStyle = '#1A5E1A';
-  for (let i = 0; i < 20; i++) {
-    const tx2 = ((i * 95 - cam.x * 0.3 + 3000) % (W + 60)) - 30;
-    const ty2 = H * 0.5 - 20;
+  // Near mountains (medium parallax)
+  const nearX = -cam.x * 0.2;
+  ctx.fillStyle = '#7A9E7E';
+  const nearWrap = bgNearMountains.length * 200;
+  for (const m of bgNearMountains) {
+    const raw = m.offset + nearX;
+    const x = ((raw % nearWrap) + nearWrap) % nearWrap - m.width;
+    if (x > W + 50 || x + m.width < -50) continue;
+    const peak = m.width * (0.5 + m.skew);
     ctx.beginPath();
-    ctx.moveTo(tx2, ty2 + 60);
-    ctx.lineTo(tx2 - 22, ty2 + 60);
-    ctx.lineTo(tx2, ty2);
+    ctx.moveTo(x, baseY + 10);
+    ctx.lineTo(x + peak, baseY + 10 - m.height);
+    ctx.lineTo(x + m.width, baseY + 10);
     ctx.fill();
+  }
+
+  // Pine trees (closer parallax)
+  const treeX = -cam.x * 0.3;
+  const treeBase = H * 0.53;
+  const treeWrap = bgTrees.length * 80;
+  for (const t of bgTrees) {
+    const raw = t.offset + treeX;
+    const x = ((raw % treeWrap) + treeWrap) % treeWrap - 30;
+    if (x > W + 30 || x < -30) continue;
+    // Trunk
+    ctx.fillStyle = '#3D2B1F';
+    ctx.fillRect(x - 2, treeBase - t.height * 0.3, 4, t.height * 0.3 + 10);
+    // Layered canopy
+    ctx.fillStyle = '#1A5E1A';
+    for (let layer = 0; layer < 3; layer++) {
+      const ly = treeBase - t.height * (0.3 + layer * 0.25);
+      const lw = t.width * (1 - layer * 0.2);
+      ctx.beginPath();
+      ctx.moveTo(x, ly);
+      ctx.lineTo(x - lw, ly + t.height * 0.3);
+      ctx.lineTo(x + lw, ly + t.height * 0.3);
+      ctx.fill();
+    }
+    // Highlight on one side
+    ctx.fillStyle = '#2B7A2B';
+    const hy = treeBase - t.height * 0.55;
     ctx.beginPath();
-    ctx.moveTo(tx2, ty2 + 40);
-    ctx.lineTo(tx2 - 28, ty2 + 40);
-    ctx.lineTo(tx2, ty2 - 20);
+    ctx.moveTo(x, hy);
+    ctx.lineTo(x + t.width * 0.7, hy + t.height * 0.25);
+    ctx.lineTo(x, hy + t.height * 0.25);
     ctx.fill();
   }
 }
