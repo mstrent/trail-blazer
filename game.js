@@ -2123,7 +2123,11 @@ function drawLevelComplete() {
   // Time and time bonus
   const timeSeconds = Math.floor(game.levelCompletionTime / 60);
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
-  const targetTime = 180; // 3 minutes target time
+  // Calculate theoretical minimum time based on level distance and player speed
+  // MOVE_SPEED = 3.5 pixels/frame, goal positions in pixels, add buffer for obstacles/jumping
+  const levelDistances = [3744, 4704, 5664]; // goal x positions in pixels
+  const theoreticalFrames = levelDistances[game.levelNum] / 3.5;
+  const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8); // 1.8x buffer for obstacles, jumping, enemies
   const timeBonus = Math.floor((targetTime - timeSeconds) * 10); // 10 points per second vs target (+bonus for fast, -penalty for slow)
   player.score += timeBonus; // Always apply, even if negative
   ctx.fillText(`Time: ${timeStr}`, W / 2, H / 2 + 65);
