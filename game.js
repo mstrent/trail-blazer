@@ -1833,7 +1833,7 @@ function drawHUD() {
   ctx.fillStyle = '#88DDFF';
   ctx.font = 'bold 12px Courier New';
   ctx.textAlign = 'left';
-  ctx.fillText(`TIME: ${timeStr}`, 260, 22);
+  ctx.fillText(`TIME: ${timeStr}`, 300, 22);
   ctx.textAlign = 'right';
 
   // Trail progress bar
