@@ -88,39 +88,39 @@ canvas {
   }
   #touch-left {
     position: fixed;
-    bottom: 12px;
-    left: 12px;
-    width: clamp(140px, 28vw, 220px);
-    height: clamp(70px, 14vw, 100px);
-    gap: 6px;
+    bottom: 10px;
+    left: 10px;
+    width: clamp(110px, 22vw, 170px);
+    height: clamp(55px, 11vw, 80px);
+    gap: 5px;
   }
   #touch-right {
     position: fixed;
-    bottom: 12px;
-    right: 12px;
-    width: clamp(180px, 32vw, 260px);
-    height: clamp(110px, 20vw, 150px);
-    gap: 4px;
+    bottom: 10px;
+    right: 10px;
+    width: clamp(140px, 26vw, 200px);
+    height: clamp(85px, 16vw, 120px);
+    gap: 3px;
   }
   .touch-btn {
-    background: rgba(10, 25, 10, 0.40);
-    border-color: rgba(58, 180, 58, 0.35);
-    font-size: clamp(18px, 4vw, 28px);
+    background: rgba(10, 25, 10, 0.25);
+    border-color: rgba(58, 180, 58, 0.25);
+    font-size: clamp(16px, 3.5vw, 24px);
   }
   .touch-btn:active {
-    background: rgba(58, 180, 58, 0.30);
+    background: rgba(58, 180, 58, 0.25);
   }
   #btn-spray {
-    border-color: rgba(255, 136, 0, 0.35);
+    border-color: rgba(255, 136, 0, 0.25);
   }
   .touch-btn-jump {
-    border-color: rgba(255, 215, 0, 0.40);
+    border-color: rgba(255, 215, 0, 0.30);
   }
   #btn-down, #btn-spray {
-    font-size: clamp(10px, 2.5vw, 14px);
+    font-size: clamp(9px, 2vw, 12px);
   }
   .touch-btn-jump {
-    font-size: clamp(11px, 3vw, 16px);
+    font-size: clamp(10px, 2.5vw, 14px);
   }
 }
 
