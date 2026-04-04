@@ -1808,11 +1808,11 @@ function drawHUD() {
 
   // Health (water drops)
   ctx.fillStyle = '#AAF';
-  ctx.fillText('H2O:', 160, 22);
+  ctx.fillText('H2O:', 140, 22);
   for (let i = 0; i < 3; i++) {
     ctx.fillStyle = i < player.health ? '#4169E1' : '#333';
     ctx.beginPath();
-    ctx.arc(210 + i * 20, 18, 7, 0, Math.PI * 2);
+    ctx.arc(190 + i * 20, 18, 7, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -1832,7 +1832,9 @@ function drawHUD() {
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
   ctx.fillStyle = '#88DDFF';
   ctx.font = 'bold 12px Courier New';
-  ctx.fillText(`TIME: ${timeStr}`, W / 2, 42);
+  ctx.textAlign = 'left';
+  ctx.fillText(`TIME: ${timeStr}`, 260, 22);
+  ctx.textAlign = 'right';
 
   // Trail progress bar
   const progress = clamp(player.x / (level.COLS * TS), 0, 1);
@@ -2235,6 +2237,7 @@ function update() {
     updateParticles();
     updateFloatTexts();
     updateCamera(player.x, player.y);
+    game.levelTick++; // Start the level timer while playing
 
   } else if (game.state === 'gameover') {
     if (game.hiScore < player.score) { game.hiScore = player.score; saveHiScore(); }
