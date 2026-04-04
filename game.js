@@ -1954,21 +1954,39 @@ function drawMenu() {
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 22px Courier New';
-    ctx.fillText('TAP  OR  PRESS  SPACE  TO  START', W / 2, 280);
+    ctx.fillText('TAP  OR  PRESS  SPACE  TO  START', W / 2, 240);
   }
 
-  // Leaderboard
-  if (leaderboardLoaded && leaderboard.length > 0) {
+  // Arcade attract: flip between controls and leaderboard every 5 seconds (300 ticks)
+  const ATTRACT_FLIP = 300;
+  const hasLeaderboard = leaderboardLoaded && leaderboard.length > 0;
+  const showLeaderboard = hasLeaderboard && Math.floor(game.tick / ATTRACT_FLIP) % 2 === 1;
+
+  // Panel header with indicator dots
+  const panelY = 272;
+  if (hasLeaderboard) {
+    // Draw two dots indicating which panel is shown
+    const dotY = panelY - 4;
+    [0, 1].forEach(idx => {
+      const active = (showLeaderboard ? 1 : 0) === idx;
+      ctx.beginPath();
+      ctx.arc(W / 2 - 8 + idx * 16, dotY, active ? 4 : 3, 0, Math.PI * 2);
+      ctx.fillStyle = active ? '#FFD700' : '#445566';
+      ctx.fill();
+    });
+  }
+
+  if (showLeaderboard) {
     ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 14px Courier New';
-    ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, 310);
+    ctx.fillText('TOP  TRAIL  BLAZERS', W / 2, panelY + 18);
 
     ctx.font = '12px Courier New';
-    const rowHeight = 16;
-    const firstRowY = 334;
+    const rowHeight = 18;
+    const firstRowY = panelY + 44;
     const maxRows = Math.min(
       leaderboard.length,
-      Math.max(1, Math.floor((H - firstRowY - 30) / rowHeight))
+      Math.max(1, Math.floor((H - firstRowY - 40) / rowHeight))
     );
 
     leaderboard.slice(0, maxRows).forEach((entry, i) => {
@@ -1984,7 +2002,11 @@ function drawMenu() {
       ctx.fillText('... more top scores', W / 2, firstRowY + maxRows * rowHeight);
     }
   } else {
-    // Show controls if no leaderboard yet
+    // Controls panel — always shown when leaderboard is absent, alternates when present
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillText('HOW  TO  PLAY', W / 2, panelY + 18);
+
     ctx.fillStyle = '#8BC48B';
     ctx.font = '13px Courier New';
     const controls = [
@@ -1992,9 +2014,10 @@ function drawMenu() {
       '\u2191 / W / Z / SPACE  :  Jump',
       '\u2193 + Move  :  Glissade (slide & stun)',
       'X  :  Bear Spray (stun enemies)',
+      'Stomp stunned enemies to score!',
     ];
     controls.forEach((line, i) => {
-      ctx.fillText(line, W / 2, 330 + i * 22);
+      ctx.fillText(line, W / 2, panelY + 44 + i * 22);
     });
   }
 
