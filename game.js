@@ -1808,11 +1808,11 @@ function drawHUD() {
 
   // Health (water drops)
   ctx.fillStyle = '#AAF';
-  ctx.fillText('H2O:', 160, 22);
+  ctx.fillText('H2O:', 140, 22);
   for (let i = 0; i < 3; i++) {
     ctx.fillStyle = i < player.health ? '#4169E1' : '#333';
     ctx.beginPath();
-    ctx.arc(210 + i * 20, 18, 7, 0, Math.PI * 2);
+    ctx.arc(190 + i * 20, 18, 7, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -1833,7 +1833,7 @@ function drawHUD() {
   ctx.fillStyle = '#88DDFF';
   ctx.font = 'bold 12px Courier New';
   ctx.textAlign = 'left';
-  ctx.fillText(`TIME: ${timeStr}`, 300, 22);
+  ctx.fillText(`TIME: ${timeStr}`, 260, 22);
   ctx.textAlign = 'right';
 
   // Trail progress bar
