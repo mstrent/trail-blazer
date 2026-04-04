@@ -22,6 +22,25 @@ canvas {
   aspect-ratio: 800 / 480;
 }
 
+/* ===== LANDSCAPE MOBILE: full-screen canvas + overlay controls ===== */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  body {
+    padding-bottom: 0 !important;
+    justify-content: center;
+    overflow: hidden;
+  }
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    border: none;
+    box-shadow: none;
+    z-index: 0;
+  }
+  #controls { display: none; }
+}
+
 #controls {
   margin-top: 12px;
   color: #8bc48b;
@@ -130,4 +149,61 @@ canvas {
 .touch-btn-jump:active {
   background: rgba(255, 215, 0, 0.25);
   border-color: rgba(255, 215, 0, 0.95);
+}
+
+/* Landscape touch: overlay controls on top of full-screen canvas.
+   Must come AFTER base button styles so overrides win by source order. */
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  #touch-controls {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: auto;
+    padding: 0;
+    z-index: 10;
+    background: none;
+    pointer-events: none;
+    gap: 0;
+    justify-content: space-between;
+  }
+  #touch-left {
+    position: fixed;
+    bottom: 8px;
+    left: 8px;
+    width: clamp(90px, 18vw, 140px);
+    height: clamp(44px, 9vw, 65px);
+    gap: 4px;
+  }
+  #touch-right {
+    position: fixed;
+    bottom: 8px;
+    right: 8px;
+    width: clamp(115px, 21vw, 165px);
+    height: clamp(70px, 13vw, 100px);
+    gap: 3px;
+  }
+  .touch-btn {
+    background: rgba(10, 25, 10, 0.30);
+    border-color: rgba(58, 180, 58, 0.30);
+    font-size: clamp(14px, 3vw, 20px);
+    color: rgba(139, 196, 139, 0.7);
+  }
+  .touch-btn:active {
+    background: rgba(58, 180, 58, 0.30);
+  }
+  #btn-spray {
+    border-color: rgba(255, 136, 0, 0.30);
+    color: rgba(255, 136, 0, 0.7);
+  }
+  .touch-btn-jump {
+    border-color: rgba(255, 215, 0, 0.35);
+    border-width: 2px;
+    color: rgba(255, 215, 0, 0.7);
+  }
+  #btn-down, #btn-spray {
+    font-size: clamp(8px, 1.8vw, 11px);
+  }
+  .touch-btn-jump {
+    font-size: clamp(9px, 2vw, 12px);
+  }
 }
