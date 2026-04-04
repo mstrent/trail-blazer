@@ -784,6 +784,15 @@ function updatePlayer() {
     game.leaveNoTrace[game.levelNum] = items.every(i => i.collected);
     game.trailAngel[game.levelNum] = enemies.every(en => !en.alive);
     game.levelCompletionTime = game.levelTick; // Store completion time for bonus calculation
+    const timeSeconds = Math.floor(game.levelTick / 60);
+    const levelDistances = [3744, 4704, 5664];
+    const theoreticalFrames = levelDistances[game.levelNum] / 3.5;
+    const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8);
+    const timeDiff = targetTime - timeSeconds;
+    game.levelTimeBonus = timeDiff >= 0
+      ? Math.floor(100 * Math.pow(1.1, timeDiff))
+      : Math.floor(timeDiff * 5);
+    player.score += game.levelTimeBonus;
     game.levelTick = 0;
     game.state = 'levelcomplete';
   }
@@ -853,6 +862,7 @@ const game = {
   levelNum: 0,
   levelTick: 0,
   levelCompletionTime: 0, // Time taken to complete current level (in frames)
+  levelTimeBonus: 0, // Time bonus or penalty applied on level completion
   leaveNoTrace: [],  // per-level: true if all items collected
   trailAngel: [],    // per-level: true if all enemies defeated
 };
@@ -909,6 +919,7 @@ function loadLevel(num) {
   floatTexts.length = 0;
   cam.x = 0;
   cam.y = 0;
+  game.levelTimeBonus = 0; // Reset time bonus for the new level
   game.levelCompletionTime = 0; // Reset completion time for new level
 }
 
@@ -2125,22 +2136,7 @@ function drawLevelComplete() {
   // Time and time bonus
   const timeSeconds = Math.floor(game.levelCompletionTime / 60);
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
-  // Calculate theoretical minimum time based on level distance and player speed
-  // MOVE_SPEED = 3.5 pixels/frame, goal positions in pixels, add buffer for obstacles/jumping
-  const levelDistances = [3744, 4704, 5664]; // goal x positions in pixels
-  const theoreticalFrames = levelDistances[game.levelNum] / 3.5;
-  const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8); // 1.8x buffer for obstacles, jumping, enemies
-  // Hybrid bonus/penalty: exponential for speed bonuses, linear for time penalties
-  const timeDiff = targetTime - timeSeconds;
-  let timeBonus;
-  if (timeDiff >= 0) {
-    // Exponential bonus for fast times (big rewards for speed)
-    timeBonus = Math.floor(100 * Math.pow(1.1, timeDiff));
-  } else {
-    // Linear penalty for slow times (gentler penalties for slowness)
-    timeBonus = Math.floor(timeDiff * 5); // 5 points per second over target
-  }
-  player.score += timeBonus; // Always apply, even if negative
+  const timeBonus = game.levelTimeBonus;
   ctx.fillText(`Time: ${timeStr}`, W / 2, H / 2 + 65);
   ctx.fillStyle = timeBonus >= 0 ? '#FFFF88' : '#FF8888';
   ctx.fillText(`${timeBonus >= 0 ? 'SPEED BONUS' : 'TIME PENALTY'} ${timeBonus >= 0 ? '+' : ''}${timeBonus}`, W / 2, H / 2 + 90);
