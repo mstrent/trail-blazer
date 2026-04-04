@@ -17,9 +17,12 @@ function resizeCanvas() {
   const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
   const isLandscape = window.innerWidth > window.innerHeight;
   if (isTouch && isLandscape) {
-    const aspect = window.innerWidth / window.innerHeight;
-    H = 480;
-    W = Math.round(H * aspect);
+    // Use actual viewport height so the canvas doesn't overflow on devices where
+    // 100vh > physical screen height (e.g. iOS Safari in landscape). This also
+    // makes H < level height (480px), enabling vertical camera scrolling.
+    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    H = Math.min(480, Math.round(vh));
+    W = Math.round(H * (window.innerWidth / vh));
   } else {
     W = 800;
     H = 480;
@@ -29,6 +32,7 @@ function resizeCanvas() {
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
 
 // ==================== INPUT ====================
 const keys = {}, prev = {};
@@ -1922,9 +1926,9 @@ function drawMenu() {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Mountains
+  // Mountains — loop until we cover full canvas width (handles wide mobile screens)
   ctx.fillStyle = '#3A6A5A';
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i * 200 - 50 < W + 200; i++) {
     const bx = i * 200 - 50;
     const bh = 120 + i * 20;
     ctx.beginPath();
