@@ -2137,28 +2137,34 @@ function drawLevelComplete() {
   const timeSeconds = Math.floor(game.levelCompletionTime / 60);
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
   const timeBonus = game.levelTimeBonus;
-  ctx.fillText(`Time: ${timeStr}`, W / 2, H / 2 + 65);
+  const lineHeight = 26;
+  let infoY = H / 2 + 15;
+  ctx.fillText(`Score: ${player.score}`, W / 2, infoY);
+  infoY += lineHeight;
+  ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, infoY);
+  infoY += lineHeight;
+  ctx.fillText(`Time: ${timeStr}`, W / 2, infoY);
+  infoY += lineHeight;
   ctx.fillStyle = timeBonus >= 0 ? '#FFFF88' : '#FF8888';
-  ctx.fillText(`${timeBonus >= 0 ? 'SPEED BONUS' : 'TIME PENALTY'} ${timeBonus >= 0 ? '+' : ''}${timeBonus}`, W / 2, H / 2 + 90);
-
-  let awardY = H / 2 + 115; // Always show time bonus/penalty, so awards start lower
+  ctx.fillText(`${timeBonus >= 0 ? 'SPEED BONUS' : 'TIME PENALTY'} ${timeBonus >= 0 ? '+' : ''}${timeBonus}`, W / 2, infoY);
+  infoY += lineHeight + 8; // extra gap before awards
   if (game.leaveNoTrace[game.levelNum]) {
     ctx.fillStyle = '#44ffaa';
     ctx.font = 'bold 16px Courier New';
-    ctx.fillText('LEAVE NO TRACE +1000', W / 2, awardY);
-    awardY += 22;
+    ctx.fillText('LEAVE NO TRACE +1000', W / 2, infoY);
+    infoY += lineHeight;
   }
   if (game.trailAngel[game.levelNum]) {
     ctx.fillStyle = '#ff88ff';
     ctx.font = 'bold 16px Courier New';
-    ctx.fillText('TRAIL ANGEL +1500', W / 2, awardY);
-    awardY += 22;
+    ctx.fillText('TRAIL ANGEL +1500', W / 2, infoY);
+    infoY += lineHeight;
   }
 
   if (nextDef) {
     ctx.fillStyle = '#AAAAFF';
     ctx.font = '14px Courier New';
-    ctx.fillText('Next: ' + nextDef.name + ' \u2014 ' + nextDef.subtitle, W / 2, awardY + 4);
+    ctx.fillText('Next: ' + nextDef.name + ' \u2014 ' + nextDef.subtitle, W / 2, infoY);
   }
 
   if (Math.floor(game.tick / 30) % 2 === 0) {
