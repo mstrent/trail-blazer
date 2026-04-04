@@ -31,6 +31,19 @@
       </div>
     </div>
   </div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script>
+    firebase.initializeApp({
+      apiKey: "AIzaSyDQ-KG90VZUtGhNt6fl9FQC-5MaESv0gAw",
+      authDomain: "trail-blazer-b8b62.firebaseapp.com",
+      projectId: "trail-blazer-b8b62",
+      storageBucket: "trail-blazer-b8b62.firebasestorage.app",
+      messagingSenderId: "444959545616",
+      appId: "1:444959545616:web:af1f112bbb16b6f430ad95"
+    });
+    window.db = firebase.firestore();
+  </script>
   <script src="game.js"></script>
 </body>
 </html>
