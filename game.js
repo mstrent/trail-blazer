@@ -271,15 +271,17 @@ const LEVELS = [
       hline(79, 84, 6, T_PLATFORM);
       fill(82, 7, 86, 10, T_SOLID);
       hline(85, 90, 5, T_PLATFORM);
-      fill(88, 6, 92, 10, T_SOLID);
+      fill(88, 6, 91, 10, T_SOLID);   // trimmed right by 1 to widen pit 1
       hline(91, 96, 4, T_PLATFORM);
-      fill(94, 5, 98, 10, T_SOLID);
+      fill(95, 5, 97, 10, T_SOLID);   // trimmed both sides: pit 1 left wall at x=95, pit 2 right wall at x=97
       hline(97, 102, 3, T_PLATFORM);
-      fill(100, 4, 104, 10, T_SOLID);
-      // Rescue platforms in the two inescapable 1-tile gaps:
-      // x=93 is boxed by fills at x=92 and x=94 with no landing spot above y=11 floor.
-      // x=99 is similarly boxed; nearest platform (y=3) is 8 tiles above — unreachable.
-      // A platform at y=7 in each gap is reachable from y=11 (4 tiles = 128px < 142px jump).
+      fill(101, 4, 104, 10, T_SOLID); // trimmed left by 1 to widen pit 2
+      // Hazard pits with rescue platforms:
+      // Pit 1: x=92-94 (3 tiles wide) — water at bottom, rescue platform at x=93 y=7 (center)
+      // Pit 2: x=98-100 (3 tiles wide) — water at bottom, rescue platform at x=99 y=7 (center)
+      // Falling off-center = water damage; landing center = bounce out via platform (4 tiles up, within jump range)
+      fill(92, 9, 94, 10, T_WATER);
+      fill(98, 9, 100, 10, T_WATER);
       set(93, 7, T_PLATFORM);
       set(99, 7, T_PLATFORM);
 
@@ -331,7 +333,7 @@ const LEVELS = [
       return [
         makeMarmot(14, 10), makeMarmot(38, 7), makeMarmot(72, 8),
         makeMarmot(105, 10), makeMarmot(142, 8), makeMarmot(162, 8),
-        makeMouse(21, 10), makeMouse(55, 8), makeMouse(99, 10), makeMouse(140, 8),
+        makeMouse(21, 10), makeMouse(55, 8), makeMouse(72, 8), makeMouse(140, 8),
         makeMosquito(20, 6), makeMosquito(45, 5), makeMosquito(58, 4),
         makeMosquito(80, 4), makeMosquito(96, 3), makeMosquito(112, 4),
         makeMosquito(126, 3), makeMosquito(150, 4), makeMosquito(170, 3),
