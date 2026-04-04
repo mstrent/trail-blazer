@@ -1832,7 +1832,7 @@ function drawHUD() {
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
   ctx.fillStyle = '#88DDFF';
   ctx.font = 'bold 12px Courier New';
-  ctx.fillText(`TIME: ${timeStr}`, W / 2, 42);
+  ctx.fillText(`TIME: ${timeStr}`, W / 2, 34);
 
   // Trail progress bar
   const progress = clamp(player.x / (level.COLS * TS), 0, 1);
@@ -2235,6 +2235,7 @@ function update() {
     updateParticles();
     updateFloatTexts();
     updateCamera(player.x, player.y);
+    game.levelTick++; // Start the level timer while playing
 
   } else if (game.state === 'gameover') {
     if (game.hiScore < player.score) { game.hiScore = player.score; saveHiScore(); }
