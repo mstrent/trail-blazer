@@ -39,6 +39,7 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', resi
 // ==================== INPUT ====================
 const keys = {}, prev = {};
 addEventListener('keydown', e => {
+  audio.init();
   keys[e.code] = true;
   if (['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
 });
@@ -668,6 +669,7 @@ function updatePlayer() {
     }
   } else if (isDown() && player.onGround && (isLeft() || isRight()) && player.hurtTimer === 0 && player.glissadeCooldown === 0) {
     player.glissading = GLISSADE_DURATION;
+    audio.sfxGlissade();
     spawnParticles(player.x + player.w / 2, player.y + player.h, '#aa8855', 6, 3);
   }
 
@@ -679,6 +681,7 @@ function updatePlayer() {
     player.jumpBuffer = 0;
     player.vy = JUMP_FORCE;
     player.jumpHeld = true;
+    audio.sfxJump();
   }
 
   // Variable jump height: cut upward speed when button released early
@@ -700,6 +703,7 @@ function updatePlayer() {
     enemies.forEach(e => {
       if (e.alive && e.stunTimer === 0 && aabb(e, sprayRect)) {
         e.stunTimer = 120;
+        audio.sfxStun();
         spawnParticles(e.x + e.w / 2, e.y, '#ff6600', 8, 3);
       }
     });
@@ -725,6 +729,7 @@ function updatePlayer() {
   const cx = Math.floor((player.x + player.w / 2) / TS);
   const cy = Math.floor((player.y + player.h - 2) / TS);
   if (isWater(cx, cy) || isWater(cx, cy + 1)) {
+    audio.sfxWater();
     hurtPlayer();
   }
 
@@ -743,6 +748,7 @@ function updatePlayer() {
       } else if (e.stunTimer === 0) {
         e.stunTimer = 120;
         e.stunnedByGlissade = true;
+        audio.sfxStun();
         spawnParticles(e.x + e.w / 2, e.y, '#ff6600', 8, 3);
       }
       return;
@@ -756,6 +762,7 @@ function updatePlayer() {
       } else {
         // Bounce off (stuns enemy briefly)
         e.stunTimer = 60;
+        audio.sfxStun();
         player.vy = -8;
       }
     } else if (e.stunTimer === 0 && player.hurtTimer === 0) {
@@ -770,6 +777,7 @@ function updatePlayer() {
     if (aabb(player, { x: item.x, y: item.y, w: item.w, h: item.h })) {
       item.collected = true;
       player.score += item.pts;
+      audio.sfxCollect();
       spawnParticles(item.x + 10, item.y + 10, ITEM_DEFS[item.type].color, 8, 3);
       addFloatText(item.x + 10, item.y - 8, `${ITEM_DEFS[item.type].label} +${item.pts}`, '#ffff44');
 
@@ -779,6 +787,7 @@ function updatePlayer() {
         player.score += bonus;
         addFloatText(player.x + player.w / 2, player.y - 30, 'LEAVE NO TRACE! +' + bonus, '#44ffaa');
         spawnParticles(player.x + player.w / 2, player.y, '#44ffaa', 20, 5);
+        audio.sfxBonus();
       }
     }
   });
@@ -802,6 +811,7 @@ function updatePlayer() {
     player.score += game.levelTimeBonus;
     game.levelTick = 0;
     game.state = 'levelcomplete';
+    audio.sfxCampFanfare();
   }
 
   // Fallen off bottom
@@ -813,6 +823,7 @@ function updatePlayer() {
 function hurtPlayer(instant) {
   if (player.hurtTimer > 0 && !instant) return;
   player.health--;
+  audio.sfxHurt();
   spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ff4444', 10, 4);
   if (player.health <= 0) {
     player.lives--;
@@ -843,6 +854,7 @@ const ENEMY_DEFS = {
 
 function killEnemy(e) {
   e.alive = false;
+  audio.sfxStomp();
   spawnParticles(e.x + e.w / 2, e.y + e.h / 2, '#aaff44', 12, 4);
 }
 
@@ -858,6 +870,7 @@ function scoreEnemy(e) {
     player.score += bonus;
     addFloatText(player.x + player.w / 2, player.y - 30, 'TRAIL ANGEL! +' + bonus, '#ff88ff');
     spawnParticles(player.x + player.w / 2, player.y, '#ff88ff', 20, 5);
+    audio.sfxBonus();
   }
 }
 
@@ -941,12 +954,14 @@ function initGame() {
   player.y = spawn[1] * TS;
   game.tick = 0;
   game.state = 'playing';
+  audio.sfxStartJingle();
 }
 
 function advanceLevel() {
   const nextNum = game.levelNum + 1;
   if (nextNum >= LEVELS.length) {
     game.state = 'win';
+    audio.sfxWinFanfare();
     return;
   }
   const savedScore = player.score;
@@ -2432,6 +2447,141 @@ function draw() {
   drawHUD();
 }
 
+// ==================== AUDIO ====================
+const audio = (() => {
+  let ctx = null;
+  let masterGain = null;
+
+  function init() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = 0.5;
+    masterGain.connect(ctx.destination);
+  }
+
+  // Resume and return a Promise that resolves when ctx is running
+  function ensureRunning() {
+    if (!ctx) return Promise.reject();
+    return ctx.state === 'suspended' ? ctx.resume() : Promise.resolve();
+  }
+
+  // ---- low-level utilities ----
+
+  function osc(type, freq, dur, gainVal, dest, startTime) {
+    const t = startTime !== undefined ? startTime : ctx.currentTime;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gainVal, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    g.connect(dest || masterGain);
+    const o = ctx.createOscillator();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    o.connect(g); o.start(t); o.stop(t + dur + 0.05);
+    return { osc: o, gain: g };
+  }
+
+  function oscSweep(type, freqFrom, freqTo, dur, gainVal, dest) {
+    const t = ctx.currentTime;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gainVal, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    g.connect(dest || masterGain);
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freqFrom, t);
+    o.frequency.exponentialRampToValueAtTime(freqTo, t + dur);
+    o.connect(g); o.start(t); o.stop(t + dur + 0.05);
+  }
+
+  function noise(dur, gainVal, filterFreq, dest) {
+    const t = ctx.currentTime;
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass'; f.frequency.value = filterFreq || 1000; f.Q.value = 0.5;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gainVal, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f); f.connect(g); g.connect(dest || masterGain);
+    src.start(t); src.stop(t + dur);
+  }
+
+  // ---- sound effects (all guard with ensureRunning) ----
+
+  function sfx(fn) {
+    ensureRunning().then(fn).catch(() => {});
+  }
+
+  function sfxJump()      { sfx(() => { oscSweep('sine', 200, 420, 0.12, 0.18); }); }
+  function sfxStomp()     { sfx(() => { oscSweep('sine', 180, 60, 0.15, 0.22); noise(0.1, 0.14, 800); }); }
+  function sfxCollect()   { sfx(() => { osc('sine', 880, 0.12, 0.15); osc('sine', 1320, 0.18, 0.12, masterGain, ctx.currentTime + 0.07); }); }
+  function sfxHurt()      { sfx(() => { oscSweep('sawtooth', 320, 100, 0.25, 0.2); noise(0.15, 0.1, 600); }); }
+  function sfxWater()     { sfx(() => { oscSweep('sine', 600, 300, 0.08, 0.08); oscSweep('sine', 500, 250, 0.08, 0.06); }); }
+  function sfxSpray()     { sfx(() => { noise(0.35, 0.18, 2000); oscSweep('sawtooth', 80, 60, 0.35, 0.08); }); }
+  function sfxBonus()     { sfx(() => { [523, 659, 784, 1047].forEach((f, i) => osc('sine', f, 0.2, 0.14, masterGain, ctx.currentTime + i * 0.08)); }); }
+  function sfxGlissade()  { sfx(() => { noise(0.4, 0.16, 500); oscSweep('sawtooth', 260, 130, 0.4, 0.06); }); }
+  function sfxStun()      { sfx(() => { oscSweep('sine', 400, 200, 0.18, 0.12); oscSweep('sine', 380, 190, 0.22, 0.08); }); }
+
+  // ---- startup jingle: cheerful C-E-G run, plays once when gameplay begins ----
+  function sfxStartJingle() {
+    sfx(() => {
+      const t0 = ctx.currentTime;
+      const notes = [
+        [261.6, 0.00], [329.6, 0.10], [392.0, 0.20], [329.6, 0.30],
+        [523.3, 0.40], [392.0, 0.55], [329.6, 0.65], [523.3, 0.75],
+      ];
+      notes.forEach(([freq, dt]) => {
+        osc('triangle', freq,     0.12, 0.18, masterGain, t0 + dt);
+        osc('sine',     freq * 2, 0.08, 0.06, masterGain, t0 + dt);
+      });
+    });
+  }
+
+  // ---- camp fanfare: triumphant ascending run, plays on level complete ----
+  function sfxCampFanfare() {
+    sfx(() => {
+      const t0 = ctx.currentTime;
+      // C-E-G-C ascending, then held high C with harmony
+      const notes = [
+        [261.6, 0.00, 0.18], [329.6, 0.12, 0.18], [392.0, 0.24, 0.18],
+        [523.3, 0.36, 0.50], [659.3, 0.38, 0.48],  // harmony on the high note
+      ];
+      notes.forEach(([freq, dt, dur]) => {
+        osc('triangle', freq,     dur, 0.20, masterGain, t0 + dt);
+        osc('sine',     freq / 2, dur, 0.07, masterGain, t0 + dt);
+      });
+    });
+  }
+
+  // ---- win fanfare: big 3-chord victory finish, plays on game complete ----
+  function sfxWinFanfare() {
+    sfx(() => {
+      const t0 = ctx.currentTime;
+      // Quick ascending run then a full chord swell
+      const run = [261.6, 329.6, 392.0, 523.3, 659.3, 784.0];
+      run.forEach((freq, i) => {
+        osc('triangle', freq,     0.14, 0.18, masterGain, t0 + i * 0.09);
+        osc('sine',     freq * 2, 0.10, 0.07, masterGain, t0 + i * 0.09);
+      });
+      // Final sustained chord: C major triad two octaves up
+      const chordT = t0 + run.length * 0.09 + 0.05;
+      [[523.3, 0.22], [659.3, 0.20], [784.0, 0.18]].forEach(([freq, gainVal]) => {
+        osc('triangle', freq,     0.9, gainVal, masterGain, chordT);
+        osc('sine',     freq / 2, 0.9, 0.06,   masterGain, chordT);
+      });
+    });
+  }
+
+  return {
+    init,
+    sfxJump, sfxStomp, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
+    sfxGlissade, sfxStun, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
+  };
+})();
+
 function loop() {
   update();
   draw();
@@ -2442,6 +2592,7 @@ function loop() {
 function setupTouch() {
   // Tap the canvas itself to advance menu / gameover / win screens
   canvas.addEventListener('touchstart', e => {
+    audio.init();
     if (game.state !== 'playing' && game.state !== 'enterInitials') {
       e.preventDefault();
       keys['Space'] = true;
