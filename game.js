@@ -80,12 +80,12 @@ function makeMap(cols, rows) {
 
 // ==================== LEVEL DEFINITIONS ====================
 const LEVELS = [
-  // ======== LEVEL 1: MEADOW TRAIL ========
+  // ======== LEVEL 1: NORTHERN TERMINUS ========
   {
-    name: 'Meadow Trail',
-    subtitle: 'A gentle start through wildflower meadows',
-    section: 'PCT Section A: Campo \u2192 Warner Springs',
-    campName: 'Lake Morena Camp',
+    name: 'Northern Terminus',
+    subtitle: 'SOBO day one — Monument 78 into the North Cascades',
+    section: 'PCT Washington: Monument 78 \u2192 Harts Pass',
+    campName: 'Harts Pass Camp',
     goalTile: [117, 2],
     goalFlagY: 4,
     spawnTile: [2, 9],
@@ -93,53 +93,126 @@ const LEVELS = [
       const COLS = 120, ROWS = 15;
       const { map, set, hline, fill } = makeMap(COLS, ROWS);
       fill(0, 11, COLS - 1, 14, T_SOLID);
-      hline(12, 18, 10, T_SOLID); hline(14, 16, 9, T_SOLID);
-      hline(5, 10, 8, T_PLATFORM); hline(20, 25, 7, T_PLATFORM);
-      hline(28, 34, 9, T_PLATFORM); hline(33, 39, 7, T_PLATFORM);
-      hline(42, 48, 8, T_PLATFORM); hline(38, 43, 5, T_PLATFORM);
-      hline(45, 50, 6, T_PLATFORM);
-      fill(30, 9, 33, 10, T_SOLID); fill(46, 9, 49, 10, T_SOLID);
-      fill(56, 11, 67, 11, T_EMPTY); fill(56, 12, 67, 13, T_WATER);
-      hline(56, 57, 10, T_SOLID); hline(60, 61, 9, T_SOLID);
-      hline(63, 64, 8, T_SOLID); hline(65, 66, 9, T_SOLID); hline(68, 69, 10, T_SOLID);
-      fill(70, 9, 74, 10, T_SOLID); fill(75, 8, 79, 10, T_SOLID);
-      fill(80, 7, 84, 10, T_SOLID); fill(85, 6, 89, 10, T_SOLID);
-      hline(72, 75, 7, T_PLATFORM); hline(79, 83, 6, T_PLATFORM);
-      hline(83, 87, 5, T_PLATFORM); hline(88, 93, 7, T_PLATFORM); hline(91, 95, 5, T_PLATFORM);
-      hline(97, 103, 8, T_PLATFORM); hline(102, 107, 6, T_PLATFORM);
-      hline(107, 112, 4, T_PLATFORM); hline(111, 116, 6, T_PLATFORM);
-      fill(116, 4, 119, 14, T_SOLID);
       for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+      // TRAILHEAD
+      fill(8, 9, 11, 10, T_SOLID);
+      fill(14, 8, 16, 10, T_SOLID);
+      hline(18, 23, 8, T_PLATFORM);
+      // FIRST CREEK
+      fill(24, 11, 31, 11, T_EMPTY); fill(24, 12, 31, 13, T_WATER);
+      hline(25, 26, 9, T_SOLID); hline(28, 29, 8, T_SOLID); hline(30, 31, 9, T_SOLID);
+      // FOREST PLATFORMS
+      fill(34, 9, 37, 10, T_SOLID);
+      hline(38, 43, 8, T_PLATFORM); hline(43, 48, 6, T_PLATFORM);
+      fill(47, 7, 50, 10, T_SOLID);
+      hline(51, 56, 8, T_PLATFORM); hline(56, 61, 6, T_PLATFORM);
+      // SECOND CREEK
+      fill(62, 11, 70, 11, T_EMPTY); fill(62, 12, 70, 13, T_WATER);
+      hline(63, 64, 9, T_SOLID); hline(66, 67, 8, T_PLATFORM); hline(69, 70, 9, T_SOLID);
+      // ROCKY CLIMB
+      fill(72, 9, 75, 10, T_SOLID); fill(77, 8, 80, 10, T_SOLID);
+      hline(79, 84, 6, T_PLATFORM);
+      fill(83, 7, 86, 10, T_SOLID);
+      hline(86, 91, 5, T_PLATFORM); hline(90, 95, 7, T_PLATFORM);
+      // FINAL RIDGE
+      fill(97, 9, 100, 10, T_SOLID);
+      hline(99, 104, 7, T_PLATFORM);
+      fill(102, 8, 105, 10, T_SOLID);
+      hline(105, 110, 5, T_PLATFORM); hline(109, 114, 7, T_PLATFORM);
+      hline(113, 116, 6, T_PLATFORM);
+      fill(116, 4, 119, 14, T_SOLID);
       return { map, COLS, ROWS };
-    },
-    spawnItems() {
-      return [
-        makeItem('spork', 7, 7), makeItem('bar', 11, 8), makeItem('spork', 22, 6),
-        makeItem('filter', 36, 6), makeItem('tent', 41, 4), makeItem('bar', 47, 5),
-        makeItem('spork', 58, 9), makeItem('filter', 63, 7), makeItem('bar', 69, 9),
-        makeItem('spork', 73, 6), makeItem('spray', 83, 5), makeItem('tent', 90, 6),
-        makeItem('spork', 98, 7), makeItem('filter', 104, 5), makeItem('tent', 110, 3),
-        makeItem('spork', 113, 5),
-      ];
     },
     spawnEnemies() {
       return [
-        makeMarmot(20, 10), makeMarmot(27, 8), makeMarmot(52, 8),
-        makeMarmot(72, 8), makeMarmot(95, 10),
-        makeMouse(42, 10), makeMouse(85, 5),
-        makeMosquito(40, 6), makeMosquito(50, 5), makeMosquito(67, 7),
-        makeMosquito(88, 6), makeMosquito(104, 5),
-        makeHiker(33, 6), makeHiker(80, 5), makeHiker(109, 3),
+        makeMarmot(10, 10), makeMarmot(40, 8), makeMarmot(80, 8),
+        makeMosquito(26, 7), makeMosquito(56, 5), makeMosquito(90, 5),
+        makeHiker(50, 8), makeHiker(106, 5),
+      ];
+    },
+    spawnTPBlooms() {
+      return [ makeTPBloom(20, 10), makeTPBloom(95, 10) ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 8, 8), makeItem('spork', 43, 7),
+        makeItem('filter', 66, 7), makeItem('spray', 84, 5),
+        makeItem('tent', 110, 6),
       ];
     },
   },
-
-  // ======== LEVEL 2: PINE RIDGE ========
+  // ======== LEVEL 2: PASAYTEN WILDERNESS ========
   {
-    name: 'Pine Ridge',
-    subtitle: 'Dense forest with treacherous ravines',
-    section: 'PCT Section B: Warner Springs \u2192 Idyllwild',
-    campName: 'Fuller Ridge Camp',
+    name: 'Pasayten Wilderness',
+    subtitle: 'Dry open ridges and river fords of the Methow highlands',
+    section: 'PCT Washington: Harts Pass \u2192 Rainy Pass',
+    campName: 'Rainy Pass Camp',
+    goalTile: [132, 2],
+    goalFlagY: 4,
+    spawnTile: [2, 9],
+    build() {
+      const COLS = 135, ROWS = 15;
+      const { map, set, hline, fill } = makeMap(COLS, ROWS);
+      fill(0, 11, COLS - 1, 14, T_SOLID);
+      for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+      // OPEN MEADOW
+      fill(8, 9, 11, 10, T_SOLID);
+      hline(14, 20, 8, T_PLATFORM);
+      fill(19, 8, 22, 10, T_SOLID);
+      hline(23, 28, 6, T_PLATFORM);
+      // RIVER FORD 1
+      fill(29, 11, 38, 11, T_EMPTY); fill(29, 12, 38, 13, T_WATER);
+      hline(30, 31, 9, T_SOLID); hline(33, 34, 8, T_PLATFORM);
+      hline(36, 37, 8, T_PLATFORM); hline(38, 39, 9, T_SOLID);
+      // RIDGE TRAVERSE
+      fill(42, 9, 45, 10, T_SOLID);
+      hline(46, 51, 7, T_PLATFORM); hline(51, 56, 5, T_PLATFORM);
+      fill(55, 6, 58, 10, T_SOLID);
+      hline(59, 64, 8, T_PLATFORM); hline(63, 68, 6, T_PLATFORM);
+      fill(67, 7, 70, 10, T_SOLID);
+      hline(70, 75, 8, T_PLATFORM);
+      // RIVER FORD 2
+      fill(76, 11, 85, 11, T_EMPTY); fill(76, 12, 85, 13, T_WATER);
+      hline(77, 78, 9, T_SOLID); hline(80, 81, 7, T_PLATFORM);
+      hline(83, 84, 8, T_SOLID); hline(85, 86, 9, T_SOLID);
+      // RIDGELINE ASCENT
+      fill(87, 9, 90, 10, T_SOLID); fill(92, 8, 95, 10, T_SOLID);
+      hline(94, 99, 6, T_PLATFORM);
+      fill(97, 7, 100, 10, T_SOLID);
+      hline(100, 105, 5, T_PLATFORM);
+      fill(103, 6, 106, 10, T_SOLID);
+      hline(106, 111, 7, T_PLATFORM); hline(110, 115, 5, T_PLATFORM);
+      // CAMP APPROACH
+      hline(115, 120, 7, T_PLATFORM); hline(119, 124, 5, T_PLATFORM);
+      hline(123, 128, 7, T_PLATFORM); hline(127, 132, 6, T_PLATFORM);
+      fill(131, 4, 134, 14, T_SOLID);
+      return { map, COLS, ROWS };
+    },
+    spawnEnemies() {
+      return [
+        makeMarmot(12, 10), makeMarmot(47, 8), makeMarmot(92, 10),
+        makeMosquito(35, 7), makeMosquito(64, 5), makeMosquito(100, 4),
+        makeHiker(23, 7), makeHiker(71, 8), makeHiker(111, 5),
+        makeRedneck(125, 7),
+      ];
+    },
+    spawnTPBlooms() {
+      return [ makeTPBloom(40, 10), makeTPBloom(73, 10), makeTPBloom(88, 10) ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 15, 8), makeItem('spork', 52, 5),
+        makeItem('filter', 80, 7), makeItem('spray', 103, 4),
+        makeItem('tent', 128, 5),
+      ];
+    },
+  },
+  // ======== LEVEL 3: GLACIER PEAK WILDERNESS ========
+  {
+    name: 'Glacier Peak',
+    subtitle: 'Dense forest and roaring creeks below Glacier Peak',
+    section: 'PCT Washington: Rainy Pass \u2192 Stevens Pass',
+    campName: 'Lake Valhalla',
     goalTile: [147, 2],
     goalFlagY: 4,
     spawnTile: [2, 9],
@@ -148,210 +221,577 @@ const LEVELS = [
       const { map, set, hline, fill } = makeMap(COLS, ROWS);
       fill(0, 11, COLS - 1, 14, T_SOLID);
       for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
-
-      // ---- FOREST ENTRANCE (x: 0-25) ----
-      hline(5, 9, 8, T_PLATFORM);
-      fill(10, 9, 13, 10, T_SOLID);
-      hline(14, 19, 7, T_PLATFORM);
-      hline(20, 24, 9, T_PLATFORM);
-
-      // ---- CANOPY CLIMB (x: 25-50) ----
-      fill(26, 9, 29, 10, T_SOLID);
-      hline(30, 34, 7, T_PLATFORM);
-      hline(32, 36, 5, T_PLATFORM);
-      fill(37, 8, 40, 10, T_SOLID);
-      hline(38, 42, 6, T_PLATFORM);
-      hline(41, 46, 4, T_PLATFORM);
-      hline(44, 49, 7, T_PLATFORM);
-      fill(47, 9, 50, 10, T_SOLID);
-
-      // ---- FIRST RAVINE (x: 50-65) ----
-      fill(52, 11, 62, 11, T_EMPTY);
-      fill(52, 12, 62, 13, T_WATER);
-      hline(52, 53, 9, T_PLATFORM);
-      hline(55, 56, 7, T_PLATFORM);
-      hline(58, 59, 8, T_PLATFORM);
-      hline(61, 62, 6, T_PLATFORM);
-      hline(63, 64, 9, T_SOLID);
-
-      // ---- FALLEN TREES (x: 65-90) ----
-      hline(66, 72, 9, T_PLATFORM);
-      hline(68, 74, 7, T_PLATFORM);
-      fill(73, 8, 76, 10, T_SOLID);
-      hline(75, 80, 5, T_PLATFORM);
-      hline(77, 82, 8, T_PLATFORM);
-      fill(81, 9, 84, 10, T_SOLID);
-      hline(83, 88, 6, T_PLATFORM);
-      hline(85, 90, 4, T_PLATFORM);
-      hline(88, 92, 8, T_PLATFORM);
-
-      // ---- SECOND RAVINE (x: 90-105) ----
-      fill(93, 11, 103, 11, T_EMPTY);
-      fill(93, 12, 103, 13, T_WATER);
-      hline(92, 93, 10, T_SOLID);
-      hline(95, 96, 8, T_SOLID);
-      hline(98, 99, 7, T_SOLID);
-      hline(101, 102, 9, T_SOLID);
-      hline(104, 105, 10, T_SOLID);
-
-      // ---- RIDGE ASCENT (x: 105-135) ----
-      fill(106, 9, 110, 10, T_SOLID);
-      fill(111, 8, 115, 10, T_SOLID);
-      hline(113, 118, 6, T_PLATFORM);
-      fill(116, 7, 120, 10, T_SOLID);
-      hline(119, 124, 5, T_PLATFORM);
-      fill(122, 6, 126, 10, T_SOLID);
-      hline(125, 130, 4, T_PLATFORM);
-      hline(128, 133, 7, T_PLATFORM);
-
-      // ---- SUMMIT (x: 135-149) ----
-      hline(134, 139, 5, T_PLATFORM);
-      hline(138, 143, 7, T_PLATFORM);
-      hline(141, 146, 5, T_PLATFORM);
+      // TRAILHEAD
+      hline(5, 10, 9, T_PLATFORM);
+      fill(11, 9, 14, 10, T_SOLID);
+      hline(15, 20, 7, T_PLATFORM);
+      fill(19, 8, 22, 10, T_SOLID);
+      // FIRST CREEK
+      fill(22, 11, 31, 11, T_EMPTY); fill(22, 12, 31, 13, T_WATER);
+      hline(23, 24, 9, T_SOLID); hline(26, 27, 8, T_PLATFORM);
+      hline(29, 30, 9, T_SOLID); hline(31, 32, 9, T_SOLID);
+      // FOREST CLIMB
+      hline(33, 38, 8, T_PLATFORM); hline(38, 43, 6, T_PLATFORM);
+      fill(42, 7, 45, 10, T_SOLID);
+      hline(46, 51, 7, T_PLATFORM); hline(50, 55, 5, T_PLATFORM);
+      fill(54, 6, 57, 10, T_SOLID);
+      hline(57, 62, 8, T_PLATFORM); hline(62, 67, 6, T_PLATFORM);
+      // SECOND CREEK
+      fill(68, 11, 77, 11, T_EMPTY); fill(68, 12, 77, 13, T_WATER);
+      hline(69, 70, 9, T_SOLID); hline(72, 73, 7, T_PLATFORM);
+      hline(75, 76, 8, T_PLATFORM); hline(77, 78, 9, T_SOLID);
+      // FALLEN LOGS
+      hline(79, 85, 8, T_PLATFORM);
+      fill(84, 8, 87, 10, T_SOLID);
+      hline(87, 92, 6, T_PLATFORM); hline(91, 96, 4, T_PLATFORM);
+      fill(95, 5, 98, 10, T_SOLID);
+      hline(98, 103, 7, T_PLATFORM); hline(102, 107, 5, T_PLATFORM);
+      // THIRD CREEK
+      fill(108, 11, 117, 11, T_EMPTY); fill(108, 12, 117, 13, T_WATER);
+      hline(109, 110, 9, T_SOLID); hline(112, 113, 8, T_PLATFORM);
+      hline(115, 116, 9, T_SOLID); hline(117, 118, 9, T_SOLID);
+      // FINAL ASCENT
+      fill(119, 9, 122, 10, T_SOLID);
+      hline(122, 127, 7, T_PLATFORM);
+      fill(126, 7, 129, 10, T_SOLID);
+      hline(129, 134, 5, T_PLATFORM); hline(133, 138, 7, T_PLATFORM);
+      hline(137, 142, 5, T_PLATFORM); hline(141, 146, 6, T_PLATFORM);
       fill(146, 4, 149, 14, T_SOLID);
-
       return { map, COLS, ROWS };
-    },
-    spawnItems() {
-      return [
-        makeItem('bar', 7, 7), makeItem('spork', 16, 6), makeItem('filter', 23, 8),
-        makeItem('bar', 33, 4), makeItem('spray', 40, 5), makeItem('tent', 45, 3),
-        makeItem('spork', 54, 8), makeItem('filter', 61, 5), makeItem('bar', 70, 6),
-        makeItem('tent', 78, 4), makeItem('spork', 86, 5), makeItem('spray', 96, 7),
-        makeItem('filter', 101, 8), makeItem('bar', 114, 5), makeItem('tent', 125, 3),
-        makeItem('spork', 132, 6), makeItem('filter', 140, 4), makeItem('tent', 144, 4),
-      ];
     },
     spawnEnemies() {
       return [
-        makeMarmot(15, 10), makeMarmot(35, 7), makeMarmot(70, 8),
-        makeMarmot(90, 10), makeMarmot(108, 8), makeMarmot(130, 6),
-        makeMouse(25, 10), makeMouse(60, 8), makeMouse(100, 10),
-        makeMosquito(28, 5), makeMosquito(43, 4), makeMosquito(57, 5),
-        makeMosquito(75, 4), makeMosquito(99, 5), makeMosquito(120, 4),
-        makeMosquito(137, 4),
-        makeHiker(48, 6), makeHiker(83, 5), makeHiker(115, 5), makeHiker(142, 4),
+        makeMarmot(12, 10), makeMarmot(35, 8), makeMarmot(82, 8), makeMarmot(122, 10),
+        makeMouse(44, 8), makeMouse(76, 8), makeMouse(100, 7),
+        makeMosquito(27, 7), makeMosquito(50, 4), makeMosquito(71, 7),
+        makeMosquito(90, 4), makeMosquito(130, 4),
+        makeHiker(60, 7), makeHiker(95, 6), makeHiker(138, 5),
+        makeRedneck(113, 9), makeRedneck(143, 5),
+      ];
+    },
+    spawnTPBlooms() {
+      return [ makeTPBloom(45, 10), makeTPBloom(86, 10), makeTPBloom(120, 10) ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 10, 8), makeItem('spork', 44, 6),
+        makeItem('filter', 73, 7), makeItem('spray', 96, 6),
+        makeItem('tent', 140, 5),
       ];
     },
   },
-
-  // ======== LEVEL 3: ALPINE PASS ========
+  // ======== LEVEL 4: ALPINE LAKES WILDERNESS ========
   {
-    name: 'Alpine Pass',
-    subtitle: 'The final ascent above the treeline',
-    section: 'PCT Section C: Idyllwild \u2192 San Jacinto Peak',
-    campName: 'San Jacinto Summit',
-    goalTile: [177, 1],
-    goalFlagY: 3,
+    name: 'Alpine Lakes',
+    subtitle: 'Granite slabs and shimmering tarns of Alpine Lakes Wilderness',
+    section: 'PCT Washington: Stevens Pass \u2192 Snoqualmie Pass',
+    campName: 'Kendall Katwalk Camp',
+    goalTile: [162, 2],
+    goalFlagY: 4,
     spawnTile: [2, 9],
     build() {
-      const COLS = 180, ROWS = 15;
+      const COLS = 165, ROWS = 15;
       const { map, set, hline, fill } = makeMap(COLS, ROWS);
       fill(0, 11, COLS - 1, 14, T_SOLID);
       for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
-
-      // ---- TRAILHEAD (x: 0-20) ----
-      hline(4, 8, 9, T_PLATFORM);
-      fill(9, 9, 12, 10, T_SOLID);
-      hline(13, 17, 7, T_PLATFORM);
-      hline(18, 22, 9, T_PLATFORM);
-
-      // ---- BOULDER FIELD (x: 20-45) ----
-      fill(22, 9, 25, 10, T_SOLID);
-      fill(27, 8, 30, 10, T_SOLID);
-      hline(31, 34, 6, T_PLATFORM);
-      fill(33, 7, 36, 10, T_SOLID);
-      hline(37, 40, 5, T_PLATFORM);
-      fill(39, 8, 42, 10, T_SOLID);
-      hline(43, 46, 7, T_PLATFORM);
-
-      // ---- WATERFALL GORGE (x: 45-70) ----
-      fill(47, 11, 68, 11, T_EMPTY);
-      fill(47, 12, 68, 13, T_WATER);
-      hline(47, 70, 10, T_SOLID); // rescue ledge: player can jump from y=14 floor to y=10, then escape up
-      hline(50, 51, 8, T_SOLID);
-      hline(53, 53, 6, T_PLATFORM);
-      hline(55, 56, 9, T_SOLID);
-      hline(58, 59, 7, T_PLATFORM);
-      hline(61, 61, 5, T_PLATFORM);
-      hline(63, 64, 8, T_SOLID);
-      hline(66, 67, 6, T_PLATFORM);
-
-      // ---- SWITCHBACK ASCENT (x: 70-105) ----
-      fill(70, 9, 75, 10, T_SOLID);
-      hline(73, 78, 7, T_PLATFORM);
-      fill(76, 8, 80, 10, T_SOLID);
-      hline(79, 84, 6, T_PLATFORM);
-      fill(82, 7, 86, 10, T_SOLID);
-      hline(85, 90, 5, T_PLATFORM);
-      fill(88, 6, 91, 10, T_SOLID);   // trimmed right by 1 to widen pit 1
-      hline(91, 96, 4, T_PLATFORM);
-      fill(95, 5, 97, 10, T_SOLID);   // trimmed both sides: pit 1 left wall at x=95, pit 2 right wall at x=97
-      hline(97, 102, 3, T_PLATFORM);
-      fill(101, 4, 104, 10, T_SOLID); // trimmed left by 1 to widen pit 2
-      // Hazard pits with rescue platforms:
-      // Pit 1: x=92-94 (3 tiles wide) — water at bottom, rescue platform at x=93 y=7 (center)
-      // Pit 2: x=98-100 (3 tiles wide) — water at bottom, rescue platform at x=99 y=7 (center)
-      // Falling off-center = water damage; landing center = bounce out via platform (4 tiles up, within jump range)
-      fill(92, 9, 94, 10, T_WATER);
-      fill(98, 9, 100, 10, T_WATER);
-      set(93, 7, T_PLATFORM);
-      set(99, 7, T_PLATFORM);
-
-      // ---- EXPOSED RIDGE (x: 105-140) ----
-      fill(105, 11, 138, 11, T_EMPTY);
-      fill(105, 12, 138, 13, T_WATER);
-      hline(105, 138, 10, T_SOLID); // rescue ledge: player can jump from y=14 floor to y=10, then reach platforms above
-      hline(105, 108, 8, T_PLATFORM);
-      hline(110, 112, 6, T_PLATFORM);
-      hline(114, 116, 8, T_PLATFORM);
-      hline(118, 120, 5, T_PLATFORM);
-      hline(122, 124, 7, T_PLATFORM);
-      hline(126, 128, 4, T_PLATFORM);
-      hline(130, 132, 6, T_PLATFORM);
-      hline(134, 136, 8, T_PLATFORM);
-      hline(138, 140, 5, T_PLATFORM);
-
-      // ---- SCREE FIELD (x: 140-160) ----
-      fill(140, 9, 144, 10, T_SOLID);
-      fill(143, 7, 146, 10, T_SOLID);
-      hline(147, 150, 5, T_PLATFORM);
-      fill(149, 8, 152, 10, T_SOLID);
-      hline(153, 156, 6, T_PLATFORM);
-      fill(155, 7, 158, 10, T_SOLID);
-      hline(157, 161, 4, T_PLATFORM);
-
-      // ---- FINAL SUMMIT PUSH (x: 160-179) ----
-      fill(160, 9, 164, 10, T_SOLID);
-      hline(163, 167, 7, T_PLATFORM);
-      hline(166, 170, 5, T_PLATFORM);
-      hline(169, 173, 3, T_PLATFORM);
-      hline(172, 176, 5, T_PLATFORM);
-      fill(176, 3, 179, 14, T_SOLID);
-
+      // GRANITE SLABS
+      fill(6, 9, 9, 10, T_SOLID); fill(11, 8, 14, 10, T_SOLID);
+      hline(15, 20, 6, T_PLATFORM);
+      fill(19, 7, 22, 10, T_SOLID);
+      hline(23, 28, 9, T_PLATFORM);
+      // LAKE 1
+      fill(28, 11, 40, 11, T_EMPTY); fill(28, 12, 40, 13, T_WATER);
+      hline(29, 30, 9, T_SOLID); hline(32, 33, 8, T_PLATFORM);
+      hline(35, 36, 7, T_PLATFORM); hline(38, 39, 8, T_PLATFORM);
+      hline(40, 41, 9, T_SOLID);
+      // BOULDER FIELD
+      fill(43, 9, 46, 10, T_SOLID); fill(48, 8, 51, 10, T_SOLID);
+      hline(52, 57, 6, T_PLATFORM);
+      fill(56, 7, 59, 10, T_SOLID);
+      hline(60, 65, 5, T_PLATFORM); hline(64, 69, 8, T_PLATFORM);
+      fill(68, 8, 71, 10, T_SOLID);
+      hline(72, 77, 6, T_PLATFORM);
+      // LAKE 2
+      fill(79, 11, 90, 11, T_EMPTY); fill(79, 12, 90, 13, T_WATER);
+      hline(80, 81, 9, T_SOLID); hline(83, 84, 7, T_PLATFORM);
+      hline(86, 87, 8, T_PLATFORM); hline(89, 90, 7, T_PLATFORM);
+      hline(90, 91, 9, T_SOLID);
+      // RIDGELINE
+      fill(93, 9, 96, 10, T_SOLID);
+      hline(97, 102, 7, T_PLATFORM); hline(101, 106, 5, T_PLATFORM);
+      fill(105, 6, 108, 10, T_SOLID);
+      hline(108, 113, 8, T_PLATFORM); hline(112, 117, 6, T_PLATFORM);
+      fill(116, 7, 119, 10, T_SOLID);
+      hline(119, 124, 4, T_PLATFORM); hline(123, 128, 7, T_PLATFORM);
+      // LAKE 3
+      fill(130, 11, 143, 11, T_EMPTY); fill(130, 12, 143, 13, T_WATER);
+      hline(131, 132, 9, T_SOLID); hline(134, 135, 7, T_PLATFORM);
+      hline(137, 138, 8, T_PLATFORM); hline(140, 141, 7, T_PLATFORM);
+      hline(143, 144, 9, T_SOLID);
+      // SUMMIT APPROACH
+      fill(146, 9, 149, 10, T_SOLID);
+      hline(149, 154, 7, T_PLATFORM); hline(153, 158, 5, T_PLATFORM);
+      hline(157, 162, 6, T_PLATFORM);
+      fill(161, 4, 164, 14, T_SOLID);
       return { map, COLS, ROWS };
-    },
-    spawnItems() {
-      return [
-        makeItem('bar', 6, 8), makeItem('spork', 15, 6), makeItem('filter', 24, 8),
-        makeItem('spray', 32, 5), makeItem('tent', 39, 4), makeItem('bar', 49, 7),
-        makeItem('spork', 55, 8), makeItem('filter', 61, 4), makeItem('tent', 67, 5),
-        makeItem('bar', 75, 6), makeItem('spray', 84, 5), makeItem('spork', 93, 3),
-        makeItem('filter', 100, 2), makeItem('bar', 111, 5), makeItem('tent', 119, 4),
-        makeItem('spork', 127, 3), makeItem('spray', 135, 7), makeItem('filter', 148, 4),
-        makeItem('tent', 156, 5), makeItem('spork', 164, 6), makeItem('tent', 174, 2),
-      ];
     },
     spawnEnemies() {
       return [
-        makeMarmot(14, 10), makeMarmot(38, 7), makeMarmot(72, 8),
-        makeMarmot(105, 10), makeMarmot(142, 8), makeMarmot(162, 8),
-        makeMouse(21, 10), makeMouse(55, 8), makeMouse(72, 8), makeMouse(140, 8),
-        makeMosquito(20, 6), makeMosquito(45, 5), makeMosquito(58, 4),
-        makeMosquito(80, 4), makeMosquito(96, 3), makeMosquito(112, 4),
-        makeMosquito(126, 3), makeMosquito(150, 4), makeMosquito(170, 3),
-        makeHiker(30, 5), makeHiker(68, 8), makeHiker(90, 4),
-        makeHiker(135, 7), makeHiker(155, 5), makeHiker(175, 2),
+        makeMarmot(10, 10), makeMarmot(46, 8), makeMarmot(97, 10), makeMarmot(147, 10),
+        makeMouse(25, 10), makeMouse(70, 8), makeMouse(110, 8), makeMouse(132, 8),
+        makeMosquito(33, 7), makeMosquito(52, 5), makeMosquito(83, 6),
+        makeMosquito(102, 4), makeMosquito(125, 3), makeMosquito(136, 6),
+        makeHiker(58, 6), makeMouse(78, 6), makeHiker(120, 5), makeHiker(155, 5),
+        makeRedneck(15, 10), makeRedneck(93, 9), makeRedneck(150, 7),
+      ];
+    },
+    spawnTPBlooms() {
+      return [
+        makeTPBloom(20, 10), makeTPBloom(55, 10),
+        makeTPBloom(94, 10), makeTPBloom(131, 10),
+      ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 9, 8), makeItem('spork', 60, 5),
+        makeItem('filter', 85, 6), makeItem('spray', 109, 5),
+        makeItem('tent', 159, 5),
+      ];
+    },
+  },
+  // ======== LEVEL 5: GOAT ROCKS WILDERNESS ========
+  {
+    name: 'Goat Rocks',
+    subtitle: 'The famous knife-edge ridge above Goat Rocks Wilderness',
+    section: 'PCT Washington: Snoqualmie Pass \u2192 White Pass',
+    campName: 'Snowgrass Flat',
+    goalTile: [172, 2],
+    goalFlagY: 4,
+    spawnTile: [2, 9],
+    build() {
+      const COLS = 175, ROWS = 15;
+      const { map, set, hline, fill } = makeMap(COLS, ROWS);
+      fill(0, 11, COLS - 1, 14, T_SOLID);
+      for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+      // APPROACH
+      fill(6, 9, 9, 10, T_SOLID); fill(12, 8, 15, 10, T_SOLID);
+      hline(16, 21, 7, T_PLATFORM);
+      fill(20, 8, 23, 10, T_SOLID);
+      hline(24, 29, 9, T_PLATFORM);
+      fill(27, 9, 30, 10, T_SOLID);
+      // CISPUS PASS CROSSING
+      fill(31, 11, 43, 11, T_EMPTY); fill(31, 12, 43, 13, T_WATER);
+      hline(32, 33, 9, T_SOLID); hline(35, 36, 7, T_PLATFORM);
+      hline(38, 39, 8, T_PLATFORM); hline(41, 42, 7, T_PLATFORM);
+      hline(43, 44, 9, T_SOLID);
+      // LOWER GOAT ROCKS
+      fill(46, 9, 49, 10, T_SOLID); fill(51, 8, 54, 10, T_SOLID);
+      hline(55, 60, 6, T_PLATFORM);
+      fill(59, 7, 62, 10, T_SOLID);
+      hline(63, 68, 5, T_PLATFORM); hline(67, 72, 7, T_PLATFORM);
+      fill(71, 8, 74, 10, T_SOLID);
+      hline(75, 80, 9, T_PLATFORM);
+      // KNIFE EDGE RIDGE — long exposed section with water gorge below
+      fill(80, 11, 122, 11, T_EMPTY); fill(80, 12, 122, 13, T_WATER);
+      hline(80, 122, 10, T_SOLID);
+      hline(80, 84, 8, T_PLATFORM); hline(86, 90, 6, T_PLATFORM);
+      hline(92, 95, 8, T_PLATFORM); hline(97, 100, 5, T_PLATFORM);
+      hline(102, 105, 7, T_PLATFORM); hline(107, 110, 4, T_PLATFORM);
+      hline(112, 115, 6, T_PLATFORM); hline(117, 120, 8, T_PLATFORM);
+      hline(120, 124, 9, T_PLATFORM);
+      // UPPER GOAT ROCKS
+      fill(123, 9, 126, 10, T_SOLID); fill(128, 8, 131, 10, T_SOLID);
+      hline(132, 137, 6, T_PLATFORM);
+      fill(136, 7, 139, 10, T_SOLID);
+      hline(140, 145, 5, T_PLATFORM); hline(144, 149, 7, T_PLATFORM);
+      fill(148, 8, 151, 10, T_SOLID);
+      // FINAL APPROACH
+      hline(152, 157, 5, T_PLATFORM); hline(156, 161, 7, T_PLATFORM);
+      hline(160, 165, 5, T_PLATFORM); hline(164, 170, 6, T_PLATFORM);
+      fill(171, 4, 174, 14, T_SOLID);
+      return { map, COLS, ROWS };
+    },
+    spawnEnemies() {
+      return [
+        makeMarmot(13, 10), makeMarmot(55, 8), makeMarmot(127, 10), makeMarmot(153, 8),
+        makeMouse(22, 10), makeMouse(63, 8), makeMouse(131, 8),
+        makeMosquito(37, 7), makeMosquito(65, 5), makeMosquito(85, 7),
+        makeMosquito(100, 4), makeMosquito(115, 6), makeMosquito(145, 4), makeMosquito(162, 4),
+        makeHiker(50, 8), makeHiker(76, 9), makeHiker(140, 5), makeHiker(165, 5),
+        makeRedneck(18, 10), makeRedneck(75, 9), makeRedneck(149, 7),
+      ];
+    },
+    spawnTPBlooms() {
+      return [
+        makeTPBloom(10, 10), makeTPBloom(45, 10),
+        makeTPBloom(125, 10), makeTPBloom(155, 10),
+      ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 12, 8), makeItem('spork', 65, 5),
+        makeItem('filter', 90, 7), makeItem('spray', 142, 5),
+        makeItem('tent', 168, 5),
+      ];
+    },
+  },
+  // ======== LEVEL 6: BRIDGE OF THE GODS ========
+  {
+    name: 'Bridge of the Gods',
+    subtitle: 'Through Indian Heaven Wilderness to the Columbia River',
+    section: 'PCT Washington/Oregon: White Pass \u2192 Cascade Locks',
+    campName: 'Cascade Locks',
+    goalTile: [182, 2],
+    goalFlagY: 4,
+    spawnTile: [2, 9],
+    build() {
+      const COLS = 185, ROWS = 15;
+      const { map, set, hline, fill } = makeMap(COLS, ROWS);
+      fill(0, 11, COLS - 1, 14, T_SOLID);
+      for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+      // FOREST DESCENT
+      fill(7, 8, 10, 10, T_SOLID);
+      hline(12, 17, 7, T_PLATFORM);
+      fill(16, 8, 19, 10, T_SOLID);
+      hline(20, 25, 9, T_PLATFORM);
+      fill(24, 9, 27, 10, T_SOLID);
+      // WIND RIVER CROSSING
+      fill(28, 11, 42, 11, T_EMPTY); fill(28, 12, 42, 13, T_WATER);
+      hline(29, 30, 9, T_SOLID); hline(32, 33, 8, T_PLATFORM);
+      hline(35, 36, 7, T_PLATFORM); hline(38, 39, 8, T_PLATFORM);
+      hline(41, 42, 9, T_SOLID);
+      // LOWER FOREST
+      fill(44, 9, 47, 10, T_SOLID);
+      hline(48, 53, 7, T_PLATFORM); hline(53, 58, 5, T_PLATFORM);
+      fill(57, 6, 60, 10, T_SOLID);
+      hline(61, 66, 8, T_PLATFORM);
+      fill(65, 9, 68, 10, T_SOLID);
+      hline(69, 74, 6, T_PLATFORM); hline(73, 78, 4, T_PLATFORM);
+      fill(77, 5, 80, 10, T_SOLID);
+      hline(81, 86, 7, T_PLATFORM);
+      // COLUMBIA GORGE GAP
+      fill(87, 11, 110, 11, T_EMPTY); fill(87, 12, 110, 13, T_WATER);
+      hline(87, 110, 10, T_SOLID);
+      hline(88, 92, 8, T_PLATFORM); hline(94, 97, 6, T_PLATFORM);
+      hline(99, 102, 8, T_PLATFORM); hline(104, 107, 5, T_PLATFORM);
+      hline(108, 111, 7, T_PLATFORM);
+      // BRIDGE APPROACH
+      fill(112, 9, 115, 10, T_SOLID);
+      hline(116, 121, 7, T_PLATFORM);
+      fill(120, 8, 123, 10, T_SOLID);
+      hline(123, 128, 5, T_PLATFORM); hline(127, 132, 8, T_PLATFORM);
+      fill(131, 8, 134, 10, T_SOLID);
+      hline(134, 139, 6, T_PLATFORM); hline(138, 143, 4, T_PLATFORM);
+      // CASCADE LOCKS APPROACH — long river gorge
+      fill(145, 11, 177, 11, T_EMPTY); fill(145, 12, 177, 13, T_WATER);
+      hline(145, 177, 10, T_SOLID);
+      hline(145, 149, 8, T_PLATFORM); hline(151, 154, 6, T_PLATFORM);
+      hline(156, 159, 8, T_PLATFORM); hline(161, 164, 5, T_PLATFORM);
+      hline(166, 169, 7, T_PLATFORM); hline(171, 174, 5, T_PLATFORM);
+      hline(174, 178, 6, T_PLATFORM);
+      fill(181, 4, 184, 14, T_SOLID);
+      return { map, COLS, ROWS };
+    },
+    spawnEnemies() {
+      return [
+        makeMarmot(13, 10), makeMarmot(52, 8), makeMarmot(115, 10), makeMarmot(147, 10),
+        makeMouse(25, 10), makeMouse(66, 8), makeMouse(85, 10), makeMouse(135, 8),
+        makeMosquito(35, 7), makeMosquito(56, 4), makeMosquito(91, 7),
+        makeMosquito(105, 4), makeMosquito(130, 3), makeMosquito(153, 6),
+        makeMosquito(168, 4),
+        makeHiker(43, 8), makeHiker(77, 5), makeHiker(126, 5),
+        makeHiker(162, 5), makeHiker(175, 7),
+        makeRedneck(18, 10), makeRedneck(62, 8),
+        makeRedneck(122, 7), makeRedneck(169, 7),
+      ];
+    },
+    spawnTPBlooms() {
+      return [
+        makeTPBloom(30, 10), makeTPBloom(55, 10), makeTPBloom(83, 10),
+        makeTPBloom(120, 10), makeTPBloom(150, 10),
+      ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 15, 8), makeItem('spork', 61, 5),
+        makeItem('filter', 97, 7), makeItem('spray', 130, 4),
+        makeItem('tent', 176, 6),
+      ];
+    },
+  },
+  // ======== LEVEL 7: OREGON CASCADES ========
+  {
+    name: 'Oregon Cascades',
+    subtitle: 'Volcanic rock and old-growth forest through the Oregon Cascades',
+    section: 'PCT Oregon: Cascade Locks \u2192 Timberline Lodge',
+    campName: 'Timberline Lodge',
+    goalTile: [197, 2],
+    goalFlagY: 4,
+    spawnTile: [2, 9],
+    build() {
+      const COLS = 200, ROWS = 15;
+      const { map, set, hline, fill } = makeMap(COLS, ROWS);
+      fill(0, 11, COLS - 1, 14, T_SOLID);
+      for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+      // COLUMBIA RIVER EXIT
+      fill(7, 9, 10, 10, T_SOLID);
+      hline(13, 18, 8, T_PLATFORM);
+      fill(17, 8, 20, 10, T_SOLID);
+      hline(21, 26, 6, T_PLATFORM);
+      fill(25, 7, 28, 10, T_SOLID);
+      // LAVA FIELD 1
+      fill(29, 11, 41, 11, T_EMPTY); fill(29, 12, 41, 13, T_WATER);
+      hline(30, 31, 9, T_SOLID); hline(33, 34, 8, T_PLATFORM);
+      hline(36, 37, 7, T_PLATFORM); hline(39, 40, 8, T_PLATFORM);
+      hline(41, 42, 9, T_SOLID);
+      fill(43, 9, 46, 10, T_SOLID);
+      hline(47, 52, 7, T_PLATFORM); hline(51, 56, 5, T_PLATFORM);
+      fill(55, 6, 58, 10, T_SOLID);
+      // FOREST SECTION
+      hline(59, 64, 8, T_PLATFORM);
+      fill(63, 9, 66, 10, T_SOLID);
+      hline(67, 72, 6, T_PLATFORM); hline(71, 76, 4, T_PLATFORM);
+      fill(75, 5, 78, 10, T_SOLID);
+      hline(79, 84, 7, T_PLATFORM); hline(83, 88, 5, T_PLATFORM);
+      fill(87, 6, 90, 10, T_SOLID);
+      // LAVA FIELD 2
+      fill(91, 11, 114, 11, T_EMPTY); fill(91, 12, 114, 13, T_WATER);
+      hline(91, 114, 10, T_SOLID);
+      hline(92, 96, 8, T_PLATFORM); hline(98, 101, 6, T_PLATFORM);
+      hline(103, 106, 8, T_PLATFORM); hline(108, 111, 5, T_PLATFORM);
+      hline(113, 116, 7, T_PLATFORM);
+      // UPPER FOREST
+      fill(116, 9, 119, 10, T_SOLID);
+      hline(120, 125, 7, T_PLATFORM);
+      fill(124, 8, 127, 10, T_SOLID);
+      hline(128, 133, 5, T_PLATFORM);
+      fill(132, 6, 135, 10, T_SOLID);
+      hline(136, 141, 8, T_PLATFORM); hline(140, 145, 6, T_PLATFORM);
+      fill(144, 7, 147, 10, T_SOLID);
+      hline(148, 153, 4, T_PLATFORM);
+      // TIMBERLINE APPROACH — long snow bridge
+      fill(154, 11, 190, 11, T_EMPTY); fill(154, 12, 190, 13, T_WATER);
+      hline(154, 190, 10, T_SOLID);
+      hline(155, 159, 8, T_PLATFORM); hline(161, 164, 6, T_PLATFORM);
+      hline(166, 169, 8, T_PLATFORM); hline(171, 174, 5, T_PLATFORM);
+      hline(176, 179, 7, T_PLATFORM); hline(181, 184, 4, T_PLATFORM);
+      hline(186, 189, 6, T_PLATFORM); hline(188, 193, 6, T_PLATFORM);
+      fill(196, 4, 199, 14, T_SOLID);
+      return { map, COLS, ROWS };
+    },
+    spawnEnemies() {
+      return [
+        makeMarmot(15, 10), makeMarmot(55, 8), makeMarmot(92, 10),
+        makeMarmot(120, 10), makeMarmot(156, 10),
+        makeMouse(25, 10), makeMouse(64, 8), makeMouse(100, 8),
+        makeMouse(128, 8), makeMouse(162, 8),
+        makeMosquito(34, 7), makeMosquito(52, 4), makeMosquito(70, 4),
+        makeMosquito(95, 7), makeMosquito(109, 4), makeMosquito(137, 3),
+        makeMosquito(158, 7), makeMosquito(175, 4), makeMosquito(188, 4),
+        makeHiker(43, 8), makeHiker(80, 5), makeHiker(116, 7),
+        makeHiker(140, 4), makeHiker(172, 5), makeHiker(190, 7),
+        makeRedneck(20, 10), makeRedneck(70, 8),
+        makeRedneck(123, 7), makeRedneck(177, 7),
+      ];
+    },
+    spawnTPBlooms() {
+      return [
+        makeTPBloom(25, 10), makeTPBloom(57, 10), makeTPBloom(90, 10),
+        makeTPBloom(125, 10), makeTPBloom(157, 10),
+      ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 18, 8), makeItem('spork', 68, 4),
+        makeItem('filter', 103, 7), makeItem('spray', 138, 5),
+        makeItem('tent', 186, 4),
+      ];
+    },
+  },
+  // ======== LEVEL 8: SKY LAKES WILDERNESS ========
+  {
+    name: 'Sky Lakes',
+    subtitle: 'Through the volcanic Sky Lakes and on to Crater Lake',
+    section: 'PCT Oregon: Timberline Lodge \u2192 Mazama Village',
+    campName: 'Mazama Village',
+    goalTile: [207, 2],
+    goalFlagY: 4,
+    spawnTile: [2, 9],
+    build() {
+      const COLS = 210, ROWS = 15;
+      const { map, set, hline, fill } = makeMap(COLS, ROWS);
+      fill(0, 11, COLS - 1, 14, T_SOLID);
+      for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+      // UPPER SKY LAKES
+      fill(7, 8, 10, 10, T_SOLID); fill(13, 7, 16, 10, T_SOLID);
+      hline(17, 22, 5, T_PLATFORM);
+      fill(21, 6, 24, 10, T_SOLID);
+      hline(25, 30, 8, T_PLATFORM);
+      fill(29, 9, 32, 10, T_SOLID);
+      // SKY LAKE 1
+      fill(33, 11, 45, 11, T_EMPTY); fill(33, 12, 45, 13, T_WATER);
+      hline(34, 35, 9, T_SOLID); hline(37, 38, 7, T_PLATFORM);
+      hline(40, 41, 8, T_PLATFORM); hline(43, 44, 7, T_PLATFORM);
+      hline(45, 46, 9, T_SOLID);
+      // VOLCANIC RIDGE
+      fill(47, 9, 50, 10, T_SOLID); fill(52, 8, 55, 10, T_SOLID);
+      hline(56, 61, 6, T_PLATFORM);
+      fill(60, 7, 63, 10, T_SOLID);
+      hline(64, 69, 5, T_PLATFORM);
+      fill(68, 6, 71, 10, T_SOLID);
+      hline(72, 77, 7, T_PLATFORM); hline(76, 81, 4, T_PLATFORM);
+      fill(80, 5, 83, 10, T_SOLID);
+      // SKY LAKE 2
+      fill(85, 11, 98, 11, T_EMPTY); fill(85, 12, 98, 13, T_WATER);
+      hline(86, 87, 9, T_SOLID); hline(89, 90, 7, T_PLATFORM);
+      hline(92, 93, 8, T_PLATFORM); hline(95, 96, 7, T_PLATFORM);
+      hline(98, 99, 9, T_SOLID);
+      // CRATER RIM APPROACH
+      fill(100, 9, 103, 10, T_SOLID);
+      hline(104, 109, 7, T_PLATFORM);
+      fill(108, 8, 111, 10, T_SOLID);
+      hline(112, 117, 5, T_PLATFORM); hline(116, 121, 7, T_PLATFORM);
+      fill(120, 8, 123, 10, T_SOLID);
+      hline(124, 129, 5, T_PLATFORM);
+      fill(128, 6, 131, 10, T_SOLID);
+      hline(132, 137, 4, T_PLATFORM); hline(136, 141, 6, T_PLATFORM);
+      // SKY LAKE 3
+      fill(142, 11, 154, 11, T_EMPTY); fill(142, 12, 154, 13, T_WATER);
+      hline(143, 144, 9, T_SOLID); hline(146, 147, 7, T_PLATFORM);
+      hline(149, 150, 8, T_PLATFORM); hline(152, 153, 7, T_PLATFORM);
+      hline(154, 155, 9, T_SOLID);
+      // MAZAMA APPROACH
+      fill(156, 9, 159, 10, T_SOLID); fill(161, 8, 164, 10, T_SOLID);
+      hline(165, 170, 6, T_PLATFORM);
+      fill(169, 7, 172, 10, T_SOLID);
+      hline(173, 178, 4, T_PLATFORM); hline(177, 182, 6, T_PLATFORM);
+      fill(181, 7, 184, 10, T_SOLID);
+      hline(185, 190, 5, T_PLATFORM); hline(189, 194, 7, T_PLATFORM);
+      hline(193, 198, 5, T_PLATFORM); hline(197, 202, 6, T_PLATFORM);
+      fill(206, 4, 209, 14, T_SOLID);
+      return { map, COLS, ROWS };
+    },
+    spawnEnemies() {
+      return [
+        makeMarmot(15, 10), makeMarmot(50, 8), makeMarmot(86, 10),
+        makeMarmot(105, 10), makeMarmot(143, 10), makeMarmot(160, 10),
+        makeMouse(27, 10), makeMouse(60, 8), makeMouse(73, 8),
+        makeMouse(110, 8), makeMouse(150, 8), makeMouse(165, 8),
+        makeMosquito(38, 7), makeMosquito(57, 4), makeMosquito(78, 3),
+        makeMosquito(92, 6), makeMosquito(115, 4), makeMosquito(133, 3),
+        makeMosquito(148, 6), makeMosquito(170, 3), makeMosquito(195, 3),
+        makeHiker(45, 8), makeHiker(80, 5), makeHiker(120, 5),
+        makeHiker(140, 6), makeHiker(178, 5), makeHiker(204, 5),
+        makeRedneck(22, 10), makeRedneck(66, 8),
+        makeRedneck(125, 7), makeRedneck(182, 6), makeRedneck(200, 5),
+      ];
+    },
+    spawnTPBlooms() {
+      return [
+        makeTPBloom(30, 10), makeTPBloom(52, 10), makeTPBloom(88, 10),
+        makeTPBloom(125, 10), makeTPBloom(157, 10), makeTPBloom(185, 10),
+      ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 20, 8), makeItem('spork', 65, 5),
+        makeItem('filter', 100, 7), makeItem('spray', 130, 5),
+        makeItem('tent', 200, 5),
+      ];
+    },
+  },
+  // ======== LEVEL 9: CASTLE CRAGS ========
+  {
+    name: 'Castle Crags',
+    subtitle: 'The dramatic spires of Castle Crags — the final push south',
+    section: 'PCT Oregon/California: Crater Lake \u2192 Castle Crags',
+    campName: 'Castle Crags Summit',
+    goalTile: [217, 1],
+    goalFlagY: 3,
+    spawnTile: [2, 9],
+    build() {
+      const COLS = 220, ROWS = 15;
+      const { map, set, hline, fill } = makeMap(COLS, ROWS);
+      fill(0, 11, COLS - 1, 14, T_SOLID);
+      for (let y = 0; y < ROWS; y++) set(0, y, T_SOLID);
+      // CRAGS BASE
+      fill(7, 8, 10, 10, T_SOLID); fill(13, 7, 16, 10, T_SOLID);
+      hline(17, 22, 6, T_PLATFORM);
+      fill(21, 7, 24, 10, T_SOLID);
+      hline(25, 30, 8, T_PLATFORM);
+      fill(29, 9, 32, 10, T_SOLID);
+      // FIRST GORGE
+      fill(33, 11, 48, 11, T_EMPTY); fill(33, 12, 48, 13, T_WATER);
+      hline(34, 35, 9, T_SOLID); hline(37, 38, 7, T_PLATFORM);
+      hline(40, 41, 8, T_PLATFORM); hline(43, 44, 7, T_PLATFORM);
+      hline(46, 47, 8, T_PLATFORM); hline(48, 49, 9, T_SOLID);
+      // ROCKY SPIRES 1
+      fill(50, 9, 53, 10, T_SOLID); fill(55, 7, 58, 10, T_SOLID);
+      hline(59, 64, 5, T_PLATFORM);
+      fill(63, 6, 66, 10, T_SOLID);
+      hline(67, 72, 7, T_PLATFORM);
+      fill(71, 8, 74, 10, T_SOLID);
+      hline(75, 80, 4, T_PLATFORM);
+      fill(79, 5, 82, 10, T_SOLID);
+      hline(83, 88, 7, T_PLATFORM);
+      // SECOND GORGE
+      fill(89, 11, 104, 11, T_EMPTY); fill(89, 12, 104, 13, T_WATER);
+      hline(89, 104, 10, T_SOLID);
+      hline(90, 94, 8, T_PLATFORM); hline(96, 99, 6, T_PLATFORM);
+      hline(101, 104, 8, T_PLATFORM); hline(104, 107, 9, T_PLATFORM);
+      // ROCKY SPIRES 2
+      fill(108, 9, 111, 10, T_SOLID); fill(113, 7, 116, 10, T_SOLID);
+      hline(117, 122, 5, T_PLATFORM);
+      fill(121, 6, 124, 10, T_SOLID);
+      hline(125, 130, 8, T_PLATFORM);
+      fill(129, 9, 132, 10, T_SOLID);
+      hline(133, 138, 6, T_PLATFORM);
+      fill(137, 7, 140, 10, T_SOLID);
+      hline(141, 146, 4, T_PLATFORM);
+      // THIRD GORGE
+      fill(147, 11, 162, 11, T_EMPTY); fill(147, 12, 162, 13, T_WATER);
+      hline(147, 162, 10, T_SOLID);
+      hline(148, 152, 8, T_PLATFORM); hline(154, 157, 6, T_PLATFORM);
+      hline(159, 162, 8, T_PLATFORM); hline(162, 165, 9, T_PLATFORM);
+      // SWITCHBACK SUMMIT
+      fill(166, 9, 169, 10, T_SOLID); fill(171, 8, 174, 10, T_SOLID);
+      hline(175, 180, 6, T_PLATFORM);
+      fill(179, 7, 182, 10, T_SOLID);
+      hline(183, 188, 4, T_PLATFORM); hline(187, 192, 6, T_PLATFORM);
+      fill(191, 7, 194, 10, T_SOLID);
+      hline(195, 200, 4, T_PLATFORM); hline(199, 204, 6, T_PLATFORM);
+      hline(203, 208, 4, T_PLATFORM); hline(207, 212, 6, T_PLATFORM);
+      fill(216, 3, 219, 14, T_SOLID);
+      return { map, COLS, ROWS };
+    },
+    spawnEnemies() {
+      return [
+        makeMarmot(10, 10), makeMarmot(52, 8), makeMarmot(89, 10),
+        makeMarmot(110, 10), makeMarmot(148, 10), makeMarmot(169, 10), makeMarmot(196, 8),
+        makeMouse(22, 10), makeMouse(60, 8), makeMouse(75, 8),
+        makeMouse(117, 8), makeMouse(135, 8), makeMouse(163, 8), makeMouse(177, 8),
+        makeMosquito(38, 7), makeMosquito(55, 4), makeMosquito(70, 4),
+        makeMosquito(93, 7), makeMosquito(107, 4), makeMosquito(128, 3),
+        makeMosquito(143, 3), makeMosquito(152, 6), makeMosquito(168, 4),
+        makeMosquito(184, 3), makeMosquito(200, 2), makeMosquito(212, 2),
+        makeHiker(44, 8), makeHiker(80, 5), makeHiker(115, 7),
+        makeHiker(140, 4), makeHiker(174, 5), makeHiker(192, 5), makeHiker(213, 4),
+        makeRedneck(16, 10), makeRedneck(65, 8), makeRedneck(105, 9),
+        makeRedneck(158, 8), makeRedneck(185, 6), makeRedneck(210, 4),
+      ];
+    },
+    spawnTPBlooms() {
+      return [
+        makeTPBloom(30, 10), makeTPBloom(55, 10), makeTPBloom(88, 10),
+        makeTPBloom(115, 10), makeTPBloom(148, 10),
+        makeTPBloom(167, 10), makeTPBloom(195, 10),
+      ];
+    },
+    spawnItems() {
+      return [
+        makeItem('bar', 18, 8), makeItem('spork', 64, 5),
+        makeItem('filter', 97, 7), makeItem('spray', 135, 4),
+        makeItem('tent', 210, 4),
       ];
     },
   },
@@ -436,6 +876,14 @@ function spawnItems() {
   items = LEVELS[game.levelNum].spawnItems();
 }
 
+let tpBlooms = [];
+function spawnTPBlooms() {
+  tpBlooms = LEVELS[game.levelNum].spawnTPBlooms ? LEVELS[game.levelNum].spawnTPBlooms() : [];
+}
+
+let beerCans = [];
+let trashPiles = [];
+
 // ==================== FLOATING TEXT ====================
 const floatTexts = [];
 function addFloatText(x, y, str, color) {
@@ -512,6 +960,34 @@ function makeMouse(tx, ty) {
 let enemies = [];
 function spawnEnemies() {
   enemies = LEVELS[game.levelNum].spawnEnemies();
+}
+
+function makeRedneck(tx, ty) {
+  return {
+    type: 'redneck',
+    x: tx * TS, y: ty * TS - 12,
+    w: 28, h: 40,
+    vx: -0.6, vy: 0,
+    onGround: false,
+    alive: true,
+    stunTimer: 0,
+    frame: 0, frameTimer: 0,
+    patrolX1: (tx - 4) * TS,
+    patrolX2: (tx + 4) * TS,
+    throwTimer: Math.floor(rnd(120, 240)),
+  };
+}
+
+function makeTPBloom(tx, ty) {
+  return { x: tx * TS + 6, y: ty * TS + 16, w: 20, h: 16, active: true };
+}
+
+function makeBeerCan(x, y, dir) {
+  return { x, y, vx: dir * 4.5, vy: -2.5, w: 8, h: 12, alive: true };
+}
+
+function makeTrash(x, y) {
+  return { x: x - 6, y, w: 16, h: 8, variant: Math.floor(rnd(0, 3)) };
 }
 
 function moveEntityHoriz(e, vx) {
@@ -597,6 +1073,37 @@ function updateEnemy(e) {
   if (!isSolid(frontTx, belowTy) && !isPlatform(frontTx, belowTy) && e.onGround) {
     e.vx *= -1;
   }
+
+  // Redneck beer-can throw
+  if (e.type === 'redneck') {
+    e.throwTimer--;
+    if (e.throwTimer <= 0) {
+      const dir = e.vx > 0 ? 1 : -1;
+      beerCans.push(makeBeerCan(e.x + e.w / 2, e.y + 10, dir));
+      audio.sfxBeerCan();
+      e.throwTimer = Math.floor(rnd(150, 280));
+    }
+  }
+}
+
+function updateBeerCans() {
+  beerCans = beerCans.filter(b => {
+    b.vy += 0.55;
+    if (b.vy > 14) b.vy = 14;
+    b.x += b.vx;
+    b.y += b.vy;
+    const tx = Math.floor((b.x + b.w / 2) / TS);
+    const ty = Math.floor((b.y + b.h / 2) / TS);
+    if (isSolid(tx, ty)) return false;
+    if (b.y > level.ROWS * TS + 32) return false;
+    if (b.x < -32 || b.x > level.COLS * TS + 32) return false;
+    if (player.hurtTimer === 0 && aabb(player, b)) {
+      hurtPlayer();
+      audio.sfxBeerCanHit();
+      return false;
+    }
+    return true;
+  });
 }
 
 // ==================== PLAYER ====================
@@ -792,6 +1299,15 @@ function updatePlayer() {
     }
   });
 
+  // TP Bloom contact
+  tpBlooms.forEach(b => {
+    if (player.hurtTimer === 0 && aabb(player, b)) {
+      hurtPlayer();
+      audio.sfxTPBloom();
+      spawnParticles(b.x + b.w / 2, b.y + b.h / 2, '#F5F0E8', 6, 2);
+    }
+  });
+
   // Goal check (summit flag)
   const gDef = LEVELS[game.levelNum].goalTile;
   const goalX = gDef[0] * TS, goalY = gDef[1] * TS;
@@ -802,7 +1318,7 @@ function updatePlayer() {
     const timeSeconds = Math.floor(game.levelTick / 60);
     // Target = 4× theoretical minimum sprint time (goalTile * 32px / 3.5px/tick / 60fps)
     // L1: ~71s, L2: ~90s, L3: ~108s
-    const levelDistances = [117 * 32, 147 * 32, 177 * 32];
+    const levelDistances = [117*32, 132*32, 147*32, 162*32, 172*32, 182*32, 197*32, 207*32, 217*32];
     const targetTime = Math.ceil(levelDistances[game.levelNum] / 3.5 / 60 * 4);
     const timeDiff = targetTime - timeSeconds;
     game.levelTimeBonus = timeDiff >= 0
@@ -846,16 +1362,20 @@ function hurtPlayer(instant) {
 }
 
 const ENEMY_DEFS = {
-  marmot:   { label: 'Marmot', pts: 100 },       // medium difficulty
-  mouse:    { label: 'Micro Bear', pts: 200 },    // fairly hard — fast and small
-  mosquito: { label: 'Mosquito', pts: 300 },      // hardest — airborne, tricky to stomp
-  hiker:    { label: 'Heavy Packer', pts: 75 },   // easiest — slow and large
+  marmot:   { label: 'Marmot',        pts: 100 },  // medium difficulty
+  mouse:    { label: 'Micro Bear',    pts: 200 },  // fairly hard — fast and small
+  mosquito: { label: 'Mosquito',      pts: 300 },  // hardest — airborne, tricky to stomp
+  hiker:    { label: 'Heavy Packer',  pts: 75  },  // easiest — slow and large
+  redneck:  { label: 'Redneck',       pts: 150 },  // medium — beer cans make him dangerous
 };
 
 function killEnemy(e) {
   e.alive = false;
   audio.sfxStomp();
   spawnParticles(e.x + e.w / 2, e.y + e.h / 2, '#aaff44', 12, 4);
+  if (e.type === 'redneck') {
+    trashPiles.push(makeTrash(e.x + e.w / 2, e.y + e.h - 8));
+  }
 }
 
 function scoreEnemy(e) {
@@ -935,12 +1455,16 @@ function loadLevel(num) {
   level = def.build();
   spawnItems();
   spawnEnemies();
+  spawnTPBlooms();
+  beerCans = [];
+  trashPiles = [];
   particles.length = 0;
   floatTexts.length = 0;
   cam.x = 0;
   cam.y = 0;
-  game.levelTimeBonus = 0; // Reset time bonus for the new level
-  game.levelCompletionTime = 0; // Reset completion time for new level
+  game.levelTimeBonus = 0;
+  game.levelCompletionTime = 0;
+  game.winScrollY = 0;
 }
 
 function initGame() {
@@ -1588,6 +2112,173 @@ function drawHiker(e) {
 
   ctx.globalAlpha = 1;
   ctx.restore();
+}
+
+function drawRedneck(e) {
+  const sx = Math.round(e.x - cam.x);
+  const sy = Math.round(e.y - cam.y);
+  const stunned = e.stunTimer > 0;
+  const f = e.vx > 0 ? 1 : -1;
+  ctx.save();
+  ctx.translate(sx + e.w / 2, sy + e.h);
+  ctx.globalAlpha = stunned ? 0.6 : 1;
+
+  // Jeans — dark blue
+  const legSwing = e.frame ? 6 : 0;
+  ctx.fillStyle = stunned ? '#FFD700' : '#1A3A8A';
+  ctx.fillRect(-9, -18, 8, 18);
+  ctx.fillRect(1, -18 + legSwing, 8, 18);
+  // Boots
+  ctx.fillStyle = '#4A2A10';
+  ctx.fillRect(-10, -3, 9, 4);
+  ctx.fillRect(0, -3 + legSwing, 9, 4);
+
+  // Flannel body — red plaid
+  ctx.fillStyle = stunned ? '#FFD700' : '#CC3333';
+  ctx.fillRect(-10, -36, 20, 20);
+  if (!stunned) {
+    ctx.fillStyle = '#881111';
+    ctx.fillRect(-10, -32, 20, 2); ctx.fillRect(-10, -26, 20, 2);
+    ctx.fillRect(-4, -36, 2, 20); ctx.fillRect(2, -36, 2, 20);
+  }
+
+  // Belly (gut — redneck is wider)
+  ctx.fillStyle = stunned ? '#FFD700' : '#CC6622';
+  ctx.beginPath();
+  ctx.ellipse(0, -22, 10, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head — ruddy complexion
+  ctx.fillStyle = stunned ? '#FFD700' : '#CC7755';
+  ctx.beginPath();
+  ctx.arc(0, -44, 9, 0, Math.PI * 2);
+  ctx.fill();
+  // Beard
+  if (!stunned) {
+    ctx.fillStyle = '#886644';
+    ctx.fillRect(-7, -40, 14, 7);
+  }
+
+  // Camo hat
+  ctx.fillStyle = '#5A7A4A';
+  ctx.fillRect(-11, -52, 22, 5); // brim
+  ctx.fillRect(-8, -60, 16, 10); // crown
+  if (!stunned) {
+    ctx.fillStyle = '#3A5A2A';
+    ctx.fillRect(-6, -58, 4, 4); ctx.fillRect(2, -55, 5, 4);
+    ctx.fillStyle = '#8A7A5A';
+    ctx.fillRect(-2, -60, 3, 3); ctx.fillRect(4, -57, 4, 4);
+  }
+
+  // Eyes
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-3, -47, 3, 2); ctx.fillRect(1, -47, 3, 2);
+  if (stunned) {
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-4, -48); ctx.lineTo(-1, -45); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-1, -48); ctx.lineTo(-4, -45); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(1, -48); ctx.lineTo(4, -45); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, -48); ctx.lineTo(1, -45); ctx.stroke();
+  }
+
+  // Beer can in hand (when not about to throw)
+  if (!stunned && e.throwTimer > 40) {
+    const hx = f * 13;
+    ctx.fillStyle = '#C8960A'; ctx.fillRect(hx - 3, -33, 6, 10);
+    ctx.fillStyle = '#E0A010'; ctx.fillRect(hx - 3, -29, 6, 4);
+    ctx.fillStyle = '#A07808'; ctx.fillRect(hx - 3, -34, 6, 2);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawTPBlooms() {
+  tpBlooms.forEach(b => {
+    const sx = Math.round(b.x - cam.x);
+    const sy = Math.round(b.y - cam.y);
+    if (sx < -20 || sx > W + 20) return;
+    ctx.save();
+    ctx.translate(sx + b.w / 2, sy + b.h / 2);
+    // Ragged TP petals radiating from center
+    const petals = 6;
+    for (let i = 0; i < petals; i++) {
+      const angle = (i / petals) * Math.PI * 2 + 0.3;
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.fillStyle = i % 2 === 0 ? '#F0EBE0' : '#E8E0D0';
+      ctx.beginPath();
+      ctx.ellipse(0, -7, 2.5, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // Center clump
+    ctx.fillStyle = '#D4C8A8';
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Faint disgusting tinge
+    ctx.fillStyle = 'rgba(200,180,100,0.3)';
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawBeerCans() {
+  beerCans.forEach(b => {
+    const sx = Math.round(b.x - cam.x);
+    const sy = Math.round(b.y - cam.y);
+    if (sx < -20 || sx > W + 20) return;
+    ctx.save();
+    ctx.translate(sx + b.w / 2, sy + b.h / 2);
+    ctx.rotate(game.tick * 0.25);
+    // Can body
+    ctx.fillStyle = '#C8960A';
+    ctx.fillRect(-3, -5, 7, 10);
+    // Top/bottom strips
+    ctx.fillStyle = '#A07808';
+    ctx.fillRect(-3, -6, 7, 2);
+    ctx.fillRect(-3, 4, 7, 2);
+    // Label band
+    ctx.fillStyle = '#E0A820';
+    ctx.fillRect(-3, -2, 7, 4);
+    ctx.restore();
+  });
+}
+
+function drawTrashPiles() {
+  trashPiles.forEach(t => {
+    const sx = Math.round(t.x - cam.x);
+    const sy = Math.round(t.y - cam.y);
+    if (sx < -20 || sx > W + 20) return;
+    ctx.save();
+    ctx.translate(sx, sy);
+    if (t.variant === 0) {
+      // Crushed beer can
+      ctx.fillStyle = '#A07808';
+      ctx.fillRect(2, 2, 10, 5);
+      ctx.fillStyle = '#C8960A';
+      ctx.fillRect(3, 3, 7, 3);
+    } else if (t.variant === 1) {
+      // Plastic wrapper
+      ctx.fillStyle = 'rgba(230,230,200,0.7)';
+      ctx.beginPath();
+      ctx.ellipse(8, 5, 7, 3, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(180,180,160,0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else {
+      // Candy wrapper
+      ctx.fillStyle = '#CC2222';
+      ctx.fillRect(1, 2, 13, 5);
+      ctx.fillStyle = '#FFCC00';
+      ctx.fillRect(4, 2, 6, 5);
+    }
+    ctx.restore();
+  });
 }
 
 function drawItemIcon(type, cx, cy) {
@@ -2271,52 +2962,70 @@ function drawLevelComplete() {
 }
 
 function drawWin() {
-  ctx.fillStyle = 'rgba(0,20,0,0.7)';
+  ctx.fillStyle = 'rgba(0,20,0,0.85)';
   ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 52px Courier New';
-  ctx.textAlign = 'center';
-  ctx.shadowColor = '#AA8800';
-  ctx.shadowBlur = 12;
-  ctx.fillText('THRU-HIKE COMPLETE!', W / 2, H / 2 - 80);
-  ctx.shadowBlur = 0;
-
-  ctx.fillStyle = '#88FF88';
-  ctx.font = 'bold 18px Courier New';
-  ctx.fillText('You completed all ' + LEVELS.length + ' PCT sections!', W / 2, H / 2 - 30);
-
-  ctx.fillStyle = '#88DDFF';
-  ctx.font = '16px Courier New';
-  ctx.fillText(`Final Score: ${player.score}`, W / 2, H / 2 + 10);
-
-  ctx.font = '14px Courier New';
-  LEVELS.forEach((l, i) => {
-    const lnt = game.leaveNoTrace[i];
-    const ta = game.trailAngel[i];
-    const awards = [];
-    if (lnt) awards.push('Leave No Trace');
-    if (ta) awards.push('Trail Angel');
-    const suffix = awards.length ? '  -  ' + awards.join(', ') + '!' : '';
-    ctx.fillStyle = (lnt || ta) ? '#44ffaa' : '#AAAAFF';
-    ctx.fillText((i + 1) + '. ' + l.name + ' \u2192 ' + l.campName + suffix, W / 2, H / 2 + 40 + i * 20);
-  });
-
-  // Stars
-  for (let i = 0; i < 30; i++) {
+  // Twinkling stars in the header area
+  for (let i = 0; i < 20; i++) {
     const sx = (Math.sin(i * 137.5) * 0.5 + 0.5) * W;
-    const sy = (Math.cos(i * 137.5) * 0.5 + 0.5) * H * 0.8;
-    const r = 2 + Math.sin(game.tick * 0.1 + i) * 2;
+    const sy = (Math.cos(i * 137.5) * 0.5 + 0.5) * 70;
+    const r = 1 + Math.sin(game.tick * 0.12 + i) * 1;
     ctx.fillStyle = '#FFD700';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
   }
 
+  // Fixed header
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#FFD700';
+  ctx.font = 'bold 36px Courier New';
+  ctx.shadowColor = '#AA8800'; ctx.shadowBlur = 12;
+  ctx.fillText('THRU-HIKE COMPLETE!', W / 2, 42);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#88FF88';
+  ctx.font = 'bold 14px Courier New';
+  ctx.fillText('All ' + LEVELS.length + ' PCT sections done!', W / 2, 62);
+  ctx.fillStyle = '#88DDFF';
+  ctx.font = '13px Courier New';
+  ctx.fillText('Final Score: ' + player.score, W / 2, 78);
+
+  // Scrolling credits zone
+  const scrollTop = 90;
+  const scrollBot = H - 32;
+  const scrollAreaH = scrollBot - scrollTop;
+  const itemH = 22;
+  const totalH = LEVELS.length * itemH + 60;
+
+  // Advance scroll
+  if (!game.winScrollY) game.winScrollY = 0;
+  game.winScrollY += 0.6;
+  if (game.winScrollY > totalH + scrollAreaH) game.winScrollY = 0;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, scrollTop, W, scrollAreaH);
+  ctx.clip();
+
+  ctx.font = '13px Courier New';
+  LEVELS.forEach((l, i) => {
+    const itemY = scrollTop + scrollAreaH - game.winScrollY + i * itemH + itemH;
+    if (itemY < scrollTop - itemH || itemY > scrollBot + itemH) return;
+    const lnt = game.leaveNoTrace[i];
+    const ta = game.trailAngel[i];
+    const awards = (lnt && ta) ? ' \u2605 LNT+Angel!' : lnt ? ' \u2605 LNT' : ta ? ' \u2605 Angel' : '';
+    ctx.fillStyle = (lnt && ta) ? '#FFD700' : (lnt || ta) ? '#44ffaa' : '#AAAAFF';
+    ctx.fillText((i + 1) + '. ' + l.campName + awards, W / 2, itemY);
+    ctx.fillStyle = 'rgba(170,170,255,0.5)';
+    ctx.font = '10px Courier New';
+    ctx.fillText(l.section, W / 2, itemY + 11);
+    ctx.font = '13px Courier New';
+  });
+  ctx.restore();
+
+  // Fixed footer
   if (Math.floor(game.tick / 30) % 2 === 0) {
     ctx.fillStyle = '#FFF';
-    ctx.font = 'bold 18px Courier New';
-    ctx.fillText('TAP  OR  PRESS  SPACE  FOR  NEW  ADVENTURE', W / 2, H / 2 + 130);
+    ctx.font = 'bold 14px Courier New';
+    ctx.fillText('TAP  OR  PRESS  SPACE  FOR  NEW  ADVENTURE', W / 2, H - 12);
   }
 }
 
@@ -2332,6 +3041,7 @@ function update() {
   } else if (game.state === 'playing') {
     updatePlayer();
     enemies.forEach(updateEnemy);
+    updateBeerCans();
     updateParticles();
     updateFloatTexts();
     updateCamera(player.x, player.y);
@@ -2407,6 +3117,7 @@ function draw() {
       else if (e.type === 'mouse') drawMouse(e);
       else if (e.type === 'mosquito') drawMosquito(e);
       else if (e.type === 'hiker') drawHiker(e);
+      else if (e.type === 'redneck') drawRedneck(e);
     });
     drawPlayer();
     drawParticles();
@@ -2433,6 +3144,8 @@ function draw() {
   // Playing
   drawBackground();
   drawLevel();
+  drawTrashPiles();
+  drawTPBlooms();
   drawItems();
   drawCampsite();
   enemies.forEach(e => {
@@ -2441,7 +3154,9 @@ function draw() {
     else if (e.type === 'mouse') drawMouse(e);
     else if (e.type === 'mosquito') drawMosquito(e);
     else if (e.type === 'hiker') drawHiker(e);
+    else if (e.type === 'redneck') drawRedneck(e);
   });
+  drawBeerCans();
   drawPlayer();
   drawParticles();
   drawFloatTexts();
@@ -2580,10 +3295,35 @@ const audio = (() => {
     });
   }
 
+  // ---- beer can throw: whoosh toss ----
+  function sfxBeerCan() {
+    sfx(() => {
+      oscSweep('sawtooth', 350, 200, 0.12, 0.08);
+      noise(0.08, 0.06, 1200);
+    });
+  }
+
+  // ---- beer can hit player: metallic bonk ----
+  function sfxBeerCanHit() {
+    sfx(() => {
+      oscSweep('square', 280, 160, 0.15, 0.1);
+      noise(0.12, 0.05, 800);
+    });
+  }
+
+  // ---- TP bloom: gross splat ----
+  function sfxTPBloom() {
+    sfx(() => {
+      noise(0.35, 0.12, 350);
+      oscSweep('sine', 180, 60, 0.18, 0.1);
+    });
+  }
+
   return {
     init,
     sfxJump, sfxStomp, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
     sfxGlissade, sfxStun, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
+    sfxBeerCan, sfxBeerCanHit, sfxTPBloom,
   };
 })();
 
