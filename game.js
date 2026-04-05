@@ -1013,8 +1013,7 @@ function makeFish(tx, ty) {
   return {
     x: tx * TS + TS / 2,
     y: ty * TS + TS / 2,
-    baseX: tx * TS + TS / 2,
-    swimRange: Math.floor(rnd(3, 6)) * TS, // how far they patrol
+    baseY: ty * TS + TS / 2,
     vx: dir * rnd(0.3, 0.7),
     phase: rnd(0, Math.PI * 2),
     variant,
@@ -1023,13 +1022,22 @@ function makeFish(tx, ty) {
 }
 function updateFish() {
   fish.forEach(f => {
-    f.x += f.vx;
-    f.phase += 0.08;
-    f.y = f.y + Math.sin(f.phase) * 0.2; // gentle vertical bob
-    // Reverse at swim range limits
-    if (f.x < f.baseX - f.swimRange || f.x > f.baseX + f.swimRange) {
-      f.vx *= -1;
+    // Check if the tile ahead is still water before moving
+    const nextX = f.x + f.vx;
+    const checkEdge = f.vx > 0 ? nextX + f.w / 2 : nextX - f.w / 2;
+    const tileAheadX = Math.floor(checkEdge / TS);
+    const tileAheadY = Math.floor(f.y / TS);
+    const tileAhead = (tileAheadX >= 0 && tileAheadX < level.COLS &&
+                       tileAheadY >= 0 && tileAheadY < level.ROWS)
+                      ? level.map[tileAheadY][tileAheadX] : -1;
+    if (tileAhead !== T_WATER) {
+      f.vx *= -1; // reverse before leaving water
+    } else {
+      f.x = nextX;
     }
+    // Bob vertically around baseY — oscillate, never accumulate
+    f.phase += 0.08;
+    f.y = f.baseY + Math.sin(f.phase) * 3;
   });
 }
 
