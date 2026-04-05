@@ -988,7 +988,16 @@ function makeRedneck(tx, ty) {
 }
 
 function makeTPBloom(tx, ty) {
-  return { x: tx * TS + 6, y: ty * TS + 16, w: 20, h: 16, active: true };
+  let placeTy = ty;
+  if (level && level.map) {
+    // Walk up out of solid tiles
+    while (placeTy > 0 && level.map[placeTy][tx] !== T_EMPTY) placeTy--;
+    // Walk down to sit on a surface
+    while (placeTy < level.ROWS - 1 &&
+           level.map[placeTy][tx] === T_EMPTY &&
+           level.map[placeTy + 1][tx] === T_EMPTY) placeTy++;
+  }
+  return { x: tx * TS + 6, y: placeTy * TS + 16, w: 20, h: 16, active: true };
 }
 
 function makeBeerCan(x, y, dir) {
