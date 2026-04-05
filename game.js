@@ -125,9 +125,9 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(10, 10), makeMarmot(40, 8), makeMarmot(80, 8),
+        makeMarmot(11,8), makeMarmot(40, 8), makeMarmot(80, 7),
         makeMosquito(26, 7), makeMosquito(56, 5), makeMosquito(90, 5),
-        makeHiker(50, 8), makeHiker(106, 5),
+        makeHiker(51, 8), makeHiker(106, 5),
       ];
     },
     spawnTPBlooms() {
@@ -190,7 +190,7 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(12, 10), makeMarmot(47, 8), makeMarmot(92, 10),
+        makeMarmot(12, 10), makeMarmot(47, 8), makeMarmot(91, 10),
         makeMosquito(35, 7), makeMosquito(64, 5), makeMosquito(100, 4),
         makeHiker(23, 7), makeHiker(71, 8), makeHiker(111, 5),
         makeRedneck(125, 7),
@@ -261,11 +261,11 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(12, 10), makeMarmot(35, 8), makeMarmot(82, 8), makeMarmot(122, 10),
-        makeMouse(44, 8), makeMouse(76, 8), makeMouse(100, 7),
+        makeMarmot(12,8), makeMarmot(35, 8), makeMarmot(82, 8), makeMarmot(123, 10),
+        makeMouse(46, 8), makeMouse(76, 8), makeMouse(100, 7),
         makeMosquito(27, 7), makeMosquito(50, 4), makeMosquito(71, 7),
         makeMosquito(90, 4), makeMosquito(130, 4),
-        makeHiker(60, 7), makeHiker(95, 6), makeHiker(138, 5),
+        makeHiker(60, 7), makeHiker(94, 6), makeHiker(138, 5),
         makeRedneck(113, 9), makeRedneck(143, 5),
       ];
     },
@@ -337,12 +337,12 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(10, 10), makeMarmot(46, 8), makeMarmot(97, 10), makeMarmot(147, 10),
-        makeMouse(25, 10), makeMouse(70, 8), makeMouse(110, 8), makeMouse(132, 8),
+        makeMarmot(10, 10), makeMarmot(46, 8), makeMarmot(97, 10), makeMarmot(145, 10),
+        makeMouse(23, 10), makeMouse(70, 7), makeMouse(110, 7), makeMouse(132, 8),
         makeMosquito(33, 7), makeMosquito(52, 5), makeMosquito(83, 6),
         makeMosquito(102, 4), makeMosquito(125, 3), makeMosquito(136, 6),
         makeHiker(58, 6), makeMouse(78, 6), makeHiker(120, 5), makeHiker(155, 5),
-        makeRedneck(15, 10), makeRedneck(93, 9), makeRedneck(150, 7),
+        makeRedneck(15, 10), makeRedneck(93, 8), makeRedneck(150, 7),
       ];
     },
     spawnTPBlooms() {
@@ -413,12 +413,12 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(13, 10), makeMarmot(55, 8), makeMarmot(127, 10), makeMarmot(153, 8),
-        makeMouse(22, 10), makeMouse(63, 8), makeMouse(131, 8),
+        makeMarmot(11, 10), makeMarmot(54,7), makeMarmot(127, 10), makeMarmot(153, 8),
+        makeMouse(23,7), makeMouse(63, 8), makeMouse(131, 7),
         makeMosquito(37, 7), makeMosquito(65, 5), makeMosquito(85, 7),
         makeMosquito(100, 4), makeMosquito(115, 6), makeMosquito(145, 4), makeMosquito(162, 4),
         makeHiker(50, 8), makeHiker(76, 9), makeHiker(140, 5), makeHiker(165, 5),
-        makeRedneck(18, 10), makeRedneck(75, 9), makeRedneck(149, 7),
+        makeRedneck(19, 10), makeRedneck(75, 9), makeRedneck(149, 7),
       ];
     },
     spawnTPBlooms() {
@@ -494,14 +494,14 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(13, 10), makeMarmot(52, 8), makeMarmot(115, 10), makeMarmot(147, 10),
-        makeMouse(25, 10), makeMouse(66, 8), makeMouse(85, 10), makeMouse(135, 8),
+        makeMarmot(13, 10), makeMarmot(52, 8), makeMarmot(116, 10), makeMarmot(147, 9),
+        makeMouse(24,8), makeMouse(66, 8), makeMouse(85, 10), makeMouse(135, 8),
         makeMosquito(35, 7), makeMosquito(56, 4), makeMosquito(91, 7),
         makeMosquito(105, 4), makeMosquito(130, 3), makeMosquito(153, 6),
         makeMosquito(168, 4),
-        makeHiker(43, 8), makeHiker(77, 5), makeHiker(126, 5),
+        makeHiker(43, 8), makeHiker(77, 4), makeHiker(126, 5),
         makeHiker(162, 5), makeHiker(175, 7),
-        makeRedneck(18, 10), makeRedneck(62, 8),
+        makeRedneck(21, 10), makeRedneck(62, 8),
         makeRedneck(122, 7), makeRedneck(169, 7),
       ];
     },
@@ -581,16 +581,16 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(15, 10), makeMarmot(55, 8), makeMarmot(92, 10),
-        makeMarmot(120, 10), makeMarmot(156, 10),
-        makeMouse(25, 10), makeMouse(64, 8), makeMouse(100, 8),
+        makeMarmot(16, 10), makeMarmot(55,5), makeMarmot(92, 9),
+        makeMarmot(120, 10), makeMarmot(156, 9),
+        makeMouse(24, 10), makeMouse(64, 8), makeMouse(100, 8),
         makeMouse(128, 8), makeMouse(162, 8),
         makeMosquito(34, 7), makeMosquito(52, 4), makeMosquito(70, 4),
         makeMosquito(95, 7), makeMosquito(109, 4), makeMosquito(137, 3),
         makeMosquito(158, 7), makeMosquito(175, 4), makeMosquito(188, 4),
-        makeHiker(43, 8), makeHiker(80, 5), makeHiker(116, 7),
+        makeHiker(43, 8), makeHiker(80, 4), makeHiker(116, 7),
         makeHiker(140, 4), makeHiker(172, 5), makeHiker(190, 7),
-        makeRedneck(20, 10), makeRedneck(70, 8),
+        makeRedneck(20,7), makeRedneck(70, 8),
         makeRedneck(123, 7), makeRedneck(177, 7),
       ];
     },
@@ -673,16 +673,16 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(15, 10), makeMarmot(50, 8), makeMarmot(86, 10),
+        makeMarmot(17, 10), makeMarmot(50, 8), makeMarmot(86, 10),
         makeMarmot(105, 10), makeMarmot(143, 10), makeMarmot(160, 10),
-        makeMouse(27, 10), makeMouse(60, 8), makeMouse(73, 8),
-        makeMouse(110, 8), makeMouse(150, 8), makeMouse(165, 8),
+        makeMouse(27, 10), makeMouse(59, 8), makeMouse(73, 8),
+        makeMouse(112, 8), makeMouse(150, 8), makeMouse(165, 8),
         makeMosquito(38, 7), makeMosquito(57, 4), makeMosquito(78, 3),
         makeMosquito(92, 6), makeMosquito(115, 4), makeMosquito(133, 3),
         makeMosquito(148, 6), makeMosquito(170, 3), makeMosquito(195, 3),
-        makeHiker(45, 8), makeHiker(80, 5), makeHiker(120, 5),
+        makeHiker(45, 8), makeHiker(80, 4), makeHiker(120, 5),
         makeHiker(140, 6), makeHiker(178, 5), makeHiker(204, 5),
-        makeRedneck(22, 10), makeRedneck(66, 8),
+        makeRedneck(20, 10), makeRedneck(66, 8),
         makeRedneck(125, 7), makeRedneck(182, 6), makeRedneck(200, 5),
       ];
     },
@@ -766,17 +766,17 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(10, 10), makeMarmot(52, 8), makeMarmot(89, 10),
-        makeMarmot(110, 10), makeMarmot(148, 10), makeMarmot(169, 10), makeMarmot(196, 8),
-        makeMouse(22, 10), makeMouse(60, 8), makeMouse(75, 8),
+        makeMarmot(10,7), makeMarmot(52, 8), makeMarmot(89, 9),
+        makeMarmot(112, 10), makeMarmot(148, 9), makeMarmot(170, 10), makeMarmot(196, 8),
+        makeMouse(20, 10), makeMouse(60, 8), makeMouse(75, 8),
         makeMouse(117, 8), makeMouse(135, 8), makeMouse(163, 8), makeMouse(177, 8),
         makeMosquito(38, 7), makeMosquito(55, 4), makeMosquito(70, 4),
         makeMosquito(93, 7), makeMosquito(107, 4), makeMosquito(128, 3),
         makeMosquito(143, 3), makeMosquito(152, 6), makeMosquito(168, 4),
         makeMosquito(184, 3), makeMosquito(200, 2), makeMosquito(212, 2),
-        makeHiker(44, 8), makeHiker(80, 5), makeHiker(115, 7),
+        makeHiker(44, 8), makeHiker(78, 5), makeHiker(115, 6),
         makeHiker(140, 4), makeHiker(174, 5), makeHiker(192, 5), makeHiker(213, 4),
-        makeRedneck(16, 10), makeRedneck(65, 8), makeRedneck(105, 9),
+        makeRedneck(17, 10), makeRedneck(67, 8), makeRedneck(105, 9),
         makeRedneck(158, 8), makeRedneck(185, 6), makeRedneck(210, 4),
       ];
     },
@@ -988,6 +988,49 @@ function makeBeerCan(x, y, dir) {
 
 function makeTrash(x, y) {
   return { x: x - 6, y, w: 16, h: 8, variant: Math.floor(rnd(0, 3)) };
+}
+
+// ==================== FISH ====================
+let fish = [];
+function spawnFish() {
+  fish = [];
+  if (!level || !level.map) return;
+  const cols = level.COLS, rows = level.ROWS;
+  // Scan water tiles and place a fish every ~6 tiles
+  let lastFishX = -99;
+  for (let ty = 0; ty < rows; ty++) {
+    for (let tx = 0; tx < cols; tx++) {
+      if (level.map[ty][tx] === T_WATER && tx - lastFishX >= 6) {
+        fish.push(makeFish(tx, ty));
+        lastFishX = tx;
+      }
+    }
+  }
+}
+function makeFish(tx, ty) {
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const variant = Math.floor(rnd(0, 3)); // 0=trout, 1=salmon, 2=bass
+  return {
+    x: tx * TS + TS / 2,
+    y: ty * TS + TS / 2,
+    baseX: tx * TS + TS / 2,
+    swimRange: Math.floor(rnd(3, 6)) * TS, // how far they patrol
+    vx: dir * rnd(0.3, 0.7),
+    phase: rnd(0, Math.PI * 2),
+    variant,
+    w: 18, h: 10,
+  };
+}
+function updateFish() {
+  fish.forEach(f => {
+    f.x += f.vx;
+    f.phase += 0.08;
+    f.y = f.y + Math.sin(f.phase) * 0.2; // gentle vertical bob
+    // Reverse at swim range limits
+    if (f.x < f.baseX - f.swimRange || f.x > f.baseX + f.swimRange) {
+      f.vx *= -1;
+    }
+  });
 }
 
 function moveEntityHoriz(e, vx) {
@@ -1456,6 +1499,7 @@ function loadLevel(num) {
   spawnItems();
   spawnEnemies();
   spawnTPBlooms();
+  spawnFish();
   beerCans = [];
   trashPiles = [];
   particles.length = 0;
@@ -2281,6 +2325,61 @@ function drawTrashPiles() {
   });
 }
 
+function drawFish() {
+  // Fish colors: trout=brown/gold, salmon=pink/orange, bass=green/silver
+  const FISH_COLORS = [
+    { body: '#8B6914', belly: '#C8A040', spot: '#5A4410' },   // trout
+    { body: '#D05840', belly: '#F0A080', spot: '#A03020' },   // salmon
+    { body: '#4A7040', belly: '#90B080', spot: '#2A5020' },   // bass
+  ];
+  fish.forEach(f => {
+    const sx = Math.round(f.x - cam.x);
+    const sy = Math.round(f.y - cam.y);
+    if (sx < -30 || sx > W + 30) return;
+    const fc = FISH_COLORS[f.variant];
+    const dir = f.vx >= 0 ? 1 : -1; // 1=right, -1=left
+    ctx.save();
+    ctx.translate(sx, sy);
+    if (dir < 0) ctx.scale(-1, 1);
+    // Tail
+    ctx.fillStyle = fc.body;
+    ctx.beginPath();
+    ctx.moveTo(-9, 0);
+    ctx.lineTo(-14, -5);
+    ctx.lineTo(-14, 5);
+    ctx.closePath();
+    ctx.fill();
+    // Body ellipse
+    ctx.fillStyle = fc.body;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 9, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Belly lighter
+    ctx.fillStyle = fc.belly;
+    ctx.beginPath();
+    ctx.ellipse(1, 1, 6, 3, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    // Dorsal fin
+    ctx.fillStyle = fc.spot;
+    ctx.beginPath();
+    ctx.moveTo(-2, -5);
+    ctx.lineTo(2, -8);
+    ctx.lineTo(6, -5);
+    ctx.closePath();
+    ctx.fill();
+    // Eye
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(6, -1, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath();
+    ctx.arc(6.5, -1.5, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
 function drawItemIcon(type, cx, cy) {
   ctx.save();
   ctx.translate(cx, cy);
@@ -3042,6 +3141,7 @@ function update() {
     updatePlayer();
     enemies.forEach(updateEnemy);
     updateBeerCans();
+    updateFish();
     updateParticles();
     updateFloatTexts();
     updateCamera(player.x, player.y);
@@ -3109,6 +3209,7 @@ function draw() {
     // Draw game behind
     drawBackground();
     drawLevel();
+    drawFish();
     drawItems();
     drawCampsite();
     enemies.forEach(e => {
@@ -3129,6 +3230,7 @@ function draw() {
   if (game.state === 'levelcomplete') {
     drawBackground();
     drawLevel();
+    drawFish();
     drawCampsite();
     drawLevelComplete();
     return;
@@ -3136,6 +3238,7 @@ function draw() {
   if (game.state === 'win') {
     drawBackground();
     drawLevel();
+    drawFish();
     drawCampsite();
     drawWin();
     return;
@@ -3144,6 +3247,7 @@ function draw() {
   // Playing
   drawBackground();
   drawLevel();
+  drawFish();
   drawTrashPiles();
   drawTPBlooms();
   drawItems();
