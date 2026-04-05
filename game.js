@@ -2121,19 +2121,19 @@ function drawLevelComplete() {
   ctx.textAlign = 'center';
   ctx.shadowColor = '#44AA44';
   ctx.shadowBlur = 12;
-  ctx.fillText('TRAIL CLEARED!', W / 2, H / 2 - 70);
+  ctx.fillText('TRAIL CLEARED!', W / 2, H / 2 - 120);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 22px Courier New';
-  ctx.fillText(def.name, W / 2, H / 2 - 25);
+  ctx.fillText(def.name, W / 2, H / 2 - 75);
 
   // Time and time bonus
   const timeSeconds = Math.floor(game.levelCompletionTime / 60);
   const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
   const timeBonus = game.levelTimeBonus;
   const lineHeight = 26;
-  let infoY = H / 2 + 15;
+  let infoY = H / 2 - 30;
   ctx.fillText(`Score: ${player.score}`, W / 2, infoY);
   infoY += lineHeight;
   ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, infoY);
