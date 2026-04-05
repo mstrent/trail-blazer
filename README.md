@@ -28,21 +28,29 @@ Then visit `http://localhost:3000`.
 
 ## Objective
 
-Navigate from the **trailhead to the summit flag** at the far right of each level. Progress through all 3 trails to reach the ultimate summit! 
+Navigate from the **trailhead to the summit flag** at the far right of each level. Hike southbound through 9 real PCT sections from the Northern Terminus in Washington to Castle Crags in California.
 
-Collect ultralight gear along the way to build your score. Each trail remembers your score and lives as you advance. Two special achievements provide bonus points:
+Collect ultralight gear along the way to build your score. Your score and lives carry forward between levels. Two special achievements provide bonus points:
 
-- **Leave No Trace** (+1000 pts) — Collect every item on a trail
-- **Trail Angel** (+1500 pts) — Defeat every enemy on a trail
+- **Leave No Trace** (+1000 pts) — Collect every item on a level
+- **Trail Angel** (+1500 pts) — Defeat every enemy on a level
+
+## Hazards
+
+| Hazard | Effect |
+|--------|--------|
+| 💧 Water | Instant damage — don't wade in |
+| 🧻 Trail Flower (TP Bloom) | Used toilet paper left on the ground — contact damages you, jump over it |
 
 ## Enemies
 
 | Enemy | Behavior | Points |
 |-------|----------|--------|
 | 🐿 Marmot | Patrols platforms, turns at ledges and walls | 100 |
-| 🐭 Micro Bear | Fast ground-dweller, speeds past platforms | 75 |
-| 🦟 Mosquito | Floats in a sine-wave pattern, reverses at walls | 150 |
-| 🧳 Overloaded Hiker | Heavy slow walker with a massive pack, patrols platforms | 300 |
+| 🐭 Micro Bear | Fast ground-dweller, speeds past platforms | 200 |
+| 🦟 Mosquito | Floats in a sine-wave pattern, reverses at walls | 300 |
+| 🧳 Heavy Hiker | Slow walker with a massive pack, patrols platforms | 75 |
+| 🍺 Redneck | Loud flannel-wearing trouble; periodically throws beer cans, drops trash when stomped | 150 |
 
 All enemies can be stunned with **Bear Spray** or by landing on them while jumping. Stomp stunned enemies to defeat them and score points.
 
@@ -86,28 +94,35 @@ Progress persists across levels:
 
 ## Level Layout
 
-The game spans **3 complete trails**, each with multiple sections and escalating difficulty:
+The game follows the **Pacific Crest Trail southbound** through 9 real PCT sections,
+starting at the Northern Terminus monument in Washington and ending at Castle Crags
+in Northern California. Difficulty escalates with each level.
 
-### 1. **Meadow Trail** 
-Gentle rolling hills through wildflower meadows. Start your adventure here with platform jumping, basic enemy encounters, and introductory collectible challenges.
+| # | Level | Section |
+|---|-------|---------|
+| 1 | Northern Terminus | Monument 78 → Harts Pass |
+| 2 | Pasayten Wilderness | Harts Pass → Rainy Pass |
+| 3 | Glacier Peak | Rainy Pass → Stevens Pass |
+| 4 | Alpine Lakes | Stevens Pass → Snoqualmie Pass |
+| 5 | Goat Rocks | Snoqualmie Pass → White Pass |
+| 6 | Bridge of the Gods | White Pass → Cascade Locks |
+| 7 | Oregon Cascades | Cascade Locks → Timberline Lodge |
+| 8 | Sky Lakes | Timberline Lodge → Mazama Village |
+| 9 | Castle Crags | Crater Lake → Castle Crags Summit |
 
-### 2. **Pine Ridge**
-Dense forest adventure with treacherous ravines. Navigate through canopy platforms, cross water hazards via stepping stones, and face increasingly challenging enemy placements. The first ravine tests your glissade technique.
-
-### 3. **Alpine Pass**
-The final ascent above the treeline. Exposed platforms with sheer drops, boulder fields, switchback climbs, and exposed ridges. Culminates in a scree field push to the final summit flag.
-
-Each trail includes:
-- Solid terrain blocks and one-way platforms
-- Water hazards (instadeath if touched)
+Each level includes:
+- Solid terrain, boulder fields, and one-way platforms
+- Water hazards (river crossings — damage on contact)
+- Decorative fish swimming in rivers and lakes
+- Trail Flowers (soiled TP) to avoid
 - Enemy patrols with varied patterns
 - Scattered collectible gear
-- A summit flag marking the trail's end
+- A summit flag marking the level's end
 
 ## Tech
 
 - **Pure HTML5 Canvas 2D** — all rendering uses canvas primitives (ellipses, rects, paths, gradients), no sprite sheets or image assets
-- **No frameworks, no dependencies** — ~2350 lines of vanilla JavaScript, single `game.js` file, no build step
+- **No frameworks, no dependencies** — ~3500 lines of vanilla JavaScript, single `game.js` file, no build step
 - **Deterministic procedural generation** — background parallax layers use seeded PRNGs for consistent visuals
 - **Tile-based collision system** — 32px tile grid with tile types: solid, one-way platform, water, empty
 - **60 fps game loop** — `requestAnimationFrame` with fixed update and render stages

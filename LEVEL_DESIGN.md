@@ -1,8 +1,8 @@
 # Trail Blazer — Level Design Reference
 
 This document captures the physics constraints, tile rules, and hard-won lessons
-from building and debugging Levels 1–3. Read it before designing new levels or
-adding enemies to avoid repeating known pitfalls.
+from building and debugging all 9 levels. Read it before designing new levels or
+adding enemies/objects to avoid repeating known pitfalls.
 
 ---
 
@@ -86,35 +86,130 @@ All `make*` functions take tile coordinates `(tx, ty)`. The spawn pixel position
 and hitbox differ per enemy — the ty value does **not** always correspond to the
 tile the enemy stands on at rest; physics settles them after spawn.
 
-| Enemy | Function | Hitbox (w×h) | Pixel y offset | Patrol radius |
-|---|---|---|---|---|
-| Marmot | `makeMarmot(tx, ty)` | 26 × 22 | `ty*32 − 4` | ±4 tiles |
-| Mouse (Micro Bear) | `makeMouse(tx, ty)` | 16 × 12 | `ty*32 + 8` | ±5 tiles |
-| Mosquito | `makeMosquito(tx, ty)` | 20 × 14 | `ty*32` (sine center) | whole level |
-| Heavy Hiker | `makeHiker(tx, ty)` | 24 × 36 | `ty*32 − 12` | ±3 tiles |
+| Enemy | Function | Hitbox (w×h) | Pixel y offset | Patrol radius | Points |
+|---|---|---|---|---|---|
+| Marmot | `makeMarmot(tx, ty)` | 26 × 22 | `ty*32 − 4` | ±4 tiles | 100 |
+| Mouse (Micro Bear) | `makeMouse(tx, ty)` | 16 × 12 | `ty*32 + 8` | ±5 tiles | 200 |
+| Mosquito | `makeMosquito(tx, ty)` | 20 × 14 | `ty*32` (sine center) | whole level | 300 |
+| Heavy Hiker | `makeHiker(tx, ty)` | 24 × 36 | `ty*32 − 12` | ±3 tiles | 75 |
+| Redneck | `makeRedneck(tx, ty)` | 28 × 40 | `ty*32 − 12` | ±4 tiles | 150 |
 
 ### Spawn placement rules
 
-1. **Verify the spawn column is not inside a solid fill.** Check every
-   `fill(x1, y1, x2, y2)` that covers the intended tx column at the ty row.
-   Enemies spawning inside solid tiles may clip through or become trapped.
+1. **Verify the spawn tile is not solid.** Check every `fill(x1, y1, x2, y2, T_SOLID)`
+   that covers the intended `(tx, ty)`. Enemies spawning inside solid tiles will be
+   trapped and visually stuck in the ground.
 
-2. **Verify the enemy can reach the player.** The player must be able to jump
+2. **Verify the spawn tile is not water.** Enemies at water tiles don't walk —
+   they are effectively removed from play and won't count toward Trail Angel.
+   Use the fish system for water decoration instead.
+
+3. **Verify the enemy can reach the player.** The player must be able to jump
    onto the enemy from above. If the enemy is below a `T_PLATFORM`, the player
    lands on the platform and cannot stomp. This makes the enemy unkillable,
    blocking the Trail Angel bonus.
 
-3. **For surface placement:** if the surface tile is at row S, use `ty = S − 1`
+4. **For surface placement:** if the surface tile is at row S, use `ty = S − 1`
    as a starting point and verify: `ty * 32 + h_offset + height < S * 32`.
    Physics will settle the enemy onto the surface. Example — mouse on surface
    at row 9: `makeMouse(tx, 8)` → pixel y = 264, bottom = 276; lands on solid
    at pixel 288 (row 9). ✓
 
-4. **Patrol edges vs. ledge detection:** Ground enemies auto-reverse at their
+5. **Patrol edges vs. ledge detection:** Ground enemies auto-reverse at their
    `patrolX1`/`patrolX2` bounds **and** at ledge edges (no solid/platform tile
    directly below their leading foot). Narrow platforms are safe — enemies
    won't walk off. You can place enemies on 2-tile-wide ledges without worrying
    about them falling.
+
+### Validating spawn positions with Python simulation
+
+When building levels with many boulder fills, the only reliable way to confirm
+enemy placement is to simulate the tile map in Python and check each spawn.
+The diagnostic pattern:
+
+```python
+# Build the grid the same way the JS does
+grid = [[T_EMPTY]*COLS for _ in range(ROWS)]
+fill(0, 11, COLS-1, 14, T_SOLID)        # base floor
+fill(8, 9, 11, 10, T_SOLID)             # boulder
+# ... all other fills ...
+
+# Check each enemy spawn
+for etype, tx, ty in spawns:
+    if grid[ty][tx] == T_SOLID:
+        print(f"BAD: {etype} at ({tx},{ty}) is inside solid")
+    elif grid[ty][tx] == T_WATER:
+        print(f"BAD: {etype} at ({tx},{ty}) is in water")
+```
+
+**Fix strategy:** when a spawn is inside a solid block, walk `ty` upward (ty−1,
+ty−2, ...) until `grid[ty][tx] == T_EMPTY`. If the column is fully solid, try
+`tx ± 1` sideways. Never place an enemy at a position that isn't `T_EMPTY`.
+
+**Important:** JS `for` loop conversion to Python loses the semicolon separator.
+Split multi-statement JS lines (`fill(...); fill(...)`) before exec-ing.
+Remove `return { map, COLS, ROWS }` — Python `exec` doesn't allow `return`
+outside a function.
+
+---
+
+## Object Placement Rules (Items, TP Blooms)
+
+All static game objects must be **terrain-snapped** at spawn time, because the
+level's tile map is the ground truth and hand-coded `ty` values will often
+conflict with terrain fills.
+
+The canonical two-pass snap used in `makeItem` and `makeTPBloom`:
+
+```js
+// Pass 1: walk up out of solid/platform/water
+while (placeTy > 0 && level.map[placeTy][tx] !== T_EMPTY) placeTy--;
+
+// Pass 2: settle down to the nearest surface
+while (placeTy < level.ROWS - 1 &&
+       level.map[placeTy][tx] === T_EMPTY &&
+       level.map[placeTy + 1][tx] === T_EMPTY) placeTy++;
+```
+
+Apply this pattern to **any new static object** placed at a tile coordinate.
+Without it, objects will float in mid-air, render inside boulders, or appear
+below the visible ground.
+
+---
+
+## Decorative Fish
+
+Fish are auto-generated at level load from water tiles — no per-level spawn list needed.
+`spawnFish()` scans every water tile and places a fish every 6 tiles.
+
+### Containment rules
+
+Fish use tile-based boundary detection, not a distance limit:
+
+```js
+// Before moving, check if the tile at the fish's leading edge is still T_WATER
+const tileAhead = level.map[tileAheadY][tileAheadX];
+if (tileAhead !== T_WATER) {
+  f.vx *= -1; // reverse, don't move
+} else {
+  f.x = nextX;
+}
+```
+
+**Do not use a fixed `swimRange` distance** — water pools are irregular shapes,
+and a distance-based range will let fish swim through ground tiles at pool edges.
+Tile-type checking guarantees fish stay inside their pool regardless of shape.
+
+### Vertical bobbing
+
+Use `f.y = f.baseY + Math.sin(f.phase) * amplitude` — **never** accumulate the
+sine offset into `f.y` each tick. Accumulation causes vertical drift that moves
+fish out of the water zone over time.
+
+### Fish and Trail Angel
+
+Fish are not in the `enemies` array and are never counted toward the Trail Angel
+bonus. Keep it that way — fish are purely decorative.
 
 ---
 
@@ -159,25 +254,73 @@ Before shipping any pit, confirm:
 
 ---
 
-## Inescapable Gaps: History
+## New Mechanics Reference
 
-These were shipped in Level 3 and fixed across PRs #27–#31:
+### TP Blooms (Trail Flowers)
 
-| Location | Root Cause | Fix |
-|---|---|---|
-| Waterfall gorge (x=47–68) | No floor — player fell into water with no ledge | Added solid rescue ledge at y=10 (PR #26) |
-| Exposed ridge (x=105–138) | Same — open water with no escape surface | Same fix (PR #26) |
-| Switchback pit x=93 | 1-tile gap, boxed by fills; nearest platform 7 tiles up | Widened to 3 tiles, added water, centered rescue platform at y=7 (PR #31) |
-| Switchback pit x=99 | Same; mouse spawned inside gap, below rescue platform | Same widening fix; mouse relocated to stair surface (PR #31) |
+Static ground hazard: shredded/soiled toilet paper left on the trail.
+
+- Defined per-level in `spawnTPBlooms()`, returning an array of bloom objects
+- Contact with player triggers `hurtPlayer()` + brief invincibility (same as enemy contact)
+- **Not** destroyed on contact — player is just pushed through with invincibility frames
+- Jump over them to avoid damage
+- Visually: crumpled off-white tissue wad with brown-yellow stain puddle; intentionally gross
+- **Terrain-snapped at spawn** — see Object Placement Rules above
+
+```js
+function makeTPBloom(tx, ty) {
+  // terrain snap, then:
+  return { x: tx*TS+6, y: placeTy*TS+16, w: 20, h: 16, active: true };
+}
+```
+
+### Redneck Enemy
+
+Patrols like a Hiker but throws beer can projectiles periodically.
+
+- `throwTimer` counts down from a random value (120–240 ticks); on zero, fires a beer can
+  in the direction the Redneck is currently facing, then resets (150–280 ticks)
+- On stomp: drops a cosmetic `trashPile` object (not a hazard, player ignores it)
+- Beer cans follow a gravity arc (`vy += 0.55`), collide with `T_SOLID` tiles and disappear,
+  and call `hurtPlayer()` on contact
+- Worth 150 points
+
+### Beer Cans
+
+Physics projectile spawned by Rednecks.
+
+```js
+function makeBeerCan(x, y, dir) {
+  return { x, y, vx: dir * 4.5, vy: -2.5, w: 8, h: 12, alive: true };
+}
+```
+
+- Gravity applied each tick (`vy += 0.55`, max 14)
+- Removed when it hits a solid tile, goes off-screen, or hits the player
+- Audio: `sfxBeerCan()` on throw, `sfxBeerCanHit()` on player contact
 
 ---
 
 ## Trail Angel Bonus
 
 The Trail Angel bonus requires killing **all enemies** in the level. This means
-every enemy must be reachable and stompable by the player. Before shipping a
-level:
+every enemy must be reachable and stompable by the player. Before shipping a level:
 
 - Confirm no enemy is trapped in a pit below a one-way platform.
-- Confirm no enemy spawns inside a solid fill (it may clip to an unreachable position).
+- Confirm no enemy spawns inside a solid fill (stuck in ground = unkillable).
+- Confirm no enemy spawns in a water tile (will stand in water indefinitely).
 - Confirm every enemy's surface is accessible from the normal player path.
+- Fish are **not** enemies — they do not affect this bonus.
+
+---
+
+## History of Placement Bugs Fixed
+
+| Issue | Root Cause | Fix Applied |
+|---|---|---|
+| 8 enemies stuck in ground (levels 1,3,5,6,7,9) | `ty` coordinate landed inside boulder `fill()` blocks | Python simulation identified each; `ty` shifted up to nearest clear tile |
+| Items rendering in mid-air or inside ground | `makeItem` used raw `ty` with no terrain check | Two-pass terrain snap added to `makeItem` |
+| TP Blooms inside ground (Pasayten level) | `makeTPBloom` used raw `ty` with no terrain check | Two-pass terrain snap added to `makeTPBloom` |
+| Fish swimming through ground tiles at pool edges | Used distance-based `swimRange` for patrol limits | Replaced with tile-type check at leading edge |
+| Fish drifting out of water vertically | Bob offset accumulated into `f.y` each tick | Changed to `f.y = f.baseY + sin(phase) * amplitude` |
+| Inescapable gaps (original levels 1–3) | No floor / rescue platform too high to reach | Widened gaps, added water, centered rescue platform at ≤4 tiles |
