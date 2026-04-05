@@ -787,7 +787,7 @@ function updatePlayer() {
     const timeSeconds = Math.floor(game.levelTick / 60);
     const levelDistances = [3744, 4704, 5664];
     const theoreticalFrames = levelDistances[game.levelNum] / 3.5;
-    const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8);
+    const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8 * 1.15);
     const timeDiff = targetTime - timeSeconds;
     game.levelTimeBonus = timeDiff >= 0
       ? Math.floor(100 * Math.pow(1.1, timeDiff))
