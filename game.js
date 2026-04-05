@@ -974,6 +974,7 @@ function advanceLevel() {
   player.score = savedScore;
   player.lives = savedLives;
   game.state = 'playing';
+  audio.sfxStartJingle();
 }
 
 // ==================== DRAWING ====================
@@ -2453,11 +2454,15 @@ const audio = (() => {
   let masterGain = null;
 
   function init() {
-    if (ctx) return;
+    if (ctx) {
+      if (ctx.state === 'suspended') ctx.resume();
+      return;
+    }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = ctx.createGain();
     masterGain.gain.value = 0.5;
     masterGain.connect(ctx.destination);
+    if (ctx.state === 'suspended') ctx.resume();
   }
 
   // Resume and return a Promise that resolves when ctx is running
@@ -2525,7 +2530,7 @@ const audio = (() => {
   function sfxGlissade()  { sfx(() => { noise(0.4, 0.16, 500); oscSweep('sawtooth', 260, 130, 0.4, 0.06); }); }
   function sfxStun()      { sfx(() => { oscSweep('sine', 400, 200, 0.18, 0.12); oscSweep('sine', 380, 190, 0.22, 0.08); }); }
 
-  // ---- startup jingle: cheerful C-E-G run, plays once when gameplay begins ----
+  // ---- startup jingle: cheerful C-E-G run, plays at the start of every level ----
   function sfxStartJingle() {
     sfx(() => {
       const t0 = ctx.currentTime;
