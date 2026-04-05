@@ -20,22 +20,22 @@ min_time = (goalTile * 32px) / MOVE_SPEED / 60fps
 
 This is the absolute floor — a straight sprint with no vertical movement, no enemies, no platforming at all. No real playthrough can approach it.
 
-### Target Time Multiplier: 3×
+### Target Time Multiplier: 4×
 
-The target time used for scoring = **3× the theoretical minimum**:
+The target time used for scoring = **4× the theoretical minimum**:
 
 | Level | Target Time |
 |---|---|
-| Meadow Trail | ~53s |
-| Pine Ridge | ~67s |
-| Alpine Pass | ~81s |
+| Meadow Trail | ~71s |
+| Pine Ridge | ~90s |
+| Alpine Pass | ~108s |
 
-**Why 3×?**
+**Why 4×?**
 
 - 1× (theoretical min) is physically impossible in a real playthrough.
 - 2× (≈37s/47s/56s) — the original formula — was also nearly impossible. A skilled player who skips all enemies and gear still couldn't beat it consistently. This caused large negative bonuses on almost every run.
-- 4× (≈71s/90s/108s) was considered but felt too forgiving — little pressure to move quickly.
-- 3× is the sweet spot: a fast, focused run that skips most enemies and some gear can beat the target; a casual exploratory run ends up slightly under.
+- 3× (≈53s/67s/81s) was the previous setting — provided good challenge but still quite difficult for casual players.
+- 4× provides a more forgiving target: most players can achieve positive bonuses with reasonable effort, while still rewarding skilled, fast playthroughs.
 
 ### Speed Bonus Formula
 
