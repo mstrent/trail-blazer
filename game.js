@@ -868,7 +868,16 @@ const ITEM_DEFS = {
 
 function makeItem(type, tx, ty) {
   const def = ITEM_DEFS[type];
-  return { type, tx, ty, x: tx * TS + 8, y: ty * TS, w: 20, h: 20, pts: def.pts, collected: false, bobOffset: rnd(0, Math.PI * 2) };
+  let placeTy = ty;
+  if (level && level.map) {
+    // If starting tile is solid/platform/water, move up until empty
+    while (placeTy > 0 && level.map[placeTy][tx] !== T_EMPTY) placeTy--;
+    // If floating in air, scan down until we're sitting on a surface
+    while (placeTy < level.ROWS - 1 &&
+           level.map[placeTy][tx] === T_EMPTY &&
+           level.map[placeTy + 1][tx] === T_EMPTY) placeTy++;
+  }
+  return { type, tx, ty: placeTy, x: tx * TS + 8, y: placeTy * TS, w: 20, h: 20, pts: def.pts, collected: false, bobOffset: rnd(0, Math.PI * 2) };
 }
 
 let items = [];
@@ -2251,29 +2260,54 @@ function drawTPBlooms() {
     const sy = Math.round(b.y - cam.y);
     if (sx < -20 || sx > W + 20) return;
     ctx.save();
-    ctx.translate(sx + b.w / 2, sy + b.h / 2);
-    // Ragged TP petals radiating from center
-    const petals = 6;
-    for (let i = 0; i < petals; i++) {
-      const angle = (i / petals) * Math.PI * 2 + 0.3;
-      ctx.save();
-      ctx.rotate(angle);
-      ctx.fillStyle = i % 2 === 0 ? '#F0EBE0' : '#E8E0D0';
-      ctx.beginPath();
-      ctx.ellipse(0, -7, 2.5, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    // Center clump
-    ctx.fillStyle = '#D4C8A8';
+    ctx.translate(sx + b.w / 2, sy + b.h);
+    // Soiled TP wad sitting on the ground
+    // Brown/yellow stain puddle underneath
+    ctx.fillStyle = 'rgba(160,120,30,0.35)';
     ctx.beginPath();
-    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.ellipse(0, -1, 11, 4, 0, 0, Math.PI * 2);
     ctx.fill();
-    // Faint disgusting tinge
-    ctx.fillStyle = 'rgba(200,180,100,0.3)';
+    // Main crumpled wad — off-white base
+    ctx.fillStyle = '#E8E2D0';
     ctx.beginPath();
-    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.moveTo(-9, -3);
+    ctx.lineTo(-6, -11);
+    ctx.lineTo(-1, -9);
+    ctx.lineTo(3, -13);
+    ctx.lineTo(7, -8);
+    ctx.lineTo(9, -4);
+    ctx.lineTo(5, -2);
+    ctx.lineTo(-4, -2);
+    ctx.closePath();
     ctx.fill();
+    // Second crumpled layer, slightly darker
+    ctx.fillStyle = '#D8D0B8';
+    ctx.beginPath();
+    ctx.moveTo(-6, -3);
+    ctx.lineTo(-3, -9);
+    ctx.lineTo(1, -12);
+    ctx.lineTo(5, -7);
+    ctx.lineTo(3, -3);
+    ctx.closePath();
+    ctx.fill();
+    // Stain patches — yellowish-brown blobs
+    ctx.fillStyle = 'rgba(150,110,20,0.5)';
+    ctx.beginPath();
+    ctx.ellipse(-2, -7, 3, 2, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(3, -5, 2, 1.5, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Ragged edge highlight
+    ctx.strokeStyle = 'rgba(200,190,165,0.6)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-7, -8);
+    ctx.lineTo(-4, -10);
+    ctx.lineTo(-1, -8);
+    ctx.moveTo(2, -11);
+    ctx.lineTo(5, -9);
+    ctx.stroke();
     ctx.restore();
   });
 }
