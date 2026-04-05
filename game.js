@@ -835,10 +835,10 @@ function hurtPlayer(instant) {
 }
 
 const ENEMY_DEFS = {
-  marmot:   { label: 'Marmot', pts: 100 },
-  mouse:    { label: 'Micro Bear', pts: 75 },
-  mosquito: { label: 'Mosquito', pts: 150 },
-  hiker:    { label: 'Heavy Packer', pts: 300 },
+  marmot:   { label: 'Marmot', pts: 100 },       // medium difficulty
+  mouse:    { label: 'Micro Bear', pts: 200 },    // fairly hard — fast and small
+  mosquito: { label: 'Mosquito', pts: 300 },      // hardest — airborne, tricky to stomp
+  hiker:    { label: 'Heavy Packer', pts: 75 },   // easiest — slow and large
 };
 
 function killEnemy(e) {

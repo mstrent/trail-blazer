@@ -68,15 +68,25 @@ penalty = floor(timeDiff * 2)   // timeDiff is negative when over target
 
 ## Other Scoring Elements
 
-| Source | Points |
-|---|---|
-| Marmot kill | 100 |
-| Micro Bear kill | 75 |
-| Mosquito kill | 150 |
-| Heavy Packer kill | 300 |
-| Leave No Trace bonus (all gear collected) | +1,000 |
-| Trail Angel bonus (all enemies killed) | +1,500 |
-| Speed bonus | up to +500 |
+| Source | Points | Rationale |
+|---|---|---|
+| Mosquito kill | 300 | Hardest — airborne, tricky to time stomp |
+| Micro Bear kill | 200 | Fairly hard — fast and small hitbox |
+| Marmot kill | 100 | Medium — standard ground enemy |
+| Heavy Packer kill | 75 | Easiest — slow and large, straightforward stomp |
+| Leave No Trace bonus (all gear collected) | +1,000 | |
+| Trail Angel bonus (all enemies killed) | +1,500 | |
+| Speed bonus | up to +500 | |
+
+### Kill Score Design Notes
+
+Points reflect kill difficulty, not enemy threat. The Heavy Packer does the most
+damage and is the scariest enemy, but it's the easiest to stomp — slow, big
+hitbox, predictable patrol. Mosquitoes are the opposite: low threat but genuinely
+hard to stomp consistently due to their sine-wave flight path.
+
+Previous values (Hiker 300, Mosquito 150, Marmot 100, Mouse 75) rewarded killing
+the easiest enemy most heavily, which was backwards. Range kept at 75–300.
 | Time penalty | −2pts/sec over target |
 
 ### Tuning Notes
