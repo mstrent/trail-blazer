@@ -83,6 +83,8 @@ const LEVELS = [
   {
     name: 'Meadow Trail',
     subtitle: 'A gentle start through wildflower meadows',
+    section: 'PCT Section A: Campo \u2192 Warner Springs',
+    campName: 'Lake Morena Camp',
     goalTile: [117, 2],
     goalFlagY: 4,
     spawnTile: [2, 9],
@@ -135,6 +137,8 @@ const LEVELS = [
   {
     name: 'Pine Ridge',
     subtitle: 'Dense forest with treacherous ravines',
+    section: 'PCT Section B: Warner Springs \u2192 Idyllwild',
+    campName: 'Fuller Ridge Camp',
     goalTile: [147, 2],
     goalFlagY: 4,
     spawnTile: [2, 9],
@@ -234,6 +238,8 @@ const LEVELS = [
   {
     name: 'Alpine Pass',
     subtitle: 'The final ascent above the treeline',
+    section: 'PCT Section C: Idyllwild \u2192 San Jacinto Peak',
+    campName: 'San Jacinto Summit',
     goalTile: [177, 1],
     goalFlagY: 3,
     spawnTile: [2, 9],
@@ -785,13 +791,14 @@ function updatePlayer() {
     game.trailAngel[game.levelNum] = enemies.every(en => !en.alive);
     game.levelCompletionTime = game.levelTick; // Store completion time for bonus calculation
     const timeSeconds = Math.floor(game.levelTick / 60);
-    const levelDistances = [3744, 4704, 5664];
-    const theoreticalFrames = levelDistances[game.levelNum] / 3.5;
-    const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8 * 1.15);
+    // Target = 3× theoretical minimum sprint time (goalTile * 32px / 3.5px/tick / 60fps)
+    // L1: ~53s, L2: ~67s, L3: ~81s
+    const levelDistances = [117 * 32, 147 * 32, 177 * 32];
+    const targetTime = Math.ceil(levelDistances[game.levelNum] / 3.5 / 60 * 3);
     const timeDiff = targetTime - timeSeconds;
     game.levelTimeBonus = timeDiff >= 0
-      ? Math.floor(100 * Math.pow(1.1, timeDiff))
-      : Math.floor(timeDiff * 5);
+      ? Math.min(500, Math.floor(50 * Math.pow(1.04, timeDiff)))  // speed bonus, capped at 500
+      : Math.floor(timeDiff * 2);                                  // 2pts/sec penalty (was 5)
     player.score += game.levelTimeBonus;
     game.levelTick = 0;
     game.state = 'levelcomplete';
@@ -1776,30 +1783,104 @@ function drawItems() {
   });
 }
 
-function drawGoalFlag() {
+function drawCampsite() {
   const def = LEVELS[game.levelNum];
   const fx = def.goalTile[0] * TS - cam.x;
-  const fy = def.goalFlagY * TS - cam.y;
+  const gy = def.goalFlagY * TS - cam.y;  // ground surface (top of end block)
+  const t = game.tick;
 
-  // Pole
-  ctx.fillStyle = '#CCC';
-  ctx.fillRect(fx, fy, 4, 48);
+  // === TENT (A-frame, centered on the end block) ===
+  const tx = fx + 12;
+  const tw = 44, th = 34;
 
-  // Flag (waving)
-  const wave = Math.sin(game.tick * 0.08);
-  ctx.fillStyle = '#FF4444';
+  // Tent body (shadow side)
+  ctx.fillStyle = '#3A6A7A';
   ctx.beginPath();
-  ctx.moveTo(fx + 4, fy);
-  ctx.lineTo(fx + 4 + 24 + wave * 4, fy + 8);
-  ctx.lineTo(fx + 4, fy + 18);
+  ctx.moveTo(tx - tw / 2, gy);
+  ctx.lineTo(tx, gy - th);
+  ctx.lineTo(tx + tw / 2, gy);
+  ctx.closePath();
   ctx.fill();
 
-  // Goal marker text
+  // Tent highlight (sun side)
+  ctx.fillStyle = '#5A9AAD';
+  ctx.beginPath();
+  ctx.moveTo(tx, gy - th);
+  ctx.lineTo(tx + tw / 2, gy);
+  ctx.lineTo(tx, gy - th * 0.28);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tent door (dark opening)
+  ctx.fillStyle = '#162030';
+  ctx.beginPath();
+  ctx.moveTo(tx - 8, gy);
+  ctx.lineTo(tx, gy - th * 0.58);
+  ctx.lineTo(tx + 8, gy);
+  ctx.closePath();
+  ctx.fill();
+
+  // Guy lines
+  ctx.strokeStyle = 'rgba(190,225,240,0.55)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tx, gy - th);
+  ctx.lineTo(tx - tw / 2 - 7, gy + 3);
+  ctx.moveTo(tx, gy - th);
+  ctx.lineTo(tx + tw / 2 + 7, gy + 3);
+  ctx.stroke();
+
+  // === CAMPFIRE (to the left, player passes it on approach) ===
+  const cfx = fx - 18;
+  const cfy = gy;
+  const f1 = Math.sin(t * 0.22) * 1.8;
+  const f2 = Math.cos(t * 0.17) * 1.4;
+
+  // Log pile (crossed logs)
+  ctx.fillStyle = '#5C3317';
+  ctx.save();
+  ctx.translate(cfx, cfy - 3);
+  ctx.rotate(0.5);  ctx.fillRect(-9, -1.5, 18, 3);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(cfx, cfy - 3);
+  ctx.rotate(-0.5);
+  ctx.fillRect(-9, -1.5, 18, 3);
+  ctx.restore();
+  ctx.fillStyle = '#3A1E0A';
+  ctx.beginPath();
+  ctx.ellipse(cfx, cfy - 1, 8, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Outer flame
+  ctx.fillStyle = '#FF5500';
+  ctx.beginPath();
+  ctx.moveTo(cfx - 7, cfy - 3);
+  ctx.quadraticCurveTo(cfx - 2 + f1, cfy - 14, cfx + f2, cfy - 19 + f1);
+  ctx.quadraticCurveTo(cfx + 3 + f1, cfy - 13, cfx + 7, cfy - 3);
+  ctx.fill();
+
+  // Inner flame
+  ctx.fillStyle = '#FFD000';
+  ctx.beginPath();
+  ctx.moveTo(cfx - 3, cfy - 3);
+  ctx.quadraticCurveTo(cfx + f2, cfy - 9, cfx, cfy - 13 + f1 * 0.5);
+  ctx.quadraticCurveTo(cfx + 3, cfy - 9, cfx + 3, cfy - 3);
+  ctx.fill();
+
+  // Smoke wisp
+  ctx.strokeStyle = `rgba(200,200,200,${0.3 + Math.sin(t * 0.07) * 0.12})`;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cfx, cfy - 20);
+  ctx.quadraticCurveTo(cfx + 4, cfy - 30, cfx + 2, cfy - 40);
+  ctx.stroke();
+
+  // === CAMP NAME LABEL ===
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 10px Courier New';
   ctx.textAlign = 'center';
-  const isLastLevel = game.levelNum === LEVELS.length - 1;
-  ctx.fillText(isLastLevel ? 'SUMMIT' : 'GOAL', fx + 14, fy - 8);
+  ctx.fillText(def.campName, tx, gy - th - 6);
 }
 
 function drawHUD() {
@@ -2121,12 +2202,15 @@ function drawLevelComplete() {
   ctx.textAlign = 'center';
   ctx.shadowColor = '#44AA44';
   ctx.shadowBlur = 12;
-  ctx.fillText('TRAIL CLEARED!', W / 2, H / 2 - 120);
+  ctx.fillText('CAMP REACHED!', W / 2, H / 2 - 120);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 22px Courier New';
-  ctx.fillText(def.name, W / 2, H / 2 - 75);
+  ctx.font = 'bold 20px Courier New';
+  ctx.fillText(def.campName, W / 2, H / 2 - 82);
+  ctx.fillStyle = '#AADDFF';
+  ctx.font = '12px Courier New';
+  ctx.fillText(def.section, W / 2, H / 2 - 62);
 
   // Time and time bonus
   const timeSeconds = Math.floor(game.levelCompletionTime / 60);
@@ -2179,12 +2263,12 @@ function drawWin() {
   ctx.textAlign = 'center';
   ctx.shadowColor = '#AA8800';
   ctx.shadowBlur = 12;
-  ctx.fillText('SUMMIT!', W / 2, H / 2 - 80);
+  ctx.fillText('THRU-HIKE COMPLETE!', W / 2, H / 2 - 80);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#88FF88';
-  ctx.font = 'bold 22px Courier New';
-  ctx.fillText('You conquered all ' + LEVELS.length + ' trails!', W / 2, H / 2 - 30);
+  ctx.font = 'bold 18px Courier New';
+  ctx.fillText('You completed all ' + LEVELS.length + ' PCT sections!', W / 2, H / 2 - 30);
 
   ctx.fillStyle = '#88DDFF';
   ctx.font = '16px Courier New';
@@ -2199,7 +2283,7 @@ function drawWin() {
     if (ta) awards.push('Trail Angel');
     const suffix = awards.length ? '  -  ' + awards.join(', ') + '!' : '';
     ctx.fillStyle = (lnt || ta) ? '#44ffaa' : '#AAAAFF';
-    ctx.fillText((i + 1) + '. ' + l.name + suffix, W / 2, H / 2 + 40 + i * 20);
+    ctx.fillText((i + 1) + '. ' + l.name + ' \u2192 ' + l.campName + suffix, W / 2, H / 2 + 40 + i * 20);
   });
 
   // Stars
@@ -2300,7 +2384,7 @@ function draw() {
     drawBackground();
     drawLevel();
     drawItems();
-    drawGoalFlag();
+    drawCampsite();
     enemies.forEach(e => {
       if (!e.alive) return;
       if (e.type === 'marmot') drawMarmot(e);
@@ -2318,14 +2402,14 @@ function draw() {
   if (game.state === 'levelcomplete') {
     drawBackground();
     drawLevel();
-    drawGoalFlag();
+    drawCampsite();
     drawLevelComplete();
     return;
   }
   if (game.state === 'win') {
     drawBackground();
     drawLevel();
-    drawGoalFlag();
+    drawCampsite();
     drawWin();
     return;
   }
@@ -2334,7 +2418,7 @@ function draw() {
   drawBackground();
   drawLevel();
   drawItems();
-  drawGoalFlag();
+  drawCampsite();
   enemies.forEach(e => {
     if (!e.alive) return;
     if (e.type === 'marmot') drawMarmot(e);
