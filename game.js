@@ -791,13 +791,14 @@ function updatePlayer() {
     game.trailAngel[game.levelNum] = enemies.every(en => !en.alive);
     game.levelCompletionTime = game.levelTick; // Store completion time for bonus calculation
     const timeSeconds = Math.floor(game.levelTick / 60);
-    const levelDistances = [3744, 4704, 5664];
-    const theoreticalFrames = levelDistances[game.levelNum] / 3.5;
-    const targetTime = Math.ceil(theoreticalFrames / 60 * 1.8 * 1.15);
+    // Target = 3× theoretical minimum sprint time (goalTile * 32px / 3.5px/tick / 60fps)
+    // L1: ~53s, L2: ~67s, L3: ~81s
+    const levelDistances = [117 * 32, 147 * 32, 177 * 32];
+    const targetTime = Math.ceil(levelDistances[game.levelNum] / 3.5 / 60 * 3);
     const timeDiff = targetTime - timeSeconds;
     game.levelTimeBonus = timeDiff >= 0
-      ? Math.floor(100 * Math.pow(1.1, timeDiff))
-      : Math.floor(timeDiff * 5);
+      ? Math.min(500, Math.floor(50 * Math.pow(1.04, timeDiff)))  // speed bonus, capped at 500
+      : Math.floor(timeDiff * 2);                                  // 2pts/sec penalty (was 5)
     player.score += game.levelTimeBonus;
     game.levelTick = 0;
     game.state = 'levelcomplete';
