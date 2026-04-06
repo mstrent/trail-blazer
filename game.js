@@ -3075,8 +3075,12 @@ function drawLevelComplete() {
   const timeBonus = game.levelTimeBonus;
   const lineHeight = 26;
   let infoY = H / 2 - 30;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 20px Courier New';
   ctx.fillText(`Score: ${player.score}`, W / 2, infoY);
-  infoY += lineHeight;
+  infoY += lineHeight + 4;
+  ctx.fillStyle = '#AADDFF';
+  ctx.font = '14px Courier New';
   ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, infoY);
   infoY += lineHeight;
   ctx.fillText(`Time: ${timeStr}`, W / 2, infoY);
