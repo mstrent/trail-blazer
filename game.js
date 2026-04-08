@@ -1001,7 +1001,7 @@ function makeTPBloom(tx, ty) {
 }
 
 function makeBeerCan(x, y, dir) {
-  return { x, y, vx: dir * 4.5, vy: -2.5, w: 8, h: 12, alive: true };
+  return { x, y, vx: dir * 5.5, vy: -3.2, w: 8, h: 12, alive: true };
 }
 
 function makeTrash(x, y) {
@@ -2194,14 +2194,15 @@ function drawRedneck(e) {
   ctx.globalAlpha = stunned ? 0.6 : 1;
 
   // Jeans — dark blue
-  const legSwing = e.frame ? 6 : 0;
+  const leftSwing  = e.frame ? 6 : 0;
+  const rightSwing = e.frame ? 0 : 6;
   ctx.fillStyle = stunned ? '#FFD700' : '#1A3A8A';
-  ctx.fillRect(-9, -18, 8, 18);
-  ctx.fillRect(1, -18 + legSwing, 8, 18);
+  ctx.fillRect(-9, -18 + leftSwing, 8, 18);
+  ctx.fillRect(1, -18 + rightSwing, 8, 18);
   // Boots
   ctx.fillStyle = '#4A2A10';
-  ctx.fillRect(-10, -3, 9, 4);
-  ctx.fillRect(0, -3 + legSwing, 9, 4);
+  ctx.fillRect(-10, -3 + leftSwing, 9, 4);
+  ctx.fillRect(0, -3 + rightSwing, 9, 4);
 
   // Flannel body — red plaid
   ctx.fillStyle = stunned ? '#FFD700' : '#CC3333';
