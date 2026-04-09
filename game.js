@@ -136,8 +136,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 8, 8), makeItem('spork', 43, 7),
-        makeItem('filter', 66, 7), makeItem('spray', 84, 5),
-        makeItem('tent', 110, 6),
+        makeItem('water', 55, 7), makeItem('filter', 66, 7),
+        makeItem('spray', 84, 5), makeItem('tent', 110, 6),
       ];
     },
   },
@@ -202,8 +202,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 15, 8), makeItem('spork', 52, 5),
-        makeItem('filter', 80, 7), makeItem('spray', 103, 4),
-        makeItem('tent', 128, 5),
+        makeItem('water', 68, 6), makeItem('filter', 80, 7),
+        makeItem('spray', 103, 4), makeItem('tent', 128, 5),
       ];
     },
   },
@@ -275,8 +275,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 10, 8), makeItem('spork', 44, 6),
-        makeItem('filter', 73, 7), makeItem('spray', 96, 6),
-        makeItem('tent', 140, 5),
+        makeItem('water', 58, 7), makeItem('filter', 73, 7),
+        makeItem('spray', 96, 6), makeItem('tent', 140, 5),
       ];
     },
   },
@@ -354,8 +354,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 9, 8), makeItem('spork', 60, 5),
-        makeItem('filter', 85, 6), makeItem('spray', 109, 5),
-        makeItem('tent', 159, 5),
+        makeItem('water', 72, 6), makeItem('filter', 85, 6),
+        makeItem('spray', 109, 5), makeItem('tent', 159, 5),
       ];
     },
   },
@@ -430,8 +430,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 12, 8), makeItem('spork', 65, 5),
-        makeItem('filter', 90, 7), makeItem('spray', 142, 5),
-        makeItem('tent', 168, 5),
+        makeItem('water', 78, 7), makeItem('filter', 90, 7),
+        makeItem('spray', 142, 5), makeItem('tent', 168, 5),
       ];
     },
   },
@@ -514,8 +514,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 15, 8), makeItem('spork', 61, 5),
-        makeItem('filter', 97, 7), makeItem('spray', 130, 4),
-        makeItem('tent', 176, 6),
+        makeItem('water', 80, 7), makeItem('filter', 97, 7),
+        makeItem('spray', 130, 4), makeItem('tent', 176, 6),
       ];
     },
   },
@@ -603,8 +603,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 18, 8), makeItem('spork', 68, 4),
-        makeItem('filter', 103, 7), makeItem('spray', 138, 5),
-        makeItem('tent', 186, 4),
+        makeItem('water', 85, 7), makeItem('filter', 103, 7),
+        makeItem('spray', 138, 5), makeItem('tent', 186, 4),
       ];
     },
   },
@@ -695,8 +695,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 20, 8), makeItem('spork', 65, 5),
-        makeItem('filter', 100, 7), makeItem('spray', 130, 5),
-        makeItem('tent', 200, 5),
+        makeItem('water', 82, 7), makeItem('filter', 100, 7),
+        makeItem('spray', 130, 5), makeItem('tent', 200, 5),
       ];
     },
   },
@@ -790,8 +790,8 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 18, 8), makeItem('spork', 64, 5),
-        makeItem('filter', 97, 7), makeItem('spray', 135, 4),
-        makeItem('tent', 210, 4),
+        makeItem('water', 80, 7), makeItem('filter', 97, 7),
+        makeItem('spray', 135, 4), makeItem('tent', 210, 4),
       ];
     },
   },
@@ -864,6 +864,7 @@ const ITEM_DEFS = {
   filter: { label: 'Water Filter',pts: 200, color: '#4169E1', r: 9 },
   tent:   { label: 'DCF Tent',    pts: 500, color: '#DAA520', r: 10 },
   spray:  { label: 'Bear Spray',  pts: 150, color: '#FF4500', r: 9 },
+  water:  { label: 'Water Bottle',pts: 25,  color: '#00BFFF', r: 9, heals: 1 },
 };
 
 function makeItem(type, tx, ty) {
@@ -1353,9 +1354,16 @@ function updatePlayer() {
     if (aabb(player, { x: item.x, y: item.y, w: item.w, h: item.h })) {
       item.collected = true;
       player.score += item.pts;
-      audio.sfxCollect();
-      spawnParticles(item.x + 10, item.y + 10, ITEM_DEFS[item.type].color, 8, 3);
-      addFloatText(item.x + 10, item.y - 8, `${ITEM_DEFS[item.type].label} +${item.pts}`, '#ffff44');
+      const def = ITEM_DEFS[item.type];
+      spawnParticles(item.x + 10, item.y + 10, def.color, 8, 3);
+      if (def.heals && player.health < 3) {
+        player.health = Math.min(3, player.health + def.heals);
+        audio.sfxHeal();
+        addFloatText(item.x + 10, item.y - 8, `${def.label} +1 H2O`, '#00BFFF');
+      } else {
+        audio.sfxCollect();
+        addFloatText(item.x + 10, item.y - 8, `${def.label} +${item.pts}`, '#ffff44');
+      }
 
       // Leave No Trace award — all items collected
       if (items.every(i => i.collected)) {
@@ -2604,6 +2612,38 @@ function drawItemIcon(type, cx, cy) {
     ctx.lineTo(6, -12);
     ctx.lineTo(6, -8);
     ctx.stroke();
+
+  } else if (type === 'water') {
+    // Water bottle — clear plastic bottle with blue water
+    // Bottle body
+    ctx.fillStyle = 'rgba(180,220,255,0.6)';
+    roundRect(-5, -2, 10, 16, 3);
+    // Water fill inside
+    ctx.fillStyle = '#00AAEE';
+    roundRect(-4, 4, 8, 9, 2);
+    // Water highlight
+    ctx.fillStyle = '#44CCFF';
+    roundRect(-3, 5, 4, 7, 1);
+    // Bottle neck
+    ctx.fillStyle = 'rgba(180,220,255,0.6)';
+    ctx.fillRect(-3, -6, 6, 5);
+    // Cap
+    ctx.fillStyle = '#0088CC';
+    roundRect(-4, -9, 8, 4, 1);
+    // Cap highlight
+    ctx.fillStyle = '#00AAEE';
+    roundRect(-3, -8, 4, 2, 1);
+    // Shine on bottle
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(-4, -1, 2, 14);
+    // Water drops (condensation)
+    ctx.fillStyle = 'rgba(100,200,255,0.7)';
+    ctx.beginPath();
+    ctx.arc(4, 2, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(3, 8, 0.8, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   ctx.restore();
@@ -3404,6 +3444,7 @@ const audio = (() => {
   function sfxBonus()     { sfx(() => { [523, 659, 784, 1047].forEach((f, i) => osc('sine', f, 0.2, 0.14, masterGain, ctx.currentTime + i * 0.08)); }); }
   function sfxGlissade()  { sfx(() => { noise(0.4, 0.16, 500); oscSweep('sawtooth', 260, 130, 0.4, 0.06); }); }
   function sfxStun()      { sfx(() => { oscSweep('sine', 400, 200, 0.18, 0.12); oscSweep('sine', 380, 190, 0.22, 0.08); }); }
+  function sfxHeal()       { sfx(() => { osc('sine', 523, 0.15, 0.16); osc('sine', 784, 0.20, 0.14, masterGain, ctx.currentTime + 0.08); osc('sine', 1047, 0.25, 0.12, masterGain, ctx.currentTime + 0.16); }); }
 
   // ---- startup jingle: cheerful C-E-G run, plays at the start of every level ----
   function sfxStartJingle() {
@@ -3482,7 +3523,7 @@ const audio = (() => {
   return {
     init,
     sfxJump, sfxStomp, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
-    sfxGlissade, sfxStun, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
+    sfxGlissade, sfxStun, sfxHeal, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
     sfxBeerCan, sfxBeerCanHit, sfxTPBloom,
   };
 })();
