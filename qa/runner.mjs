@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { GameClient } from './lib/game-client.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -24,7 +24,7 @@ try {
   );
 
   const scenarioPath = resolve(__dirname, scenarioArg);
-  const { default: scenario } = await import(scenarioPath);
+  const { default: scenario } = await import(pathToFileURL(scenarioPath).href);
   const client = new GameClient(page);
 
   await scenario(client);
