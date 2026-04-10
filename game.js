@@ -1060,6 +1060,64 @@ function updateFish() {
   });
 }
 
+// ==================== TRAIL RUNNERS ====================
+let trailRunners = [];
+const TRAIL_RUNNER_INTERVAL = 600; // frames between spawn attempts (~10s at 60fps)
+let trailRunnerTimer = 0;
+
+function spawnTrailRunners() {
+  trailRunners = [];
+  trailRunnerTimer = Math.floor(rnd(120, 360)); // initial delay before first runner
+}
+
+function makeTrailRunner() {
+  // Spawn off-screen, running left-to-right or right-to-left
+  // Positions are in parallax-space (screen = x - cam.x * 0.35)
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const parallaxCam = cam.x * 0.35;
+  const startX = dir > 0 ? parallaxCam - 60 : parallaxCam + W + 60;
+  const variant = Math.floor(rnd(0, 3)); // 0=fast, 1=ultra, 2=casual
+  const speed = 3.5 + rnd(0, 2.5);
+  return {
+    x: startX,
+    vx: dir * speed,
+    phase: rnd(0, Math.PI * 2),
+    variant,
+    soundPlayed: false,
+  };
+}
+
+function updateTrailRunners() {
+  trailRunnerTimer--;
+  if (trailRunnerTimer <= 0) {
+    // ~30% chance to spawn a runner each interval
+    if (Math.random() < 0.3) {
+      trailRunners.push(makeTrailRunner());
+    }
+    trailRunnerTimer = TRAIL_RUNNER_INTERVAL + Math.floor(rnd(-120, 120));
+  }
+
+  trailRunners.forEach(r => {
+    r.x += r.vx;
+    r.phase += 0.25; // fast stride animation
+
+    // Play sound when runner enters the visible area
+    if (!r.soundPlayed) {
+      const screenX = r.x - cam.x * 0.35;
+      if (screenX > -20 && screenX < W + 20) {
+        r.soundPlayed = true;
+        audio.sfxTrailRunner();
+      }
+    }
+  });
+
+  // Remove runners that have gone far off-screen
+  trailRunners = trailRunners.filter(r => {
+    const screenX = r.x - cam.x * 0.35;
+    return screenX > -200 && screenX < W + 200;
+  });
+}
+
 function moveEntityHoriz(e, vx) {
   e.x += vx;
   const left  = Math.floor(e.x / TS);
@@ -1534,6 +1592,7 @@ function loadLevel(num) {
   spawnEnemies();
   spawnTPBlooms();
   spawnFish();
+  spawnTrailRunners();
   beerCans = [];
   trashPiles = [];
   particles.length = 0;
@@ -1763,6 +1822,94 @@ function drawBackground() {
     ctx.lineTo(x, hy + t.height * 0.25);
     ctx.fill();
   }
+
+  // Trail runners (between background trees and foreground)
+  drawTrailRunners();
+}
+
+function drawTrailRunners() {
+  const runnerBase = H * 0.53 + 2; // just at the tree line base
+  trailRunners.forEach(r => {
+    const sx = r.x - cam.x * 0.35; // parallax slightly in front of trees (0.30)
+    if (sx < -30 || sx > W + 30) return;
+
+    ctx.save();
+    ctx.translate(sx, runnerBase);
+    // Flip based on direction
+    if (r.vx < 0) ctx.scale(-1, 1);
+
+    // Stride phase drives all limb animation
+    const stride = Math.sin(r.phase);
+    const armSwing = Math.cos(r.phase);
+
+    // Runner colors by variant
+    const shirts = ['#E04040', '#2266DD', '#FF8C00'];
+    const shorts = ['#222', '#333', '#1A1A4A'];
+    const skin = '#D4A574';
+    const shirtColor = shirts[r.variant];
+    const shortColor = shorts[r.variant];
+
+    // --- Legs ---
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    // Back leg
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(-stride * 5, -2);
+    ctx.lineTo(-stride * 3, 4);
+    ctx.stroke();
+    // Front leg
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(stride * 5, -2);
+    ctx.lineTo(stride * 3, 4);
+    ctx.stroke();
+
+    // Shoes
+    ctx.fillStyle = '#444';
+    ctx.fillRect(stride * 3 - 2, 3, 4, 2);
+    ctx.fillRect(-stride * 3 - 2, 3, 4, 2);
+
+    // --- Shorts ---
+    ctx.fillStyle = shortColor;
+    ctx.fillRect(-3, -10, 6, 4);
+
+    // --- Torso (shirt) ---
+    ctx.fillStyle = shirtColor;
+    ctx.fillRect(-3.5, -18, 7, 10);
+
+    // --- Arms ---
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 2;
+    // Back arm
+    ctx.beginPath();
+    ctx.moveTo(-2, -16);
+    ctx.lineTo(-2 - armSwing * 4, -11);
+    ctx.stroke();
+    // Front arm
+    ctx.beginPath();
+    ctx.moveTo(2, -16);
+    ctx.lineTo(2 + armSwing * 4, -11);
+    ctx.stroke();
+
+    // --- Head ---
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(0, -21, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Headband / visor by variant
+    const bandColors = ['#FFF', '#FFD700', '#00CC66'];
+    ctx.fillStyle = bandColors[r.variant];
+    ctx.fillRect(-3.5, -23, 7, 2);
+
+    // Hair behind headband
+    ctx.fillStyle = '#3A2010';
+    ctx.fillRect(-3, -25, 6, 2.5);
+
+    ctx.restore();
+  });
 }
 
 function drawTile(tx, ty) {
@@ -3238,6 +3385,7 @@ function update() {
     enemies.forEach(updateEnemy);
     updateBeerCans();
     updateFish();
+    updateTrailRunners();
     updateParticles();
     updateFloatTexts();
     updateCamera(player.x, player.y);
@@ -3496,6 +3644,25 @@ const audio = (() => {
     });
   }
 
+  // ---- trail runner: quick footsteps whoosh past ----
+  function sfxTrailRunner() {
+    sfx(() => {
+      // Quick pattering footsteps — short bursts of noise
+      for (let i = 0; i < 5; i++) {
+        noise(0.04, 0.06, 3500 + i * 200, undefined);
+        // Stagger each step
+        const stepG = ctx.createGain();
+        const t = ctx.currentTime + i * 0.06;
+        stepG.gain.setValueAtTime(0.05, t);
+        stepG.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+        stepG.connect(masterGain);
+      }
+      // Breathy whoosh as they pass
+      noise(0.3, 0.07, 1800);
+      oscSweep('sine', 300, 180, 0.25, 0.04);
+    });
+  }
+
   // ---- beer can throw: whoosh toss ----
   function sfxBeerCan() {
     sfx(() => {
@@ -3524,7 +3691,7 @@ const audio = (() => {
     init,
     sfxJump, sfxStomp, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
     sfxGlissade, sfxStun, sfxHeal, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
-    sfxBeerCan, sfxBeerCanHit, sfxTPBloom,
+    sfxBeerCan, sfxBeerCanHit, sfxTPBloom, sfxTrailRunner,
   };
 })();
 
