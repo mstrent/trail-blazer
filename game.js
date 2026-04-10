@@ -136,7 +136,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 8, 8), makeItem('spork', 43, 7),
-        makeItem('water', 55, 7), makeItem('filter', 66, 7),
+        makeItem('filter', 66, 7),
         makeItem('spray', 84, 5), makeItem('tent', 110, 6),
       ];
     },
@@ -202,7 +202,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 15, 8), makeItem('spork', 52, 5),
-        makeItem('water', 68, 6), makeItem('filter', 80, 7),
+        makeItem('filter', 80, 7),
         makeItem('spray', 103, 4), makeItem('tent', 128, 5),
       ];
     },
@@ -275,7 +275,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 10, 8), makeItem('spork', 44, 6),
-        makeItem('water', 58, 7), makeItem('filter', 73, 7),
+        makeItem('filter', 73, 7),
         makeItem('spray', 96, 6), makeItem('tent', 140, 5),
       ];
     },
@@ -354,7 +354,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 9, 8), makeItem('spork', 60, 5),
-        makeItem('water', 72, 6), makeItem('filter', 85, 6),
+        makeItem('filter', 85, 6),
         makeItem('spray', 109, 5), makeItem('tent', 159, 5),
       ];
     },
@@ -430,7 +430,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 12, 8), makeItem('spork', 65, 5),
-        makeItem('water', 78, 7), makeItem('filter', 90, 7),
+        makeItem('filter', 90, 7),
         makeItem('spray', 142, 5), makeItem('tent', 168, 5),
       ];
     },
@@ -514,7 +514,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 15, 8), makeItem('spork', 61, 5),
-        makeItem('water', 80, 7), makeItem('filter', 97, 7),
+        makeItem('filter', 97, 7),
         makeItem('spray', 130, 4), makeItem('tent', 176, 6),
       ];
     },
@@ -603,7 +603,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 18, 8), makeItem('spork', 68, 4),
-        makeItem('water', 85, 7), makeItem('filter', 103, 7),
+        makeItem('filter', 103, 7),
         makeItem('spray', 138, 5), makeItem('tent', 186, 4),
       ];
     },
@@ -695,7 +695,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 20, 8), makeItem('spork', 65, 5),
-        makeItem('water', 82, 7), makeItem('filter', 100, 7),
+        makeItem('filter', 100, 7),
         makeItem('spray', 130, 5), makeItem('tent', 200, 5),
       ];
     },
@@ -790,7 +790,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 18, 8), makeItem('spork', 64, 5),
-        makeItem('water', 80, 7), makeItem('filter', 97, 7),
+        makeItem('filter', 97, 7),
         makeItem('spray', 135, 4), makeItem('tent', 210, 4),
       ];
     },
