@@ -262,11 +262,11 @@ const LEVELS = [
     spawnEnemies() {
       return [
         makeMarmot(12,8), makeMarmot(35, 8), makeMarmot(82, 8), makeMarmot(123, 10),
-        makeMouse(46, 8), makeMouse(76, 8), makeMouse(100, 7),
+        makeMouse(46, 8), makeMouse(79, 8), makeMouse(100, 7),
         makeMosquito(27, 7), makeMosquito(50, 4), makeMosquito(71, 7),
         makeMosquito(90, 4), makeMosquito(130, 4),
         makeHiker(60, 7), makeHiker(94, 6), makeHiker(138, 5),
-        makeRedneck(113, 9), makeRedneck(143, 5),
+        makeRedneck(120, 9), makeRedneck(143, 5),
       ];
     },
     spawnTPBlooms() {
