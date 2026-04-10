@@ -3882,6 +3882,35 @@ addEventListener('keydown', e => {
   }
 });
 
+// ==================== DEBUG API ====================
+window.trailBlazerDebug = {
+  warpToLevel(n) {
+    warpToLevel(n);
+  },
+  screenshot() {
+    return canvas.toDataURL('image/png');
+  },
+  pressKey(code) {
+    keys[code] = true;
+  },
+  releaseKey(code) {
+    keys[code] = false;
+  },
+  getState() {
+    return {
+      state: game.state,
+      levelNum: game.levelNum,
+      levelTick: game.levelTick,
+      playerX: player ? player.x : null,
+      playerY: player ? player.y : null,
+      playerLives: player ? player.lives : null,
+      playerScore: player ? player.score : null,
+      enemyCount: enemies.filter(e => e.alive).length,
+      itemCount: items.filter(i => !i.collected).length,
+    };
+  },
+};
+
 // ==================== BOOT ====================
 setupTouch();
 fetchLeaderboard();
