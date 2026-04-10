@@ -1260,6 +1260,7 @@ function makePlayer() {
     sprayCooldown: 0,
     sprayTimer: 0,
     hurtTimer: 0,
+    waterDmgTimer: 0,
     frame: 0, frameTimer: 0,
     dead: false,
   };
@@ -1273,6 +1274,7 @@ function updatePlayer() {
   if (player.sprayCooldown > 0) player.sprayCooldown--;
   if (player.sprayTimer > 0) player.sprayTimer--;
   if (player.glissadeCooldown > 0) player.glissadeCooldown--;
+  if (player.waterDmgTimer > 0) player.waterDmgTimer--;
 
   // Horizontal movement
   let dx = 0;
@@ -1363,8 +1365,11 @@ function updatePlayer() {
   const cx = Math.floor((player.x + player.w / 2) / TS);
   const cy = Math.floor((player.y + player.h - 2) / TS);
   if (isWater(cx, cy) || isWater(cx, cy + 1)) {
-    audio.sfxWater();
-    hurtPlayer();
+    if (player.waterDmgTimer === 0) {
+      audio.sfxWater();
+      hurtPlayer();
+      player.waterDmgTimer = 180;
+    }
   }
 
   // Enemy collisions
