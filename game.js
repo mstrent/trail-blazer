@@ -1005,7 +1005,7 @@ function makeBeerCan(x, y, dir) {
 }
 
 function makeTrash(x, y) {
-  return { x: x - 6, y, w: 16, h: 8, variant: Math.floor(rnd(0, 3)) };
+  return { x: x - 16, y: y - 10, w: 32, h: 18 };
 }
 
 // ==================== FISH ====================
@@ -2508,31 +2508,69 @@ function drawTrashPiles() {
   trashPiles.forEach(t => {
     const sx = Math.round(t.x - cam.x);
     const sy = Math.round(t.y - cam.y);
-    if (sx < -20 || sx > W + 20) return;
+    if (sx < -40 || sx > W + 40) return;
     ctx.save();
     ctx.translate(sx, sy);
-    if (t.variant === 0) {
-      // Crushed beer can
-      ctx.fillStyle = '#A07808';
-      ctx.fillRect(2, 2, 10, 5);
-      ctx.fillStyle = '#C8960A';
-      ctx.fillRect(3, 3, 7, 3);
-    } else if (t.variant === 1) {
-      // Plastic wrapper
-      ctx.fillStyle = 'rgba(230,230,200,0.7)';
-      ctx.beginPath();
-      ctx.ellipse(8, 5, 7, 3, 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(180,180,160,0.5)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    } else {
-      // Candy wrapper
-      ctx.fillStyle = '#CC2222';
-      ctx.fillRect(1, 2, 13, 5);
-      ctx.fillStyle = '#FFCC00';
-      ctx.fillRect(4, 2, 6, 5);
-    }
+
+    // Ground shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(16, 17, 14, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Crushed beer can (center, slightly angled) — most prominent piece
+    ctx.save();
+    ctx.translate(5, 4);
+    ctx.rotate(-0.15);
+    ctx.fillStyle = '#A07008';
+    ctx.fillRect(0, 0, 16, 8);       // can body (dark gold)
+    ctx.fillStyle = '#D4A010';
+    ctx.fillRect(1, 1, 12, 5);       // highlight face
+    ctx.fillStyle = '#888';
+    ctx.fillRect(0, 0, 2, 8);        // left end cap
+    ctx.fillRect(14, 0, 2, 8);       // right end cap
+    ctx.fillStyle = '#7A5806';
+    ctx.fillRect(5, 2, 4, 4);        // crush dent
+    ctx.restore();
+
+    // Crumpled plastic bag (right side) — translucent white blob
+    ctx.fillStyle = 'rgba(215,215,195,0.65)';
+    ctx.beginPath();
+    ctx.moveTo(21, 3);
+    ctx.lineTo(30, 5);
+    ctx.lineTo(31, 13);
+    ctx.lineTo(22, 14);
+    ctx.lineTo(20, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(160,160,140,0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Bottle cap (top right, gray ridged disc)
+    ctx.fillStyle = '#777';
+    ctx.beginPath();
+    ctx.arc(28, 2, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.beginPath();
+    ctx.arc(28, 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Candy wrapper (bottom left, red/yellow)
+    ctx.fillStyle = '#CC2020';
+    ctx.fillRect(1, 12, 9, 5);
+    ctx.fillStyle = '#FFCC00';
+    ctx.fillRect(3, 12, 5, 5);
+    ctx.fillStyle = '#AA1010';
+    ctx.fillRect(1, 12, 2, 5);       // left twisted end
+
+    // Cigarette butt (bottom center)
+    ctx.fillStyle = '#DDD';
+    ctx.fillRect(14, 15, 6, 2);
+    ctx.fillStyle = '#D06040';
+    ctx.fillRect(14, 15, 2, 2);      // burnt orange tip
+
     ctx.restore();
   });
 }
