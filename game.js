@@ -501,7 +501,7 @@ const LEVELS = [
         makeMosquito(168, 4),
         makeHiker(43, 8), makeHiker(77, 4), makeHiker(126, 5),
         makeHiker(162, 5), makeHiker(175, 7),
-        makeRedneck(21, 10), makeRedneck(62, 8),
+        makeRedneck(21, 8), makeRedneck(62, 8),
         makeRedneck(122, 7), makeRedneck(169, 7),
       ];
     },
