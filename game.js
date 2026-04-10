@@ -3387,12 +3387,16 @@ function getCurrentFps() {
 }
 
 function warpToLevel(n) {
-  initGame();                          // ensures player exists, state = 'playing'
-  loadLevel(n);                        // override initGame's level 0 with requested level
+  game.leaveNoTrace = [];
+  game.trailAngel = [];
+  game.tick = 0;
+  loadLevel(n);
+  player = makePlayer();
   const spawn = LEVELS[n].spawnTile;
   player.x = spawn[0] * TS;
   player.y = spawn[1] * TS;
   game.levelTick = 0;
+  game.state = 'playing';
 }
 
 addEventListener('keydown', e => {
