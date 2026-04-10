@@ -11,7 +11,7 @@ python -m http.server 3000
 # then visit http://localhost:3000
 ```
 
-There are no tests, no linting tools, and no package.json. All verification is done by playing the game in a browser.
+There are no linting tools and no root-level package.json. The primary verification method is playing the game in a browser. For automated QA, see the `qa/` directory below.
 
 ## Architecture
 
@@ -45,7 +45,9 @@ The entire game is ~3785 lines of vanilla JavaScript in a single IIFE in `game.j
 | MAIN LOOP | 3374 | `update()` and `draw()` dispatch by `game.state`; `requestAnimationFrame` loop at ~60fps |
 | AUDIO | 3514 | Web Audio API synth — all sound effects generated procedurally, no audio files |
 | TOUCH CONTROLS | 3704 | Mobile button bindings |
-| BOOT | 3780 | `fetchLeaderboard()`, starts `requestAnimationFrame` loop |
+| DEBUG | ~3800 | `dbg` flag, `isDebug()`, `warpToLevel()`, FPS tracking, `drawDebugOverlay()`, keydown shortcuts |
+| DEBUG API | ~3885 | `window.trailBlazerDebug` — Playwright automation surface |
+| BOOT | ~3915 | `fetchLeaderboard()`, starts `requestAnimationFrame` loop |
 
 ### Game Loop
 
@@ -136,6 +138,62 @@ All work should follow this branch-based workflow:
    Any branches that were deleted on the remote but still exist locally (marked `[gone]`) can be bulk-removed with the `/clean_gone` skill.
 
 **Never commit directly to master.** Always work on a branch, even for small fixes.
+
+## Debug & Testing Tools
+
+### Human Debug Mode
+
+Press `Ctrl+Shift+D` in-game to toggle the debug overlay. It shows:
+- Colored hitbox outlines: player (red), enemies (orange), items (cyan), TP blooms (magenta)
+- Top-left HUD: game state, level, player tile/world position, vx/vy/onGround, enemy/item counts, FPS
+
+Press `Ctrl+1` through `Ctrl+9` (while overlay is on) to warp to any level. Lives and score are preserved across warps.
+
+> **Note:** `Ctrl+1–9` conflicts with browser tab-switching shortcuts in some browsers. Use `window.trailBlazerDebug.warpToLevel(n)` from DevTools as a reliable alternative.
+
+### Playwright Automated QA
+
+The `qa/` directory contains a headless Playwright runner for scripted testing.
+
+**Setup (once):**
+```bash
+cd qa
+npm install
+npx playwright install chromium
+```
+
+**Run a scenario:**
+```bash
+# Requires a local server: python -m http.server 3000
+cd qa
+node runner.mjs scenarios/smoke.mjs
+```
+
+**Write a new scenario** in `qa/scenarios/<name>.mjs`:
+```js
+export default async function scenario(game) {
+  await game.warpToLevel(2);        // warp to level 3 (0-indexed)
+  await game.waitFrames(30);        // wait ~30 frames
+  await game.holdKey('ArrowRight', 60); // hold right for 60 frames
+  await game.screenshot('my-shot'); // saves to qa/screenshots/my-shot.png
+  const s = await game.getState();  // { state, levelNum, levelTick, playerX, playerY,
+                                    //   playerLives, playerScore, enemyCount, itemCount }
+}
+```
+
+Screenshots are saved to `qa/screenshots/` (gitignored) and can be read with the `Read` tool for visual QA.
+
+### `window.trailBlazerDebug` API
+
+Available at `http://localhost:3000?debug=1` (or any time in the page):
+
+| Method | Description |
+|--------|-------------|
+| `warpToLevel(n)` | Warp to level index `n` (0–8); preserves lives/score |
+| `screenshot()` | Returns canvas as base64 PNG data URL |
+| `pressKey(code)` | Simulate keydown (e.g. `'ArrowRight'`) |
+| `releaseKey(code)` | Release simulated key |
+| `getState()` | Returns `{ state, levelNum, levelTick, playerX, playerY, playerLives, playerScore, enemyCount, itemCount }` |
 
 ## Firebase / Leaderboard
 

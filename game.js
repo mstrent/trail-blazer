@@ -136,7 +136,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 8, 8), makeItem('spork', 43, 7),
-        makeItem('water', 55, 7), makeItem('filter', 66, 7),
+        makeItem('filter', 66, 7),
         makeItem('spray', 84, 5), makeItem('tent', 110, 6),
       ];
     },
@@ -202,7 +202,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 15, 8), makeItem('spork', 52, 5),
-        makeItem('water', 68, 6), makeItem('filter', 80, 7),
+        makeItem('filter', 80, 7),
         makeItem('spray', 103, 4), makeItem('tent', 128, 5),
       ];
     },
@@ -275,7 +275,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 10, 8), makeItem('spork', 44, 6),
-        makeItem('water', 58, 7), makeItem('filter', 73, 7),
+        makeItem('filter', 73, 7),
         makeItem('spray', 96, 6), makeItem('tent', 140, 5),
       ];
     },
@@ -354,7 +354,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 9, 8), makeItem('spork', 60, 5),
-        makeItem('water', 72, 6), makeItem('filter', 85, 6),
+        makeItem('filter', 85, 6),
         makeItem('spray', 109, 5), makeItem('tent', 159, 5),
       ];
     },
@@ -430,7 +430,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 12, 8), makeItem('spork', 65, 5),
-        makeItem('water', 78, 7), makeItem('filter', 90, 7),
+        makeItem('filter', 90, 7),
         makeItem('spray', 142, 5), makeItem('tent', 168, 5),
       ];
     },
@@ -514,7 +514,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 15, 8), makeItem('spork', 61, 5),
-        makeItem('water', 80, 7), makeItem('filter', 97, 7),
+        makeItem('filter', 97, 7),
         makeItem('spray', 130, 4), makeItem('tent', 176, 6),
       ];
     },
@@ -603,7 +603,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 18, 8), makeItem('spork', 68, 4),
-        makeItem('water', 85, 7), makeItem('filter', 103, 7),
+        makeItem('filter', 103, 7),
         makeItem('spray', 138, 5), makeItem('tent', 186, 4),
       ];
     },
@@ -695,7 +695,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 20, 8), makeItem('spork', 65, 5),
-        makeItem('water', 82, 7), makeItem('filter', 100, 7),
+        makeItem('filter', 100, 7),
         makeItem('spray', 130, 5), makeItem('tent', 200, 5),
       ];
     },
@@ -790,7 +790,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 18, 8), makeItem('spork', 64, 5),
-        makeItem('water', 80, 7), makeItem('filter', 97, 7),
+        makeItem('filter', 97, 7),
         makeItem('spray', 135, 4), makeItem('tent', 210, 4),
       ];
     },
@@ -861,10 +861,9 @@ function drawParticles() {
 const ITEM_DEFS = {
   spork:  { label: 'Ti Spork',    pts: 100, color: '#C0C0C0', r: 8 },
   bar:    { label: 'Protein Bar', pts: 50,  color: '#D2691E', r: 8 },
-  filter: { label: 'Water Filter',pts: 200, color: '#4169E1', r: 9 },
+  filter: { label: 'Water Filter',pts: 200, color: '#4169E1', r: 9, heals: 1, healPts: 75 },
   tent:   { label: 'DCF Tent',    pts: 500, color: '#DAA520', r: 10 },
   spray:  { label: 'Bear Spray',  pts: 150, color: '#FF4500', r: 9 },
-  water:  { label: 'Water Bottle',pts: 25,  color: '#00BFFF', r: 9, heals: 1 },
 };
 
 function makeItem(type, tx, ty) {
@@ -1006,7 +1005,7 @@ function makeBeerCan(x, y, dir) {
 }
 
 function makeTrash(x, y) {
-  return { x: x - 6, y, w: 16, h: 8, variant: Math.floor(rnd(0, 3)) };
+  return { x: x - 16, y: y - 10, w: 32, h: 18 };
 }
 
 // ==================== FISH ====================
@@ -1261,6 +1260,7 @@ function makePlayer() {
     sprayCooldown: 0,
     sprayTimer: 0,
     hurtTimer: 0,
+    waterDmgTimer: 0,
     frame: 0, frameTimer: 0,
     dead: false,
   };
@@ -1274,6 +1274,7 @@ function updatePlayer() {
   if (player.sprayCooldown > 0) player.sprayCooldown--;
   if (player.sprayTimer > 0) player.sprayTimer--;
   if (player.glissadeCooldown > 0) player.glissadeCooldown--;
+  if (player.waterDmgTimer > 0) player.waterDmgTimer--;
 
   // Horizontal movement
   let dx = 0;
@@ -1364,8 +1365,11 @@ function updatePlayer() {
   const cx = Math.floor((player.x + player.w / 2) / TS);
   const cy = Math.floor((player.y + player.h - 2) / TS);
   if (isWater(cx, cy) || isWater(cx, cy + 1)) {
-    audio.sfxWater();
-    hurtPlayer();
+    if (player.waterDmgTimer === 0) {
+      audio.sfxWater();
+      hurtPlayer();
+      player.waterDmgTimer = 180;
+    }
   }
 
   // Enemy collisions
@@ -1411,14 +1415,15 @@ function updatePlayer() {
     if (item.collected) return;
     if (aabb(player, { x: item.x, y: item.y, w: item.w, h: item.h })) {
       item.collected = true;
-      player.score += item.pts;
       const def = ITEM_DEFS[item.type];
       spawnParticles(item.x + 10, item.y + 10, def.color, 8, 3);
       if (def.heals && player.health < 3) {
         player.health = Math.min(3, player.health + def.heals);
+        player.score += def.healPts;
         audio.sfxHeal();
-        addFloatText(item.x + 10, item.y - 8, `${def.label} +1 H2O`, '#00BFFF');
+        addFloatText(item.x + 10, item.y - 8, `${def.label} +1\u2665`, '#00BFFF');
       } else {
+        player.score += item.pts;
         audio.sfxCollect();
         addFloatText(item.x + 10, item.y - 8, `${def.label} +${item.pts}`, '#ffff44');
       }
@@ -1489,6 +1494,7 @@ function hurtPlayer(instant) {
       player.vy = 0;
       player.health = 3;
       player.hurtTimer = 120;
+      player.waterDmgTimer = 0;
       cam.x = 0;
     }
   } else {
@@ -2503,31 +2509,69 @@ function drawTrashPiles() {
   trashPiles.forEach(t => {
     const sx = Math.round(t.x - cam.x);
     const sy = Math.round(t.y - cam.y);
-    if (sx < -20 || sx > W + 20) return;
+    if (sx < -40 || sx > W + 40) return;
     ctx.save();
     ctx.translate(sx, sy);
-    if (t.variant === 0) {
-      // Crushed beer can
-      ctx.fillStyle = '#A07808';
-      ctx.fillRect(2, 2, 10, 5);
-      ctx.fillStyle = '#C8960A';
-      ctx.fillRect(3, 3, 7, 3);
-    } else if (t.variant === 1) {
-      // Plastic wrapper
-      ctx.fillStyle = 'rgba(230,230,200,0.7)';
-      ctx.beginPath();
-      ctx.ellipse(8, 5, 7, 3, 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(180,180,160,0.5)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    } else {
-      // Candy wrapper
-      ctx.fillStyle = '#CC2222';
-      ctx.fillRect(1, 2, 13, 5);
-      ctx.fillStyle = '#FFCC00';
-      ctx.fillRect(4, 2, 6, 5);
-    }
+
+    // Ground shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(16, 17, 14, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Crushed beer can (center, slightly angled) — most prominent piece
+    ctx.save();
+    ctx.translate(5, 4);
+    ctx.rotate(-0.15);
+    ctx.fillStyle = '#A07008';
+    ctx.fillRect(0, 0, 16, 8);       // can body (dark gold)
+    ctx.fillStyle = '#D4A010';
+    ctx.fillRect(1, 1, 12, 5);       // highlight face
+    ctx.fillStyle = '#888';
+    ctx.fillRect(0, 0, 2, 8);        // left end cap
+    ctx.fillRect(14, 0, 2, 8);       // right end cap
+    ctx.fillStyle = '#7A5806';
+    ctx.fillRect(5, 2, 4, 4);        // crush dent
+    ctx.restore();
+
+    // Crumpled plastic bag (right side) — translucent white blob
+    ctx.fillStyle = 'rgba(215,215,195,0.65)';
+    ctx.beginPath();
+    ctx.moveTo(21, 3);
+    ctx.lineTo(30, 5);
+    ctx.lineTo(31, 13);
+    ctx.lineTo(22, 14);
+    ctx.lineTo(20, 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(160,160,140,0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Bottle cap (top right, gray ridged disc)
+    ctx.fillStyle = '#777';
+    ctx.beginPath();
+    ctx.arc(28, 2, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.beginPath();
+    ctx.arc(28, 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Candy wrapper (bottom left, red/yellow)
+    ctx.fillStyle = '#CC2020';
+    ctx.fillRect(1, 12, 9, 5);
+    ctx.fillStyle = '#FFCC00';
+    ctx.fillRect(3, 12, 5, 5);
+    ctx.fillStyle = '#AA1010';
+    ctx.fillRect(1, 12, 2, 5);       // left twisted end
+
+    // Cigarette butt (bottom center)
+    ctx.fillStyle = '#DDD';
+    ctx.fillRect(14, 15, 6, 2);
+    ctx.fillStyle = '#D06040';
+    ctx.fillRect(14, 15, 2, 2);      // burnt orange tip
+
     ctx.restore();
   });
 }
@@ -2759,38 +2803,6 @@ function drawItemIcon(type, cx, cy) {
     ctx.lineTo(6, -12);
     ctx.lineTo(6, -8);
     ctx.stroke();
-
-  } else if (type === 'water') {
-    // Water bottle — clear plastic bottle with blue water
-    // Bottle body
-    ctx.fillStyle = 'rgba(180,220,255,0.6)';
-    roundRect(-5, -2, 10, 16, 3);
-    // Water fill inside
-    ctx.fillStyle = '#00AAEE';
-    roundRect(-4, 4, 8, 9, 2);
-    // Water highlight
-    ctx.fillStyle = '#44CCFF';
-    roundRect(-3, 5, 4, 7, 1);
-    // Bottle neck
-    ctx.fillStyle = 'rgba(180,220,255,0.6)';
-    ctx.fillRect(-3, -6, 6, 5);
-    // Cap
-    ctx.fillStyle = '#0088CC';
-    roundRect(-4, -9, 8, 4, 1);
-    // Cap highlight
-    ctx.fillStyle = '#00AAEE';
-    roundRect(-3, -8, 4, 2, 1);
-    // Shine on bottle
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillRect(-4, -1, 2, 14);
-    // Water drops (condensation)
-    ctx.fillStyle = 'rgba(100,200,255,0.7)';
-    ctx.beginPath();
-    ctx.arc(4, 2, 1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(3, 8, 0.8, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   ctx.restore();
