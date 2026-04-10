@@ -1494,6 +1494,7 @@ function hurtPlayer(instant) {
       player.vy = 0;
       player.health = 3;
       player.hurtTimer = 120;
+      player.waterDmgTimer = 0;
       cam.x = 0;
     }
   } else {
