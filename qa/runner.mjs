@@ -11,10 +11,12 @@ if (!scenarioArg) {
   process.exit(1);
 }
 
-const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage();
-
+let browser;
+let exitCode = 0;
 try {
+  browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
   await page.goto('http://localhost:3000?debug=1');
   await page.waitForFunction(
     () => typeof window.trailBlazerDebug !== 'undefined',
@@ -28,8 +30,9 @@ try {
   await scenario(client);
   console.log('Scenario completed successfully.');
 } catch (err) {
-  console.error('Scenario failed:', err.message);
-  process.exit(1);
+  console.error('Scenario failed:', err.stack ?? err.message);
+  exitCode = 1;
 } finally {
-  await browser.close();
+  if (browser) await browser.close();
 }
+process.exit(exitCode);
