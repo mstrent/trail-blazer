@@ -2759,38 +2759,6 @@ function drawItemIcon(type, cx, cy) {
     ctx.lineTo(6, -12);
     ctx.lineTo(6, -8);
     ctx.stroke();
-
-  } else if (type === 'water') {
-    // Water bottle — clear plastic bottle with blue water
-    // Bottle body
-    ctx.fillStyle = 'rgba(180,220,255,0.6)';
-    roundRect(-5, -2, 10, 16, 3);
-    // Water fill inside
-    ctx.fillStyle = '#00AAEE';
-    roundRect(-4, 4, 8, 9, 2);
-    // Water highlight
-    ctx.fillStyle = '#44CCFF';
-    roundRect(-3, 5, 4, 7, 1);
-    // Bottle neck
-    ctx.fillStyle = 'rgba(180,220,255,0.6)';
-    ctx.fillRect(-3, -6, 6, 5);
-    // Cap
-    ctx.fillStyle = '#0088CC';
-    roundRect(-4, -9, 8, 4, 1);
-    // Cap highlight
-    ctx.fillStyle = '#00AAEE';
-    roundRect(-3, -8, 4, 2, 1);
-    // Shine on bottle
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillRect(-4, -1, 2, 14);
-    // Water drops (condensation)
-    ctx.fillStyle = 'rgba(100,200,255,0.7)';
-    ctx.beginPath();
-    ctx.arc(4, 2, 1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(3, 8, 0.8, 0, Math.PI * 2);
-    ctx.fill();
   }
 
   ctx.restore();
