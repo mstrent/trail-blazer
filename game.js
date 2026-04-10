@@ -861,10 +861,9 @@ function drawParticles() {
 const ITEM_DEFS = {
   spork:  { label: 'Ti Spork',    pts: 100, color: '#C0C0C0', r: 8 },
   bar:    { label: 'Protein Bar', pts: 50,  color: '#D2691E', r: 8 },
-  filter: { label: 'Water Filter',pts: 200, color: '#4169E1', r: 9 },
+  filter: { label: 'Water Filter',pts: 200, color: '#4169E1', r: 9, heals: 1, healPts: 75 },
   tent:   { label: 'DCF Tent',    pts: 500, color: '#DAA520', r: 10 },
   spray:  { label: 'Bear Spray',  pts: 150, color: '#FF4500', r: 9 },
-  water:  { label: 'Water Bottle',pts: 25,  color: '#00BFFF', r: 9, heals: 1 },
 };
 
 function makeItem(type, tx, ty) {
@@ -1411,14 +1410,15 @@ function updatePlayer() {
     if (item.collected) return;
     if (aabb(player, { x: item.x, y: item.y, w: item.w, h: item.h })) {
       item.collected = true;
-      player.score += item.pts;
       const def = ITEM_DEFS[item.type];
       spawnParticles(item.x + 10, item.y + 10, def.color, 8, 3);
       if (def.heals && player.health < 3) {
         player.health = Math.min(3, player.health + def.heals);
+        player.score += def.healPts;
         audio.sfxHeal();
-        addFloatText(item.x + 10, item.y - 8, `${def.label} +1 H2O`, '#00BFFF');
+        addFloatText(item.x + 10, item.y - 8, `${def.label} +1\u2665`, '#00BFFF');
       } else {
+        player.score += item.pts;
         audio.sfxCollect();
         addFloatText(item.x + 10, item.y - 8, `${def.label} +${item.pts}`, '#ffff44');
       }
