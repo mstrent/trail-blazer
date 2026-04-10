@@ -3387,14 +3387,19 @@ function getCurrentFps() {
 }
 
 function warpToLevel(n) {
-  game.leaveNoTrace = [];
-  game.trailAngel = [];
-  game.tick = 0;
+  if (n < 0 || n >= LEVELS.length) {
+    console.warn(`warpToLevel: invalid level index ${n} (valid: 0–${LEVELS.length - 1})`);
+    return;
+  }
+  const savedScore = player ? player.score : 0;
+  const savedLives = player ? player.lives : 3;
   loadLevel(n);
   player = makePlayer();
   const spawn = LEVELS[n].spawnTile;
   player.x = spawn[0] * TS;
   player.y = spawn[1] * TS;
+  player.score = savedScore;
+  player.lives = savedLives;
   game.levelTick = 0;
   game.state = 'playing';
 }
@@ -3402,15 +3407,24 @@ function warpToLevel(n) {
 addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
     dbg.human = !dbg.human;
+    if (dbg.human) { fpsLastTime = 0; fpsBuffer = []; } // reset stale FPS state on enable
     e.preventDefault();
     return;
   }
+  // Note: Ctrl+1–9 conflicts with browser tab-switching shortcuts.
+  // preventDefault only suppresses the page event; the browser may
+  // still switch tabs. Use the window.trailBlazerDebug.warpToLevel()
+  // API (e.g. from DevTools console) as a reliable alternative.
   if (isDebug() && e.ctrlKey && !e.shiftKey && !e.altKey) {
-    const n = parseInt(e.key) - 1; // Ctrl+1 → level index 0, Ctrl+9 → level index 8
-    if (!isNaN(n) && n >= 0 && n < LEVELS.length) {
-      audio.init();
-      warpToLevel(n);
-      e.preventDefault();
+    // Use e.code (layout-independent) to detect digit keys — e.key varies by keyboard layout
+    const m = e.code.match(/^Digit([1-9])$/);
+    if (m) {
+      const n = parseInt(m[1]) - 1; // Ctrl+1 → level index 0, Ctrl+9 → level index 8
+      if (n < LEVELS.length) {
+        audio.init();
+        warpToLevel(n);
+        e.preventDefault();
+      }
     }
   }
 });
