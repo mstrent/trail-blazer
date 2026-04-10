@@ -1,1 +1,4 @@
 .claude/
+.worktrees/
+qa/node_modules/
+qa/screenshots/*.png

@@ -3371,8 +3371,126 @@ function drawWin() {
   }
 }
 
+// ==================== DEBUG ====================
+const dbg = {
+  url: new URLSearchParams(location.search).has('debug'),
+  human: false,
+};
+const isDebug = () => dbg.url || dbg.human;
+
+let fpsLastTime = 0;
+let fpsBuffer = []; // rolling 60-frame window of frame durations (ms)
+function getCurrentFps() {
+  if (fpsBuffer.length === 0) return 60;
+  const avg = fpsBuffer.reduce((a, b) => a + b, 0) / fpsBuffer.length;
+  return Math.round(1000 / avg);
+}
+
+function warpToLevel(n) {
+  if (n < 0 || n >= LEVELS.length) {
+    console.warn(`warpToLevel: invalid level index ${n} (valid: 0–${LEVELS.length - 1})`);
+    return;
+  }
+  const savedScore = player ? player.score : 0;
+  const savedLives = player ? player.lives : 3;
+  loadLevel(n);
+  player = makePlayer();
+  const spawn = LEVELS[n].spawnTile;
+  player.x = spawn[0] * TS;
+  player.y = spawn[1] * TS;
+  player.score = savedScore;
+  player.lives = savedLives;
+  game.levelTick = 0;
+  game.state = 'playing';
+}
+
+addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+    dbg.human = !dbg.human;
+    if (dbg.human) { fpsLastTime = 0; fpsBuffer = []; } // reset stale FPS state on enable
+    e.preventDefault();
+    return;
+  }
+  // Note: Ctrl+1–9 conflicts with browser tab-switching shortcuts.
+  // preventDefault only suppresses the page event; the browser may
+  // still switch tabs. Use the window.trailBlazerDebug.warpToLevel()
+  // API (e.g. from DevTools console) as a reliable alternative.
+  if (isDebug() && e.ctrlKey && !e.shiftKey && !e.altKey) {
+    // Use e.code (layout-independent) to detect digit keys — e.key varies by keyboard layout
+    const m = e.code.match(/^Digit([1-9])$/);
+    if (m) {
+      const n = parseInt(m[1]) - 1; // Ctrl+1 → level index 0, Ctrl+9 → level index 8
+      if (n < LEVELS.length) {
+        audio.init();
+        warpToLevel(n);
+        e.preventDefault();
+      }
+    }
+  }
+});
+
+function drawDebugOverlay() {
+  if (!player) return;
+  const sx = x => Math.round(x - cam.x);
+  const sy = y => Math.round(y - cam.y);
+
+  ctx.save();
+  ctx.lineWidth = 1.5;
+
+  // Player hitbox — red
+  ctx.strokeStyle = '#ff3333';
+  ctx.strokeRect(sx(player.x), sy(player.y), player.w, player.h);
+
+  // Enemy hitboxes — orange
+  ctx.strokeStyle = '#ff9900';
+  enemies.forEach(e => {
+    if (e.alive) ctx.strokeRect(sx(e.x), sy(e.y), e.w, e.h);
+  });
+
+  // Item hitboxes — cyan (items use `collected` flag, not `alive`)
+  ctx.strokeStyle = '#00ffff';
+  items.forEach(it => {
+    if (!it.collected) ctx.strokeRect(sx(it.x), sy(it.y), it.w, it.h);
+  });
+
+  // TP Bloom hitboxes — magenta (blooms use `active` flag, not `alive`)
+  ctx.strokeStyle = '#ff00ff';
+  tpBlooms.forEach(b => {
+    if (b.active) ctx.strokeRect(sx(b.x), sy(b.y), b.w, b.h);
+  });
+
+  ctx.restore();
+
+  // Info readout — fixed top-left corner
+  const tx = Math.floor(player.x / TS);
+  const ty = Math.floor(player.y / TS);
+  const lines = [
+    `STATE:${game.state}  LEVEL:${game.levelNum + 1} (${LEVELS[game.levelNum].name})`,
+    `PLAYER tile:(${tx},${ty})  world:(${Math.floor(player.x)},${Math.floor(player.y)})`,
+    `vx:${player.vx.toFixed(2)}  vy:${player.vy.toFixed(2)}  onGround:${player.onGround}`,
+    `ENEMIES alive:${enemies.filter(e => e.alive).length}  ITEMS left:${items.filter(i => !i.collected).length}`,
+    `FPS:${getCurrentFps()}`,
+  ];
+  ctx.save();
+  ctx.font = '12px monospace';
+  const lh = 16, pad = 6, bw = 360, bh = lines.length * lh + pad * 2;
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.fillRect(4, 4, bw, bh);
+  ctx.fillStyle = '#ffffff';
+  lines.forEach((l, i) => ctx.fillText(l, 4 + pad, 4 + pad + 12 + i * lh));
+  ctx.restore();
+}
+
 // ==================== MAIN LOOP ====================
 function update() {
+  if (isDebug()) {
+    const now = performance.now();
+    if (fpsLastTime > 0) {
+      fpsBuffer.push(now - fpsLastTime);
+      if (fpsBuffer.length > 60) fpsBuffer.shift();
+    }
+    fpsLastTime = now;
+  }
   game.tick++;
 
   if (game.state === 'menu') {
@@ -3509,6 +3627,7 @@ function draw() {
   drawParticles();
   drawFloatTexts();
   drawHUD();
+  if (isDebug()) drawDebugOverlay();
 }
 
 // ==================== AUDIO ====================
@@ -3776,6 +3895,35 @@ addEventListener('keydown', e => {
     e.preventDefault();
   }
 });
+
+// ==================== DEBUG API ====================
+window.trailBlazerDebug = {
+  warpToLevel(n) {
+    warpToLevel(n);
+  },
+  screenshot() {
+    return canvas.toDataURL('image/png');
+  },
+  pressKey(code) {
+    keys[code] = true;
+  },
+  releaseKey(code) {
+    keys[code] = false;
+  },
+  getState() {
+    return {
+      state: game.state,
+      levelNum: game.levelNum,
+      levelTick: game.levelTick,
+      playerX: player ? player.x : null,
+      playerY: player ? player.y : null,
+      playerLives: player ? player.lives : null,
+      playerScore: player ? player.score : null,
+      enemyCount: enemies.filter(e => e.alive).length,
+      itemCount: items.filter(i => !i.collected).length,
+    };
+  },
+};
 
 // ==================== BOOT ====================
 setupTouch();
