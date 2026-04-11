@@ -3839,8 +3839,8 @@ function drawHUD() {
   ctx.fillText(`TIME: ${timeStr}`, 260, 22);
   ctx.textAlign = 'right';
 
-  // Trail progress bar
-  const progress = clamp(player.x / (level.COLS * TS), 0, 1);
+  // Trail progress bar (not applicable in boss arenas)
+  const progress = level ? clamp(player.x / (level.COLS * TS), 0, 1) : 0;
   ctx.fillStyle = '#333';
   ctx.fillRect(W - 180, 8, 170, 12);
   ctx.fillStyle = '#4E7D3A';
