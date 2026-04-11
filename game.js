@@ -955,7 +955,7 @@ function makeMouse(tx, ty) {
   return {
     type: 'mouse',
     x: tx * TS, y: ty * TS + 8,
-    w: 16, h: 12,
+    w: 22, h: 18,
     vx: -1.8, vy: 0,
     onGround: false,
     alive: true,

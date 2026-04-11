@@ -179,8 +179,8 @@ canvas {
     position: fixed;
     bottom: 8px;
     right: 8px;
-    width: clamp(115px, 21vw, 165px);
-    height: clamp(70px, 13vw, 100px);
+    width: clamp(140px, 26vw, 200px);
+    height: clamp(90px, 17vw, 130px);
     gap: 3px;
   }
   .touch-btn {
