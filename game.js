@@ -2105,12 +2105,14 @@ function drawPlayer() {
   // Bear spray effect
   if (player.sprayTimer > 0) {
     ctx.globalAlpha = 0.6;
-    const spx = (player.facing > 0 ? 12 : -120);
-    const grad = ctx.createLinearGradient(spx, 0, spx + 110 * player.facing, 0);
+    const spx = player.facing > 0 ? player.w / 2 : -(player.w / 2 + 120);
+    const nearX = player.facing > 0 ? spx : spx + 120;
+    const farX  = player.facing > 0 ? spx + 120 : spx;
+    const grad = ctx.createLinearGradient(nearX, 0, farX, 0);
     grad.addColorStop(0, '#ff8800');
     grad.addColorStop(1, 'rgba(255,136,0,0)');
     ctx.fillStyle = grad;
-    ctx.fillRect(spx, -8, 110 * player.facing, 18);
+    ctx.fillRect(spx, -8, 120, 18);
     ctx.globalAlpha = 1;
   }
 
