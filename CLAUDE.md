@@ -130,12 +130,12 @@ All work should follow this branch-based workflow:
 
 4. **Open a PR when the work is ready** using `gh pr create`. The PR description should include `closes #NNN`.
 
-5. **After the PR is merged, clean up:**
+5. **After the PR is merged, pull master and clean up:**
    ```bash
    git checkout master && git pull
    git branch -d issue-NNN-short-description
    ```
-   Any branches that were deleted on the remote but still exist locally (marked `[gone]`) can be bulk-removed with the `/clean_gone` skill.
+   Always pull master after a merge so the local branch is up to date before starting new work. Any branches that were deleted on the remote but still exist locally (marked `[gone]`) can be bulk-removed with the `/clean_gone` skill.
 
 **Never commit directly to master.** Always work on a branch, even for small fixes.
 
