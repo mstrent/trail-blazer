@@ -1449,10 +1449,214 @@ function drawMothman(boss) {
 }
 
 function makeBigfoot() {
-  return { type: 'bigfoot', x: 650, y: 50, w: 250, h: 350, hp: 8, hitTimer: 0, vulnerable: false, phase: 1 };
+  return {
+    type: 'bigfoot',
+    x: 150, y: BOSS_GROUND_Y - 200,
+    w: 100, h: 200,
+    hp: 8,
+    phase: 1,
+    state: 'idle',  // idle | windup | throw | groundpound | stagger | rage
+    stateTimer: 80,
+    boulders: [],
+    shockwave: null,
+    windupProgress: 0,
+    rageTimer: 0,
+    vulnerable: false,
+    hitTimer: 0,
+  };
 }
-function updateBigfoot(boss)     { if (boss.hitTimer > 0) boss.hitTimer--; }
-function drawBigfoot(boss)       {}
+
+function updateBigfoot(boss) {
+  if (boss.hitTimer > 0) boss.hitTimer--;
+
+  boss.boulders = boss.boulders.filter(b => {
+    b.x += b.vx;
+    b.y += b.vy;
+    b.vy += GRAVITY_FORCE * 0.6;
+    if (player.hurtTimer === 0 &&
+        aabb(player, { x: b.x - b.r, y: b.y - b.r, w: b.r * 2, h: b.r * 2 })) {
+      hurtPlayer();
+    }
+    return b.y < BOSS_GROUND_Y + 60;
+  });
+
+  if (boss.shockwave && boss.shockwave.active) {
+    const sw = boss.shockwave;
+    sw.x    += sw.dir * sw.speed;
+    sw.alpha -= 0.012;
+    if (sw.alpha <= 0 || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
+    if (player.hurtTimer === 0 && player.onGround) {
+      const swHit = { x: sw.dir > 0 ? sw.x - 30 : 0, y: BOSS_GROUND_Y - 30, w: 60, h: 30 };
+      if (aabb(player, swHit)) hurtPlayer();
+    }
+  }
+
+  if (boss.rageTimer > 0) {
+    boss.rageTimer--;
+    return;
+  }
+
+  boss.stateTimer--;
+
+  if (boss.state === 'idle') {
+    if (boss.stateTimer <= 0) {
+      boss.windupProgress = 0;
+      boss.state = 'windup';
+      boss.stateTimer = 40;
+    }
+  } else if (boss.state === 'windup') {
+    boss.windupProgress = Math.min(1, boss.windupProgress + 1 / 40);
+    boss.vulnerable = boss.windupProgress > 0.55;
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      const count = boss.phase === 3 ? 3 : 2;
+      for (let i = 0; i < count; i++) {
+        const spread = count === 2 ? (i - 0.5) * 200 : (i - 1) * 160;
+        const tx = Math.max(50, Math.min(BOSS_ARENA_W - 50, player.x + player.w / 2 + spread));
+        const ty = BOSS_GROUND_Y;
+        const sx = boss.x + boss.w / 2;
+        const sy = boss.y + boss.h * 0.3;
+        const dist = Math.hypot(tx - sx, ty - sy) || 1;
+        const spd  = 7 + boss.phase;
+        boss.boulders.push({
+          x: sx, y: sy,
+          vx: (tx - sx) / dist * spd,
+          vy: (ty - sy) / dist * spd - 6,
+          r: 16,
+        });
+      }
+      boss.windupProgress = 0;
+      boss.state = 'throw';
+      boss.stateTimer = 30;
+    }
+  } else if (boss.state === 'throw') {
+    if (boss.stateTimer <= 0) {
+      const nextIdleTime = boss.phase === 3 ? 25 : boss.phase === 2 ? 45 : 65;
+      if (boss.phase >= 2 && Math.random() < 0.45) {
+        boss.state = 'groundpound';
+        boss.stateTimer = 45;
+      } else {
+        boss.state = 'idle';
+        boss.stateTimer = nextIdleTime;
+      }
+    }
+  } else if (boss.state === 'groundpound') {
+    if (boss.stateTimer <= 0) {
+      const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
+      boss.shockwave = { x: boss.x + boss.w / 2, dir, speed: 7, alpha: 0.85, active: true };
+      spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
+      audio.sfxStun();
+      boss.vulnerable = true;
+      boss.state = 'stagger';
+      boss.stateTimer = 28;
+    }
+  } else if (boss.state === 'stagger') {
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      const nextIdleTime = boss.phase === 3 ? 20 : 40;
+      boss.state = 'idle';
+      boss.stateTimer = nextIdleTime;
+    }
+  }
+}
+
+function drawBigfoot(boss) {
+  const t  = game.tick;
+  const bx = boss.x - cam.x + boss.w / 2;
+  const by = boss.y - cam.y + boss.h;  // translate to feet
+
+  boss.boulders.forEach(b => {
+    ctx.fillStyle = '#666';
+    ctx.beginPath();
+    ctx.arc(b.x - cam.x, b.y - cam.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.beginPath();
+    ctx.arc(b.x - cam.x - b.r * 0.3, b.y - cam.y - b.r * 0.3, b.r * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  if (boss.shockwave && boss.shockwave.active) {
+    const sw  = boss.shockwave;
+    const swx = sw.x - cam.x;
+    const swy = BOSS_GROUND_Y - cam.y - 22;
+    ctx.fillStyle = `rgba(90,58,26,${sw.alpha})`;
+    if (sw.dir > 0) ctx.fillRect(swx, swy, BOSS_ARENA_W - sw.x, 22);
+    else            ctx.fillRect(0,   swy, swx, 22);
+  }
+
+  ctx.save();
+  ctx.translate(bx, by);
+
+  const arm = Math.min(1, boss.windupProgress);
+
+  ctx.fillStyle = '#2a1a0a';
+
+  ctx.beginPath(); ctx.ellipse(-22, 0, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 22, 0, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillRect(-32, -75, 26, 75);
+  ctx.fillRect(  6, -75, 26, 75);
+
+  ctx.beginPath();
+  ctx.ellipse(0, -120, 46, 62, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(-50, -150 - arm * 30);
+  ctx.rotate(-arm * 0.9 - 0.25);
+  ctx.fillRect(-10, 0, 20, 70);
+  ctx.beginPath(); ctx.ellipse(0, 76, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(50, -150 - arm * 30);
+  ctx.rotate(arm * 0.9 + 0.25);
+  ctx.fillRect(-10, 0, 20, 70);
+  ctx.beginPath(); ctx.ellipse(0, 76, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.ellipse(0, -188, 28, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = boss.phase === 3 ? '#ff6600' : '#cc3300';
+  ctx.beginPath(); ctx.arc(-10, -193, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 10, -193, 4, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(80,50,20,0.5)';
+  ctx.lineWidth = 1.5;
+  for (let i = -36; i <= 36; i += 12) {
+    const yy = -90 + Math.sin(i * 0.45) * 14;
+    ctx.beginPath();
+    ctx.moveTo(i, yy);
+    ctx.lineTo(i + 4, yy - 14);
+    ctx.stroke();
+  }
+
+  if (boss.phase === 3) {
+    ctx.strokeStyle = `rgba(255,100,0,${0.4 + Math.sin(t * 0.2) * 0.4})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, -130, 60, 95, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (boss.rageTimer > 60) {
+    ctx.fillStyle = '#ff2200';
+    ctx.beginPath();
+    ctx.ellipse(0, -178, 10, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Hit flash
+  if (boss.hitTimer > 0 && Math.floor(boss.hitTimer / 6) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(boss.x - cam.x, boss.y - cam.y, boss.w, boss.h);
+  }
+}
 
 function updateBossArena() {
   if (!bossArena) return;
