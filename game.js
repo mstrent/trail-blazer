@@ -1835,7 +1835,7 @@ function drawBackground() {
 }
 
 function drawTrailRunners() {
-  const runnerBase = H * 0.53 + 2; // just at the tree line base
+  const runnerBase = H * 0.53 + 5; // feet land at tree trunk base (treeBase + 10)
   trailRunners.forEach(r => {
     const sx = r.x - cam.x * 0.35; // parallax slightly in front of trees (0.30)
     if (sx < -30 || sx > W + 30) return;
