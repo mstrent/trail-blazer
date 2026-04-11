@@ -2175,7 +2175,7 @@ function drawMarmot(e) {
 
   // Feet
   ctx.fillStyle = '#6A4810';
-  ctx.fillRect(-10, -2, 8, 4);
+  ctx.fillRect(-10, -2 + (e.frame ? 0 : 2), 8, 4);
   ctx.fillRect(2,   -2 + (e.frame ? 2 : 0), 8, 4);
 
   ctx.globalAlpha = 1;
@@ -2302,10 +2302,11 @@ function drawHiker(e) {
   ctx.globalAlpha = stunned ? 0.6 : 1;
 
   // Legs
-  const legSwing = e.frame ? 5 : 0;
+  const leftSwing  = e.frame ? 5 : 0;
+  const rightSwing = e.frame ? 0 : 5;
   ctx.fillStyle = '#4A3A2A';
-  ctx.fillRect(-7, -16, 6, 16);
-  ctx.fillRect(1, -16 + legSwing, 6, 16);
+  ctx.fillRect(-7, -16 + leftSwing,  6, 16);
+  ctx.fillRect( 1, -16 + rightSwing, 6, 16);
 
   // Body
   ctx.fillStyle = stunned ? '#FFD700' : '#8B3A3A';
