@@ -197,6 +197,16 @@ export default async function scenario(game) {
 
 Screenshots are saved to `qa/screenshots/` (gitignored) and can be read with the `Read` tool for visual QA.
 
+### LSP Tool
+
+The `LSP` tool (typescript-language-server) is available for code intelligence. Prefer it over `Grep` in these situations:
+
+- **Before modifying a widely-called function** — use `findReferences` to confirm every call site (e.g., before changing `makeItem`, `loadLevel`, `hurtPlayer`)
+- **When adding a new enemy type** — use `findReferences` on an existing enemy factory (e.g., `makeMarmot`) to find all dispatch points that need to be mirrored
+- **When tracing unexpected behavior** — use `incomingCalls`/`outgoingCalls` to map what triggers a function in the game loop
+
+`findReferences` requires a file path, line number, and character offset — look up the symbol's location first with `Grep`, then call `LSP`.
+
 ### `window.trailBlazerDebug` API
 
 Available at `http://localhost:3000?debug=1` (or any time in the page):
