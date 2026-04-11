@@ -4224,12 +4224,12 @@ function drawLevelComplete() {
   const def = LEVELS[game.levelNum];
   const nextDef = LEVELS[game.levelNum + 1];
 
-  ctx.fillStyle = '#88FF88';
+  ctx.fillStyle = def.isBoss ? '#FFD700' : '#88FF88';
   ctx.font = 'bold 48px Courier New';
   ctx.textAlign = 'center';
-  ctx.shadowColor = '#44AA44';
+  ctx.shadowColor = def.isBoss ? '#aa6600' : '#44AA44';
   ctx.shadowBlur = 12;
-  ctx.fillText('CAMP REACHED!', W / 2, H / 2 - 120);
+  ctx.fillText(def.isBoss ? 'BOSS DEFEATED!' : 'CAMP REACHED!', W / 2, H / 2 - 120);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#FFD700';
@@ -4251,7 +4251,11 @@ function drawLevelComplete() {
   infoY += lineHeight + 4;
   ctx.fillStyle = '#AADDFF';
   ctx.font = '14px Courier New';
-  ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, infoY);
+  if (!def.isBoss) {
+    ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, infoY);
+  } else {
+    ctx.fillText('Bear spray hits landed!', W / 2, infoY);
+  }
   infoY += lineHeight;
   ctx.fillText(`Time: ${timeStr}`, W / 2, infoY);
   infoY += lineHeight;
@@ -4259,9 +4263,9 @@ function drawLevelComplete() {
   ctx.fillText(`${timeBonus >= 0 ? 'SPEED BONUS' : 'TIME PENALTY'} ${timeBonus >= 0 ? '+' : ''}${timeBonus}`, W / 2, infoY);
   infoY += lineHeight + 8; // extra gap before awards
   if (game.leaveNoTrace[game.levelNum]) {
-    ctx.fillStyle = '#44ffaa';
+    ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 16px Courier New';
-    ctx.fillText('LEAVE NO TRACE +1000', W / 2, infoY);
+    ctx.fillText(def.isBoss ? 'NO HIT BONUS +500' : 'LEAVE NO TRACE +1000', W / 2, infoY);
     infoY += lineHeight;
   }
   if (game.trailAngel[game.levelNum]) {
@@ -4335,8 +4339,15 @@ function drawWin() {
     if (itemY < scrollTop - itemH || itemY > scrollBot + itemH) return;
     const lnt = game.leaveNoTrace[i];
     const ta = game.trailAngel[i];
-    const awards = (lnt && ta) ? ' \u2605 LNT+Angel!' : lnt ? ' \u2605 LNT' : ta ? ' \u2605 Angel' : '';
-    ctx.fillStyle = (lnt && ta) ? '#FFD700' : (lnt || ta) ? '#44ffaa' : '#AAAAFF';
+    let awards, fillColor;
+    if (l.isBoss) {
+      awards    = lnt ? ' \u2605 NO HIT' : '';
+      fillColor = lnt ? '#FFD700' : '#cc8833';
+    } else {
+      awards    = (lnt && ta) ? ' \u2605 LNT+Angel!' : lnt ? ' \u2605 LNT' : ta ? ' \u2605 Angel' : '';
+      fillColor = (lnt && ta) ? '#FFD700' : (lnt || ta) ? '#44ffaa' : '#AAAAFF';
+    }
+    ctx.fillStyle = fillColor;
     ctx.fillText((i + 1) + '. ' + l.campName + awards, W / 2, itemY);
     ctx.fillStyle = 'rgba(170,170,255,0.5)';
     ctx.font = '10px Courier New';
