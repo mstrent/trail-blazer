@@ -40,7 +40,8 @@ try {
   const context = await browser.newContext(devicePreset);
   const page = await context.newPage();
 
-  await page.goto('http://localhost:3000?debug=1');
+  const port = process.env.GAME_PORT || process.env.PORT || 3000;
+  await page.goto(`http://localhost:${port}?debug=1`);
   await page.waitForFunction(
     () => typeof window.trailBlazerDebug !== 'undefined',
     { timeout: 10000 }

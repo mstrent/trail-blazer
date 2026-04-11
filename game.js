@@ -1046,6 +1046,209 @@ function makeTrash(x, y) {
   return { x: x - 16, y: y - 10, w: 32, h: 18 };
 }
 
+// ==================== BOSS ARENA ====================
+const BOSS_ARENA_W  = 1600;
+const BOSS_ARENA_H  = 800;
+const BOSS_GROUND_Y = 720;
+const BOSS_SPAWN_X  = BOSS_ARENA_W / 2 - 10;  // center minus half PLAYER_W (20)
+const BOSS_SPAWN_Y  = BOSS_GROUND_Y - 30;       // BOSS_GROUND_Y minus PLAYER_H (30)
+
+let bossArena = null;
+
+function initBossArena(def) {
+  bossArena = {
+    boss:        makeBoss(def.bossType),
+    spray:       null,
+    noHit:       true,
+    phase:       'fighting',
+    defeatTimer: 0,
+  };
+}
+
+function makeBoss(type) {
+  if (type === 'thunderbird') return makeBossThunderbird();
+  if (type === 'mothman')     return makeBossMothman();
+  if (type === 'bigfoot')     return makeBigfoot();
+  throw new Error('Unknown boss type: ' + type);
+}
+
+// --- BOSS STUBS (replaced in Tasks 5–7) ---
+function makeBossThunderbird() {
+  return { type: 'thunderbird', x: 700, y: 100, w: 200, h: 150, hp: 3, hitTimer: 0, vulnerable: false, phase: 1 };
+}
+function makeBossMothman() {
+  return { type: 'mothman', x: 700, y: 100, w: 160, h: 180, hp: 5, hitTimer: 0, vulnerable: false, phase: 1 };
+}
+function makeBigfoot() {
+  return { type: 'bigfoot', x: 650, y: 50, w: 250, h: 350, hp: 8, hitTimer: 0, vulnerable: false, phase: 1 };
+}
+function updateThunderbird(boss) { if (boss.hitTimer > 0) boss.hitTimer--; }
+function updateMothman(boss)     { if (boss.hitTimer > 0) boss.hitTimer--; }
+function updateBigfoot(boss)     { if (boss.hitTimer > 0) boss.hitTimer--; }
+function drawThunderbird(boss)   {}
+function drawMothman(boss)       {}
+function drawBigfoot(boss)       {}
+
+function updateBossArena() {
+  if (!bossArena) return;
+  game.levelTick++;
+
+  if (bossArena.phase === 'fighting') {
+    updateBossPlayer();
+    updateBossProjectile();
+    const type = bossArena.boss.type;
+    if (type === 'thunderbird') updateThunderbird(bossArena.boss);
+    else if (type === 'mothman') updateMothman(bossArena.boss);
+    else if (type === 'bigfoot') updateBigfoot(bossArena.boss);
+  } else if (bossArena.phase === 'defeated') {
+    bossArena.defeatTimer++;
+    if (bossArena.defeatTimer > 120) {
+      game.state = 'levelcomplete';
+    }
+  }
+
+  cam.x = Math.max(0, Math.min(BOSS_ARENA_W - W, player.x + player.w / 2 - W * 0.5));
+  cam.y = Math.max(0, Math.min(BOSS_ARENA_H - H, player.y - H * 0.80));
+
+  updateParticles();
+  updateFloatTexts();
+}
+
+function updateBossPlayer() {
+  if (player.dead) return;
+  if (player.hurtTimer > 0) player.hurtTimer--;
+  if (player.sprayCooldown > 0) player.sprayCooldown--;
+  if (player.sprayTimer > 0) player.sprayTimer--;
+
+  let dx = 0;
+  if (isLeft())  { dx = -MOVE_SPEED; player.facing = -1; }
+  if (isRight()) { dx =  MOVE_SPEED; player.facing =  1; }
+  player.vx = dx;
+
+  if (dx !== 0 && player.onGround) {
+    player.frameTimer++;
+    if (player.frameTimer > 8) { player.frameTimer = 0; player.frame ^= 1; }
+  } else if (player.onGround) {
+    player.frame = 0; player.frameTimer = 0;
+  }
+
+  if (isJump() && !wasJump()) player.jumpBuffer = 8;
+  if (player.jumpBuffer > 0) player.jumpBuffer--;
+  if (player.jumpBuffer > 0 && player.onGround) {
+    player.jumpBuffer = 0;
+    player.vy = JUMP_FORCE;
+    player.jumpHeld = true;
+    audio.sfxJump();
+  }
+  if (player.jumpHeld && !isJump()) {
+    player.jumpHeld = false;
+    if (player.vy < -5) player.vy = -5;
+  }
+
+  if (isSpray() && player.sprayCooldown === 0 && bossArena.boss) {
+    player.sprayCooldown = 30;
+    player.sprayTimer = 20;
+    const boss = bossArena.boss;
+    const px = player.x + player.w / 2;
+    const py = player.y + player.h / 2;
+    const bx = boss.x + boss.w / 2;
+    const by = boss.y + boss.h / 2;
+    const dist = Math.hypot(bx - px, by - py) || 1;
+    const speed = 14;
+    bossArena.spray = {
+      x: px, y: py,
+      vx: (bx - px) / dist * speed,
+      vy: (by - py) / dist * speed,
+      active: true,
+    };
+    spawnParticles(px, player.y + 8, '#ff8800', 12, 4);
+  }
+
+  player.vy = Math.min(player.vy + GRAVITY_FORCE, MAX_FALL);
+  player.x += player.vx;
+  player.y += player.vy;
+
+  if (player.y + player.h >= BOSS_GROUND_Y) {
+    player.y = BOSS_GROUND_Y - player.h;
+    player.vy = 0;
+    player.onGround = true;
+  } else {
+    player.onGround = false;
+  }
+
+  player.x = Math.max(0, Math.min(BOSS_ARENA_W - player.w, player.x));
+}
+
+function updateBossProjectile() {
+  const spray = bossArena.spray;
+  if (!spray || !spray.active) return;
+
+  spray.x += spray.vx;
+  spray.y += spray.vy;
+
+  if (spray.x < 0 || spray.x > BOSS_ARENA_W ||
+      spray.y < 0 || spray.y > BOSS_ARENA_H) {
+    spray.active = false;
+    return;
+  }
+
+  const boss = bossArena.boss;
+  if (boss.vulnerable && boss.hitTimer === 0 &&
+      aabb({ x: spray.x - 6, y: spray.y - 6, w: 12, h: 12 }, boss)) {
+    spray.active = false;
+    boss.hp--;
+    boss.hitTimer = 60;
+    boss.vulnerable = false;
+    spawnParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, '#ff8800', 20, 6);
+    audio.sfxStomp();
+    if (boss.hp <= 0) {
+      bossDefeated();
+    } else {
+      checkBossPhase(boss);
+    }
+  }
+}
+
+function checkBossPhase(boss) {
+  if (boss.type === 'mothman') {
+    if (boss.hp <= 2 && boss.phase === 1) boss.phase = 2;
+  }
+  if (boss.type === 'bigfoot') {
+    if (boss.hp <= 5 && boss.phase === 1) boss.phase = 2;
+    if (boss.hp <= 2 && boss.phase === 2) {
+      boss.phase = 3;
+      boss.rageTimer = 90;
+    }
+  }
+}
+
+function bossDefeated() {
+  bossArena.phase = 'defeated';
+  bossArena.defeatTimer = 0;
+
+  const timeSeconds = Math.floor(game.levelTick / 60);
+  const targets = { thunderbird: 30, mothman: 60, bigfoot: 90 };
+  const targetTime = targets[bossArena.boss.type] || 60;
+  const timeDiff = targetTime - timeSeconds;
+  game.levelCompletionTime = game.levelTick;
+  game.levelTimeBonus = timeDiff >= 0
+    ? Math.min(500, Math.floor(50 * Math.pow(1.04, timeDiff)))
+    : Math.floor(timeDiff * 2);
+  player.score += game.levelTimeBonus;
+
+  if (bossArena.noHit) {
+    player.score += 500;
+    game.leaveNoTrace[game.levelNum] = true;
+  }
+
+  audio.sfxCampFanfare();
+  spawnParticles(
+    bossArena.boss.x + bossArena.boss.w / 2,
+    bossArena.boss.y + bossArena.boss.h / 2,
+    '#FFD700', 40, 8
+  );
+}
+
 // ==================== FISH ====================
 let fish = [];
 function spawnFish() {
@@ -1523,6 +1726,7 @@ function updatePlayer() {
 
 function hurtPlayer(instant) {
   if (player.hurtTimer > 0 && !instant) return;
+  if (bossArena) bossArena.noHit = false;
   player.health--;
   audio.sfxHurt();
   spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ff4444', 10, 4);
@@ -1532,15 +1736,20 @@ function hurtPlayer(instant) {
       game.state = 'gameover';
     } else {
       // Respawn
-      const sp = LEVELS[game.levelNum].spawnTile;
-      player.x = sp[0] * TS;
-      player.y = sp[1] * TS;
+      if (LEVELS[game.levelNum].isBoss) {
+        player.x = BOSS_SPAWN_X;
+        player.y = BOSS_SPAWN_Y;
+      } else {
+        const sp = LEVELS[game.levelNum].spawnTile;
+        player.x = sp[0] * TS;
+        player.y = sp[1] * TS;
+        cam.x = 0;
+      }
       player.vx = 0;
       player.vy = 0;
       player.health = 3;
       player.hurtTimer = 120;
       player.waterDmgTimer = 0;
-      cam.x = 0;
     }
   } else {
     player.hurtTimer = 90;
@@ -1638,6 +1847,26 @@ function qualifiesForLeaderboard(score) {
 function loadLevel(num) {
   game.levelNum = num;
   const def = LEVELS[num];
+  if (def.isBoss) {
+    items = [];
+    enemies = [];
+    tpBlooms = [];
+    fish = [];
+    trailRunners = [];
+    beerCans = [];
+    trashPiles = [];
+    particles.length = 0;
+    floatTexts.length = 0;
+    cam.x = 0;
+    cam.y = 0;
+    game.levelTimeBonus = 0;
+    game.levelCompletionTime = 0;
+    game.winScrollY = 0;
+    game.levelTick = 0;
+    initBossArena(def);
+    game.state = 'boss';
+    return;
+  }
   level = def.build();
   spawnItems();
   spawnEnemies();
@@ -1680,13 +1909,19 @@ function advanceLevel() {
   const savedLives = player.lives;
   loadLevel(nextNum);
   player = makePlayer();
-  const spawn = LEVELS[nextNum].spawnTile;
-  player.x = spawn[0] * TS;
-  player.y = spawn[1] * TS;
+  const nextDef = LEVELS[nextNum];
+  if (nextDef.isBoss) {
+    player.x = BOSS_SPAWN_X;
+    player.y = BOSS_SPAWN_Y;
+  } else {
+    const spawn = nextDef.spawnTile;
+    player.x = spawn[0] * TS;
+    player.y = spawn[1] * TS;
+    game.state = 'playing';
+    audio.sfxStartJingle();
+  }
   player.score = savedScore;
   player.lives = savedLives;
-  game.state = 'playing';
-  audio.sfxStartJingle();
 }
 
 // ==================== DRAWING ====================
@@ -2015,6 +2250,7 @@ function drawTile(tx, ty) {
 }
 
 function drawLevel() {
+  if (!level) return;
   const startX = Math.max(0, Math.floor(cam.x / TS));
   const endX   = Math.min(level.COLS - 1, Math.ceil((cam.x + W) / TS));
   const startY = Math.max(0, Math.floor(cam.y / TS));
@@ -2890,6 +3126,7 @@ function drawItems() {
 
 function drawCampsite() {
   const def = LEVELS[game.levelNum];
+  if (!def.goalTile) return;
   const fx = def.goalTile[0] * TS - cam.x;
   const gy = def.goalFlagY * TS - cam.y;  // ground surface (top of end block)
   const t = game.tick;
@@ -3079,6 +3316,122 @@ function drawFloatTexts() {
     ctx.fillText(f.str, f.x - cam.x, f.y - cam.y);
   });
   ctx.globalAlpha = 1;
+}
+
+function drawBossArena() {
+  if (!bossArena) return;
+  const boss = bossArena.boss;
+
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0d0d2a');
+  grad.addColorStop(1, '#1a0d00');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  const gsy = BOSS_GROUND_Y - cam.y;
+  ctx.fillStyle = '#2a1a0a';
+  ctx.fillRect(0, gsy, W, H - gsy);
+  ctx.fillStyle = '#4a2a10';
+  ctx.fillRect(0, gsy, W, 4);
+
+  const spray = bossArena.spray;
+  if (spray && spray.active) {
+    ctx.fillStyle = '#ff8800';
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(spray.x - cam.x, spray.y - cam.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  if (boss.type === 'thunderbird') drawThunderbird(boss);
+  else if (boss.type === 'mothman') drawMothman(boss);
+  else if (boss.type === 'bigfoot') drawBigfoot(boss);
+
+  drawPlayer();
+  drawParticles();
+  drawFloatTexts();
+  drawBossHUD();
+
+  if (bossArena.phase === 'defeated') {
+    const alpha = Math.min(0.7, bossArena.defeatTimer / 40);
+    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+    ctx.fillRect(0, 0, W, H);
+    if (bossArena.defeatTimer > 20) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowColor = '#aa6600';
+      ctx.shadowBlur = 12;
+      ctx.font = 'bold 48px Courier New';
+      ctx.fillText('BOSS DEFEATED!', W / 2, H / 2 - 20);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 22px Courier New';
+      ctx.fillText(`Score: ${player.score}`, W / 2, H / 2 + 30);
+    }
+  }
+}
+
+function drawBossHUD() {
+  const boss = bossArena.boss;
+  const bossNames  = { thunderbird: 'THUNDERBIRD', mothman: 'MOTHMAN OF SHASTA', bigfoot: 'BIGFOOT' };
+  const bossColors = { thunderbird: '#4488ff',     mothman: '#ff4444',           bigfoot: '#885533' };
+  const maxHps     = { thunderbird: 3,             mothman: 5,                   bigfoot: 8 };
+
+  const color  = bossColors[boss.type];
+  const maxHp  = maxHps[boss.type];
+  const barW   = W * 0.5;
+  const barX   = (W - barW) / 2;
+  const barY   = 26;
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = color;
+  ctx.font = 'bold 13px Courier New';
+  ctx.fillText(bossNames[boss.type], W / 2, 18);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(barX - 2, barY - 2, barW + 4, 16);
+
+  const hpFrac = Math.max(0, boss.hp / maxHp);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(barX, barY, barW, 12);
+  ctx.fillStyle = hpFrac > 0.5 ? color : hpFrac > 0.25 ? '#ffaa00' : '#ff4444';
+  ctx.fillRect(barX, barY, barW * hpFrac, 12);
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < maxHp; i++) {
+    const segX = barX + (barW / maxHp) * i;
+    ctx.beginPath();
+    ctx.moveTo(segX, barY);
+    ctx.lineTo(segX, barY + 12);
+    ctx.stroke();
+  }
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ff4444';
+  ctx.font = '16px Courier New';
+  ctx.fillText('\u2665'.repeat(Math.max(0, player.lives)), 8, 18);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#FFD700';
+  ctx.font = '13px Courier New';
+  ctx.fillText(player.score.toString(), W - 8, 18);
+
+  if (boss.phase && boss.phase > 1) {
+    ctx.fillStyle = '#ff8800';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('PHASE ' + boss.phase, W / 2, 50);
+  }
+
+  if (bossArena.noHit) {
+    ctx.fillStyle = 'rgba(255,215,0,0.65)';
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'right';
+    ctx.fillText('NO HIT +500', W - 8, 32);
+  }
 }
 
 // ==================== SCREENS ====================
@@ -3440,20 +3793,26 @@ const isDebug = () => dbg.url || dbg.human;
 
 function warpToLevel(n) {
   if (n < 0 || n >= LEVELS.length) {
-    console.warn(`warpToLevel: invalid level index ${n} (valid: 0–${LEVELS.length - 1})`);
+    console.warn(`warpToLevel: invalid level index ${n} (valid: 0\u2013${LEVELS.length - 1})`);
     return;
   }
   const savedScore = player ? player.score : 0;
   const savedLives = player ? player.lives : 3;
   loadLevel(n);
   player = makePlayer();
-  const spawn = LEVELS[n].spawnTile;
-  player.x = spawn[0] * TS;
-  player.y = spawn[1] * TS;
+  const def = LEVELS[n];
+  if (def.isBoss) {
+    player.x = BOSS_SPAWN_X;
+    player.y = BOSS_SPAWN_Y;
+  } else {
+    const spawn = def.spawnTile;
+    player.x = spawn[0] * TS;
+    player.y = spawn[1] * TS;
+    game.state = 'playing';
+  }
   player.score = savedScore;
   player.lives = savedLives;
   game.levelTick = 0;
-  game.state = 'playing';
 }
 
 addEventListener('keydown', e => {
@@ -3546,6 +3905,9 @@ function update() {
       }
     }
 
+  } else if (game.state === 'boss') {
+    updateBossArena();
+
   } else if (game.state === 'levelcomplete') {
     game.levelTick++;
     if (game.hiScore < player.score) { game.hiScore = player.score; saveHiScore(); }
@@ -3580,7 +3942,7 @@ function setTouchControlsVisible(visible) {
 
 function draw() {
   // Hide touch controls on non-gameplay screens so they don't cover title/UI content
-  setTouchControlsVisible(game.state === 'playing');
+  setTouchControlsVisible(game.state === 'playing' || game.state === 'boss');
   ctx.clearRect(0, 0, W, H);
 
   if (game.state === 'menu') {
@@ -3611,6 +3973,10 @@ function draw() {
     drawFloatTexts();
     drawHUD();
     drawGameOver();
+    return;
+  }
+  if (game.state === 'boss') {
+    drawBossArena();
     return;
   }
   if (game.state === 'levelcomplete') {
