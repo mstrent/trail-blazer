@@ -435,6 +435,18 @@ const LEVELS = [
       ];
     },
   },
+  // ==================== BOSS 1: THUNDERBIRD ====================
+  {
+    isBoss: true,
+    bossType: 'thunderbird',
+    name: 'Thunderbird Encounter',
+    subtitle: 'A storm-bringing spirit descends on the North Cascades',
+    section: 'Washington \u2014 Cascade Crest',
+    campName: 'Thunderbird Banished',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
+  },
   // ======== LEVEL 6: BRIDGE OF THE GODS ========
   {
     name: 'Bridge of the Gods',
@@ -700,6 +712,18 @@ const LEVELS = [
       ];
     },
   },
+  // ==================== BOSS 2: MOTHMAN ====================
+  {
+    isBoss: true,
+    bossType: 'mothman',
+    name: 'Mothman of Shasta',
+    subtitle: 'Red eyes glowing in the ancient Oregon dark',
+    section: 'Oregon \u2014 Columbia River corridor',
+    campName: 'Mothman Dispersed',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
+  },
   // ======== LEVEL 9: CASTLE CRAGS ========
   {
     name: 'Castle Crags',
@@ -794,6 +818,18 @@ const LEVELS = [
         makeItem('spray', 135, 4), makeItem('tent', 210, 4),
       ];
     },
+  },
+  // ==================== BOSS 3: BIGFOOT ====================
+  {
+    isBoss: true,
+    bossType: 'bigfoot',
+    name: 'Bigfoot',
+    subtitle: 'The legend of the PCT emerges from the California shadows',
+    section: 'California \u2014 Castle Crags Wilderness',
+    campName: 'Bigfoot Bested',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
   },
 ];
 
@@ -1467,7 +1503,7 @@ function updatePlayer() {
     const timeSeconds = Math.floor(game.levelTick / 60);
     // Target = 4× theoretical minimum sprint time (goalTile * 32px / 3.5px/tick / 60fps)
     // L1: ~71s, L2: ~90s, L3: ~108s
-    const levelDistances = [117*32, 132*32, 147*32, 162*32, 172*32, 182*32, 197*32, 207*32, 217*32];
+    const levelDistances = [117*32, 132*32, 147*32, 0, 162*32, 172*32, 182*32, 0, 197*32, 207*32, 217*32, 0];
     const targetTime = Math.ceil(levelDistances[game.levelNum] / 3.5 / 60 * 4);
     const timeDiff = targetTime - timeSeconds;
     game.levelTimeBonus = timeDiff >= 0
