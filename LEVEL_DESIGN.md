@@ -104,6 +104,11 @@ tile the enemy stands on at rest; physics settles them after spawn.
    they are effectively removed from play and won't count toward Trail Angel.
    Use the fish system for water decoration instead.
 
+3. **Verify the enemy won't fall into water.** A spawn tile of T_EMPTY is not
+   sufficient — the enemy settles under gravity and may land inside a water zone
+   if no solid tile interrupts the column above the water rows. See
+   "Gorge-style vs. pit-style water zones" below.
+
 3. **Verify the enemy can reach the player.** The player must be able to jump
    onto the enemy from above. If the enemy is below a `T_PLATFORM`, the player
    lands on the platform and cannot stomp. This makes the enemy unkillable,
@@ -121,6 +126,40 @@ tile the enemy stands on at rest; physics settles them after spawn.
    won't walk off. You can place enemies on 2-tile-wide ledges without worrying
    about them falling.
 
+### Gorge-style vs. pit-style water zones
+
+The game has two distinct water-crossing structures. Knowing which style a zone
+uses is critical for safe enemy placement.
+
+**Gorge-style** (Knife Edge, Columbia Gorge, Lava Fields, etc.)
+
+```
+hline(x1, x2, 10, T_SOLID)   ← solid "bridge floor" at row 10 spans entire zone
+fill(x1, 12, x2, 13, T_WATER) ← water below the bridge floor
+```
+
+Enemies spawned anywhere above row 10 in a gorge zone fall to the solid row 10.
+They are safe and reachable.
+
+**Pit-style** (Sky Lakes, Castle Crags First Gorge)
+
+```
+fill(x1, 11, x2, 11, T_EMPTY)  ← row 11 cleared (no bridge floor)
+fill(x1, 12, x2, 13, T_WATER)  ← water at rows 12–13
+                                   row 14 stays solid (base floor)
+```
+
+Enemies in pit-style zones fall all the way to row 14 — inside the water —
+because there is no solid row 10 or 11 to stop them. The stepping stones
+within pit-style zones are T_SOLID or T_PLATFORM at row 7–9, but enemies
+spawned in-column anywhere between row 5 and row 11 will sail right past them
+if the spawn column doesn't happen to be one of those stepping-stone tiles.
+
+**Rule:** Never spawn a ground enemy (marmot, mouse, hiker, redneck) at a
+column that lies inside a pit-style water zone unless the exact spawn column
+has a T_SOLID tile at row ≤ 10 to catch the fall. Spawn outside the pit bounds
+(before or after x1/x2) instead.
+
 ### Validating spawn positions with Python simulation
 
 When building levels with many boulder fills, the only reliable way to confirm
@@ -134,13 +173,32 @@ fill(0, 11, COLS-1, 14, T_SOLID)        # base floor
 fill(8, 9, 11, 10, T_SOLID)             # boulder
 # ... all other fills ...
 
+def settle_row(grid, tx, ty, height_tiles):
+    """Simulate gravity: return the row the enemy bottom lands on."""
+    for row in range(ty, len(grid)):
+        if grid[row][tx] == T_SOLID:
+            return row  # lands on top of this row
+    return None  # fell off bottom (shouldn't happen)
+
 # Check each enemy spawn
 for etype, tx, ty in spawns:
     if grid[ty][tx] == T_SOLID:
         print(f"BAD: {etype} at ({tx},{ty}) is inside solid")
     elif grid[ty][tx] == T_WATER:
         print(f"BAD: {etype} at ({tx},{ty}) is in water")
+    else:
+        # Simulate gravity: find the first solid tile below spawn
+        land_row = settle_row(grid, tx, ty, 1)
+        if land_row is not None:
+            # Check if the column the enemy falls through contains water
+            for row in range(ty, land_row):
+                if grid[row][tx] == T_WATER:
+                    print(f"BAD: {etype} at ({tx},{ty}) falls into water at row {row}")
+                    break
 ```
+
+The gravity-settling check catches the pit-style lake bug: spawn tile is T_EMPTY
+(passes the naive check) but the enemy falls through water on its way to row 14.
 
 **Fix strategy:** when a spawn is inside a solid block, walk `ty` upward (ty−1,
 ty−2, ...) until `grid[ty][tx] == T_EMPTY`. If the column is fully solid, try
@@ -297,7 +355,7 @@ function makeBeerCan(x, y, dir) {
 
 - Gravity applied each tick (`vy += 0.55`, max 14)
 - Removed when it hits a solid tile, goes off-screen, or hits the player
-- Audio: `sfxBeerCan()` on throw, `sfxBeerCanHit()` on player contact
+- Audio: `sfxBeerCan()` on throw **only when the redneck is on screen** (gated on `e.x - cam.x`); `sfxBeerCanHit()` on player contact. Without the gate, levels with multiple off-screen rednecks produce a constant cacophony of throw sounds.
 
 ---
 
@@ -324,3 +382,5 @@ every enemy must be reachable and stompable by the player. Before shipping a lev
 | Fish swimming through ground tiles at pool edges | Used distance-based `swimRange` for patrol limits | Replaced with tile-type check at leading edge |
 | Fish drifting out of water vertically | Bob offset accumulated into `f.y` each tick | Changed to `f.y = f.baseY + sin(phase) * amplitude` |
 | Inescapable gaps (original levels 1–3) | No floor / rescue platform too high to reach | Widened gaps, added water, centered rescue platform at ≤4 tiles |
+| 2 marmots in Sky Lakes water, 1 hiker in Castle Crags gorge | Spawned inside pit-style lake zones; no solid row 10, so enemies fell to row 14 (inside water) — spawn tile was T_EMPTY, fooling the naive check | Moved spawns to columns outside pit bounds; added gravity-settling check to Python validator |
+| Beer can sfx playing off-screen | `sfxBeerCan()` fired whenever throwTimer hit 0, regardless of redneck position relative to camera | Gated sound on screen X: `if (e.x - cam.x > -e.w && e.x - cam.x < W + e.w)` |

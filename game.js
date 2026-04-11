@@ -673,8 +673,8 @@ const LEVELS = [
     },
     spawnEnemies() {
       return [
-        makeMarmot(17, 10), makeMarmot(50, 8), makeMarmot(86, 10),
-        makeMarmot(105, 10), makeMarmot(143, 10), makeMarmot(160, 10),
+        makeMarmot(17, 10), makeMarmot(50, 8), makeMarmot(84, 10),
+        makeMarmot(105, 10), makeMarmot(141, 10), makeMarmot(160, 10),
         makeMouse(27, 10), makeMouse(59, 8), makeMouse(73, 8),
         makeMouse(112, 8), makeMouse(150, 8), makeMouse(165, 8),
         makeMosquito(38, 7), makeMosquito(57, 4), makeMosquito(78, 3),
@@ -774,7 +774,7 @@ const LEVELS = [
         makeMosquito(93, 7), makeMosquito(107, 4), makeMosquito(128, 3),
         makeMosquito(143, 3), makeMosquito(152, 6), makeMosquito(168, 4),
         makeMosquito(184, 3), makeMosquito(200, 2), makeMosquito(212, 2),
-        makeHiker(44, 8), makeHiker(78, 5), makeHiker(115, 6),
+        makeHiker(48, 8), makeHiker(78, 5), makeHiker(115, 6),
         makeHiker(140, 4), makeHiker(174, 5), makeHiker(192, 5), makeHiker(213, 4),
         makeRedneck(17, 10), makeRedneck(67, 8), makeRedneck(105, 9),
         makeRedneck(158, 8), makeRedneck(185, 6), makeRedneck(210, 4),
@@ -1207,7 +1207,8 @@ function updateEnemy(e) {
     if (e.throwTimer <= 0) {
       const dir = e.vx > 0 ? 1 : -1;
       beerCans.push(makeBeerCan(e.x + e.w / 2, e.y + 10, dir));
-      audio.sfxBeerCan();
+      const sx = e.x - cam.x;
+      if (sx > -e.w && sx < W + e.w) audio.sfxBeerCan();
       e.throwTimer = Math.floor(rnd(150, 280));
     }
   }
