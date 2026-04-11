@@ -1253,14 +1253,205 @@ function drawThunderbird(boss) {
 }
 
 function makeBossMothman() {
-  return { type: 'mothman', x: 700, y: 100, w: 160, h: 180, hp: 5, hitTimer: 0, vulnerable: false, phase: 1 };
+  return {
+    type: 'mothman',
+    x: BOSS_ARENA_W / 2 - 50, y: 200,
+    w: 100, h: 120,
+    hp: 5,
+    phase: 1,
+    state: 'hover',  // hover | fire | freeze | chargeWind | charge | stall
+    stateTimer: 90,
+    hoverDir: 1,
+    hoverSpeed: 1.2,
+    orbs: [],
+    eyeGlow: 0,
+    chargeVx: 0,
+    vulnerable: false,
+    hitTimer: 0,
+  };
 }
+
+function updateMothman(boss) {
+  if (boss.hitTimer > 0) boss.hitTimer--;
+
+  boss.orbs = boss.orbs.filter(orb => {
+    orb.x += orb.vx;
+    orb.y += orb.vy;
+    if (player.hurtTimer === 0 &&
+        aabb(player, { x: orb.x - 8, y: orb.y - 8, w: 16, h: 16 })) {
+      hurtPlayer();
+      return false;
+    }
+    return orb.x > -50 && orb.x < BOSS_ARENA_W + 50 &&
+           orb.y > -50 && orb.y < BOSS_ARENA_H + 50;
+  });
+
+  if (boss.state === 'hover') {
+    boss.x += boss.hoverDir * boss.hoverSpeed;
+    if (boss.x < 100)                         { boss.x = 100;                          boss.hoverDir =  1; }
+    if (boss.x > BOSS_ARENA_W - boss.w - 100) { boss.x = BOSS_ARENA_W - boss.w - 100;  boss.hoverDir = -1; }
+    boss.y = 200 + Math.sin(game.tick * 0.03) * 25;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.state = 'fire';
+      boss.stateTimer = 20;
+    }
+  } else if (boss.state === 'fire') {
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      const px = player.x + player.w / 2;
+      const py = player.y + player.h / 2;
+      const bx = boss.x + boss.w / 2;
+      const by = boss.y + boss.h / 2;
+      for (let i = -1; i <= 1; i++) {
+        const spread = i * 80;
+        const tx = px + spread;
+        const ty = py;
+        const dist = Math.hypot(tx - bx, ty - by) || 1;
+        const speed = boss.phase === 2 ? 5 : 4;
+        boss.orbs.push({
+          x: bx, y: by,
+          vx: (tx - bx) / dist * speed,
+          vy: (ty - by) / dist * speed,
+        });
+      }
+      audio.sfxStun();
+      boss.state = 'freeze';
+      boss.stateTimer = boss.phase === 2 ? 20 : 30;
+    }
+  } else if (boss.state === 'freeze') {
+    boss.vulnerable = true;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      if (boss.phase === 2 && Math.random() < 0.5) {
+        boss.eyeGlow = 0;
+        boss.state = 'chargeWind';
+        boss.stateTimer = 35;
+      } else {
+        boss.state = 'hover';
+        boss.stateTimer = 60 + (Math.random() * 30 | 0);
+      }
+    }
+  } else if (boss.state === 'chargeWind') {
+    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 35);
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      const dir = player.x < boss.x ? -1 : 1;
+      boss.chargeVx = dir * 14;
+      boss.state = 'charge';
+      boss.stateTimer = 50;
+    }
+  } else if (boss.state === 'charge') {
+    boss.x += boss.chargeVx;
+    const targetY = BOSS_GROUND_Y - boss.h - 10;
+    boss.y += (targetY - boss.y) * 0.15;
+
+    if (player.hurtTimer === 0 && aabb(player, boss)) {
+      hurtPlayer();
+    }
+
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0 || boss.x < -boss.w || boss.x > BOSS_ARENA_W) {
+      boss.chargeVx = 0;
+      boss.x = Math.max(100, Math.min(BOSS_ARENA_W - boss.w - 100, boss.x));
+      boss.eyeGlow = 0;
+      boss.vulnerable = true;
+      boss.state = 'stall';
+      boss.stateTimer = 25;
+    }
+  } else if (boss.state === 'stall') {
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      boss.state = 'hover';
+      boss.stateTimer = 50;
+    }
+  }
+}
+
+function drawMothman(boss) {
+  const t  = game.tick;
+  const bx = boss.x - cam.x + boss.w / 2;
+  const by = boss.y - cam.y + boss.h / 2;
+
+  // Orbs (draw behind boss)
+  boss.orbs.forEach(orb => {
+    ctx.fillStyle = 'rgba(255,50,50,0.85)';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(orb.x - cam.x, orb.y - cam.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  ctx.save();
+  ctx.translate(bx, by);
+
+  const flapAmp  = boss.state === 'charge' ? 25 : 12;
+  const wingFlap = Math.sin(t * 0.15) * flapAmp;
+
+  // Upper wings
+  ctx.fillStyle = '#1a0a2a';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 8, -20);
+    ctx.quadraticCurveTo(s * 72, -55 - wingFlap, s * 88, -8);
+    ctx.quadraticCurveTo(s * 58, 12, s * 8, -8);
+    ctx.fill();
+  }
+
+  // Lower wings
+  ctx.fillStyle = '#15082a';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 8, 8);
+    ctx.quadraticCurveTo(s * 48, 42, s * 52, 52);
+    ctx.quadraticCurveTo(s * 28, 58, s * 8, 42);
+    ctx.fill();
+  }
+
+  // Body
+  ctx.fillStyle = '#2a1040';
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 11, 33, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Glowing red eyes
+  const eyeAlpha = boss.state === 'chargeWind' || boss.state === 'charge'
+    ? 0.7 + boss.eyeGlow * 0.3
+    : 0.6 + Math.sin(t * 0.05) * 0.3;
+  ctx.fillStyle = `rgba(255,0,0,${eyeAlpha})`;
+  ctx.shadowColor = '#ff0000';
+  ctx.shadowBlur = 8 + boss.eyeGlow * 18;
+  ctx.beginPath(); ctx.arc(-7, -30, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 7, -30, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Wing pattern veins
+  ctx.strokeStyle = 'rgba(100,40,150,0.35)';
+  ctx.lineWidth = 1;
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 8, -15);
+    ctx.quadraticCurveTo(s * 50, -42 - wingFlap * 0.8, s * 72, -4);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // Hit flash
+  if (boss.hitTimer > 0 && Math.floor(boss.hitTimer / 6) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(boss.x - cam.x, boss.y - cam.y, boss.w, boss.h);
+  }
+}
+
 function makeBigfoot() {
   return { type: 'bigfoot', x: 650, y: 50, w: 250, h: 350, hp: 8, hitTimer: 0, vulnerable: false, phase: 1 };
 }
-function updateMothman(boss)     { if (boss.hitTimer > 0) boss.hitTimer--; }
 function updateBigfoot(boss)     { if (boss.hitTimer > 0) boss.hitTimer--; }
-function drawMothman(boss)       {}
 function drawBigfoot(boss)       {}
 
 function updateBossArena() {
