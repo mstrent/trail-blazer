@@ -2288,7 +2288,7 @@ function updatePlayer() {
   }
 
   // Fallen off bottom
-  if (player.y > level.ROWS * TS + 64) {
+  if (level && player.y > level.ROWS * TS + 64) {
     hurtPlayer(true);
   }
 }
@@ -2417,6 +2417,7 @@ function loadLevel(num) {
   game.levelNum = num;
   const def = LEVELS[num];
   if (def.isBoss) {
+    level = null;
     items = [];
     enemies = [];
     tpBlooms = [];
