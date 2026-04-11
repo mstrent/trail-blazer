@@ -145,7 +145,6 @@ All work should follow this branch-based workflow:
 
 Press `Ctrl+Shift+D` in-game to toggle the debug overlay. It shows:
 - Colored hitbox outlines: player (red), enemies (orange), items (cyan), TP blooms (magenta)
-- Top-left HUD: game state, level, player tile/world position, vx/vy/onGround, enemy/item counts, FPS
 
 Press `Ctrl+1` through `Ctrl+9` (while overlay is on) to warp to any level. Lives and score are preserved across warps.
 
