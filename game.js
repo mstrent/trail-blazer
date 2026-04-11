@@ -1047,7 +1047,7 @@ function makeTrash(x, y) {
 }
 
 // ==================== BOSS ARENA ====================
-const BOSS_ARENA_W  = 1600;
+const BOSS_ARENA_W  = 800;
 const BOSS_ARENA_H  = 800;
 const BOSS_GROUND_Y = 720;
 const BOSS_SPAWN_X  = BOSS_ARENA_W / 2 - 10;  // center minus half PLAYER_W (20)
@@ -1075,7 +1075,7 @@ function makeBoss(type) {
 function makeBossThunderbird() {
   return {
     type: 'thunderbird',
-    x: BOSS_ARENA_W / 2 - 60, y: 340,
+    x: BOSS_ARENA_W / 2 - 60, y: 390,
     w: 120, h: 80,
     hp: 3,
     phase: 1,
@@ -1716,19 +1716,9 @@ function updateBossPlayer() {
 
   if (isSpray() && player.sprayCooldown === 0 && bossArena.boss) {
     player.sprayCooldown = 30;
-    const boss = bossArena.boss;
     const px = player.x + player.w / 2;
     const py = player.y + player.h / 2;
-    const bx = boss.x + boss.w / 2;
-    const by = boss.y + boss.h / 2;
-    const dist = Math.hypot(bx - px, by - py) || 1;
-    const speed = 14;
-    bossArena.spray = {
-      x: px, y: py,
-      vx: (bx - px) / dist * speed,
-      vy: (by - py) / dist * speed,
-      active: true,
-    };
+    bossArena.spray = { x: px, y: py, vx: 0, vy: -14, active: true };
     spawnParticles(px, player.y + 8, '#ff8800', 12, 4);
   }
 
@@ -3902,6 +3892,48 @@ function drawBossArena() {
   ctx.fillRect(0, gsy, W, H - gsy);
   ctx.fillStyle = '#4a2a10';
   ctx.fillRect(0, gsy, W, 4);
+
+  // Mountain silhouettes — fixed screen positions (cam.x always 0 since arena width = viewport)
+  ctx.fillStyle = '#1a1a35';
+  const mts = [[0, 0.72, 0.14], [0.18, 0.68, 0.16], [0.42, 0.75, 0.13], [0.65, 0.70, 0.17], [0.82, 0.74, 0.12]];
+  for (const [mx, my, mw] of mts) {
+    ctx.beginPath();
+    ctx.moveTo(mx * W - mw * W, gsy);
+    ctx.lineTo(mx * W, my * H);
+    ctx.lineTo(mx * W + mw * W, gsy);
+    ctx.fill();
+  }
+
+  // Storm clouds (Thunderbird only)
+  if (boss && boss.type === 'thunderbird') {
+    const t = game.tick;
+    const clouds = [[0.15, 0.12], [0.45, 0.08], [0.75, 0.14], [0.30, 0.20], [0.62, 0.18]];
+    for (const [cx, cy] of clouds) {
+      const drift = Math.sin(t * 0.008 + cx * 10) * 6;
+      const sx = cx * W + drift;
+      const sy = cy * H;
+      ctx.fillStyle = 'rgba(30,30,60,0.7)';
+      ctx.beginPath(); ctx.ellipse(sx,      sy,      38, 18, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(sx - 28, sy + 6,  26, 14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(sx + 28, sy + 6,  26, 14, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Vulnerability glow — pulsing green ring when boss is hittable
+  if (boss && boss.vulnerable) {
+    const bsx = boss.x - cam.x + boss.w / 2;
+    const bsy = boss.y - cam.y + boss.h / 2;
+    const pulse = 0.55 + 0.45 * Math.sin(game.tick * 0.25);
+    ctx.strokeStyle = `rgba(0,255,100,${pulse})`;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#00ff64';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.ellipse(bsx, bsy, boss.w * 0.7, boss.h * 0.7, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 1;
+  }
 
   const spray = bossArena.spray;
   if (spray && spray.active) {
