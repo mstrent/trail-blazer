@@ -1072,20 +1072,194 @@ function makeBoss(type) {
   throw new Error('Unknown boss type: ' + type);
 }
 
-// --- BOSS STUBS (replaced in Tasks 5–7) ---
 function makeBossThunderbird() {
-  return { type: 'thunderbird', x: 700, y: 100, w: 200, h: 150, hp: 3, hitTimer: 0, vulnerable: false, phase: 1 };
+  return {
+    type: 'thunderbird',
+    x: BOSS_ARENA_W / 2 - 60, y: 160,
+    w: 120, h: 80,
+    hp: 3,
+    phase: 1,
+    state: 'patrol',  // patrol | telegraph | swoop | retreat
+    stateTimer: 90,
+    patrolDir: 1,
+    patrolSpeed: 1.8,
+    swoopStartX: 0, swoopStartY: 0,
+    swoopTargetX: 0,
+    swoopProgress: 0,
+    swoopDuration: 45,
+    telegraphTimer: 0,
+    retreatTimer: 0,
+    retreatStartX: 0, retreatStartY: 0,
+    vulnerable: false,
+    hitTimer: 0,
+  };
 }
+
+function updateThunderbird(boss) {
+  if (boss.hitTimer > 0) boss.hitTimer--;
+
+  const swoopDur    = boss.hp === 3 ? 45 : boss.hp === 2 ? 33 : 22;
+  const telegraphDur = boss.hp === 3 ? 30 : boss.hp === 2 ? 20 : 12;
+
+  if (boss.state === 'patrol') {
+    boss.x += boss.patrolDir * boss.patrolSpeed;
+    if (boss.x < 80)                             { boss.x = 80;                          boss.patrolDir =  1; }
+    if (boss.x > BOSS_ARENA_W - boss.w - 80)     { boss.x = BOSS_ARENA_W - boss.w - 80;  boss.patrolDir = -1; }
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.telegraphTimer = telegraphDur;
+      boss.swoopTargetX = Math.max(50, Math.min(BOSS_ARENA_W - boss.w - 50,
+        player.x + player.w / 2 - boss.w / 2));
+      boss.state = 'telegraph';
+    }
+  } else if (boss.state === 'telegraph') {
+    boss.telegraphTimer--;
+    if (boss.telegraphTimer <= 0) {
+      boss.swoopStartX   = boss.x;
+      boss.swoopStartY   = boss.y;
+      boss.swoopProgress = 0;
+      boss.swoopDuration = swoopDur;
+      boss.state = 'swoop';
+    }
+  } else if (boss.state === 'swoop') {
+    boss.swoopProgress = Math.min(1, boss.swoopProgress + 1 / boss.swoopDuration);
+    const t = boss.swoopProgress;
+    const ctrlX = (boss.swoopStartX + boss.swoopTargetX) / 2;
+    const ctrlY = BOSS_GROUND_Y - 60;
+    const endY  = BOSS_GROUND_Y - 110;
+    boss.x = (1-t)*(1-t)*boss.swoopStartX + 2*(1-t)*t*ctrlX + t*t*boss.swoopTargetX;
+    boss.y = (1-t)*(1-t)*boss.swoopStartY + 2*(1-t)*t*ctrlY + t*t*endY;
+
+    boss.vulnerable = t > 0.65 && t < 0.90;
+
+    if (!boss.vulnerable && player.hurtTimer === 0 && aabb(player, boss)) {
+      hurtPlayer();
+    }
+
+    if (boss.swoopProgress >= 1) {
+      boss.vulnerable    = false;
+      boss.retreatTimer  = 30;
+      boss.retreatStartX = boss.x;
+      boss.retreatStartY = boss.y;
+      boss.state = 'retreat';
+    }
+  } else if (boss.state === 'retreat') {
+    boss.retreatTimer--;
+    const t = 1 - boss.retreatTimer / 30;
+    boss.x = boss.retreatStartX + (boss.swoopStartX - boss.retreatStartX) * t;
+    boss.y = boss.retreatStartY + (boss.swoopStartY - boss.retreatStartY) * t;
+    if (boss.retreatTimer <= 0) {
+      boss.x = boss.swoopStartX;
+      boss.y = boss.swoopStartY;
+      boss.stateTimer = 60 + (Math.random() * 30 | 0);
+      boss.state = 'patrol';
+    }
+  }
+}
+
+function drawThunderbird(boss) {
+  const t  = game.tick;
+  const bx = boss.x - cam.x + boss.w / 2;
+  const by = boss.y - cam.y + boss.h / 2;
+  const wing = Math.sin(t * 0.1) * 18;
+
+  ctx.save();
+  ctx.translate(bx, by);
+
+  // Wings
+  ctx.fillStyle = '#1a1a4a';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 10, 0);
+    ctx.quadraticCurveTo(s * 75, -wing - 20, s * boss.w * 0.9, wing * 0.8);
+    ctx.quadraticCurveTo(s * 55, 12, s * 10, 12);
+    ctx.fill();
+  }
+
+  // Electric blue wing highlights
+  ctx.strokeStyle = '#4488ff';
+  ctx.lineWidth = 2;
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 10, 0);
+    ctx.quadraticCurveTo(s * 65, -wing - 15, s * boss.w * 0.85, wing * 0.7);
+    ctx.stroke();
+  }
+
+  // Body
+  ctx.fillStyle = '#2a2a6a';
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 18, 26, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#2a2a6a';
+  ctx.beginPath();
+  ctx.ellipse(2, -24, 11, 9, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = '#ffaa00';
+  ctx.beginPath();
+  ctx.moveTo(9, -26);
+  ctx.lineTo(22, -22);
+  ctx.lineTo(9, -19);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#88ccff';
+  ctx.beginPath();
+  ctx.arc(5, -26, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(6, -27, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lightning bolts during telegraph/swoop
+  if (boss.state === 'telegraph' || boss.state === 'swoop') {
+    ctx.strokeStyle = `rgba(120,200,255,${0.6 + Math.sin(t * 0.4) * 0.4})`;
+    ctx.lineWidth = 2;
+    for (let i = -1; i <= 1; i++) {
+      const lx = i * 22;
+      ctx.beginPath();
+      ctx.moveTo(lx, 28);
+      ctx.lineTo(lx - 6, 50);
+      ctx.lineTo(lx + 6, 72);
+      ctx.lineTo(lx, 95);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+
+  // Hit flash
+  if (boss.hitTimer > 0 && Math.floor(boss.hitTimer / 6) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(boss.x - cam.x, boss.y - cam.y, boss.w, boss.h);
+  }
+
+  // Telegraph indicator
+  if (boss.state === 'telegraph' && Math.floor(game.tick / 4) % 2 === 0) {
+    ctx.strokeStyle = 'rgba(100,180,255,0.5)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(boss.x - cam.x + boss.w / 2, boss.y - cam.y + boss.h);
+    ctx.lineTo(boss.swoopTargetX - cam.x + boss.w / 2, BOSS_GROUND_Y - 110 - cam.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
 function makeBossMothman() {
   return { type: 'mothman', x: 700, y: 100, w: 160, h: 180, hp: 5, hitTimer: 0, vulnerable: false, phase: 1 };
 }
 function makeBigfoot() {
   return { type: 'bigfoot', x: 650, y: 50, w: 250, h: 350, hp: 8, hitTimer: 0, vulnerable: false, phase: 1 };
 }
-function updateThunderbird(boss) { if (boss.hitTimer > 0) boss.hitTimer--; }
 function updateMothman(boss)     { if (boss.hitTimer > 0) boss.hitTimer--; }
 function updateBigfoot(boss)     { if (boss.hitTimer > 0) boss.hitTimer--; }
-function drawThunderbird(boss)   {}
 function drawMothman(boss)       {}
 function drawBigfoot(boss)       {}
 
