@@ -131,7 +131,7 @@ const LEVELS = [
       ];
     },
     spawnTPBlooms() {
-      return [ makeTPBloom(20, 10), makeTPBloom(95, 10) ];
+      return [ makeTPBloom(20, 10), makeTPBloom(95, 10) ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -197,7 +197,7 @@ const LEVELS = [
       ];
     },
     spawnTPBlooms() {
-      return [ makeTPBloom(40, 10), makeTPBloom(73, 10), makeTPBloom(88, 10) ];
+      return [ makeTPBloom(40, 10), makeTPBloom(73, 10), makeTPBloom(88, 10) ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -270,7 +270,7 @@ const LEVELS = [
       ];
     },
     spawnTPBlooms() {
-      return [ makeTPBloom(45, 10), makeTPBloom(86, 10), makeTPBloom(120, 10) ];
+      return [ makeTPBloom(45, 10), makeTPBloom(86, 10), makeTPBloom(120, 10) ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -349,7 +349,7 @@ const LEVELS = [
       return [
         makeTPBloom(20, 10), makeTPBloom(55, 10),
         makeTPBloom(94, 10), makeTPBloom(131, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -425,7 +425,7 @@ const LEVELS = [
       return [
         makeTPBloom(10, 10), makeTPBloom(45, 10),
         makeTPBloom(125, 10), makeTPBloom(155, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -509,7 +509,7 @@ const LEVELS = [
       return [
         makeTPBloom(30, 10), makeTPBloom(55, 10), makeTPBloom(83, 10),
         makeTPBloom(120, 10), makeTPBloom(150, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -598,7 +598,7 @@ const LEVELS = [
       return [
         makeTPBloom(25, 10), makeTPBloom(57, 10), makeTPBloom(90, 10),
         makeTPBloom(125, 10), makeTPBloom(157, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -690,7 +690,7 @@ const LEVELS = [
       return [
         makeTPBloom(30, 10), makeTPBloom(52, 10), makeTPBloom(88, 10),
         makeTPBloom(125, 10), makeTPBloom(157, 10), makeTPBloom(185, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -785,7 +785,7 @@ const LEVELS = [
         makeTPBloom(30, 10), makeTPBloom(55, 10), makeTPBloom(88, 10),
         makeTPBloom(115, 10), makeTPBloom(148, 10),
         makeTPBloom(167, 10), makeTPBloom(195, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -996,6 +996,8 @@ function makeTPBloom(tx, ty) {
     while (placeTy < level.ROWS - 1 &&
            level.map[placeTy][tx] === T_EMPTY &&
            level.map[placeTy + 1][tx] === T_EMPTY) placeTy++;
+    // Don't place above water — the empty gap row above water is not a valid surface
+    if (level.map[placeTy + 1] && level.map[placeTy + 1][tx] === T_WATER) return null;
   }
   return { x: tx * TS + 6, y: placeTy * TS + 16, w: 20, h: 16, active: true };
 }
