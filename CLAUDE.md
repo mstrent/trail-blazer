@@ -167,10 +167,25 @@ npx playwright install chromium
 # Requires a local server: python -m http.server 3000
 cd qa
 node runner.mjs scenarios/smoke.mjs
+# Emulate a mobile device (landscape touch UI, etc.):
+node runner.mjs --device=mobile-landscape scenarios/mobile-buttons.mjs
 ```
+
+**Device presets** live in `qa/lib/devices.mjs`:
+
+| Preset | Viewport | `hasTouch` / `isMobile` | Notes |
+|---|---|---|---|
+| `desktop` (default) | 1280x720 | false | Default for all existing scenarios. |
+| `mobile-portrait` | 393x727 | true | Pixel-5-ish portrait; `(orientation: portrait)` matches. |
+| `mobile-landscape` | 844x390 | true | Pixel-5-ish landscape; activates the full-screen touch overlay. |
+
+The mobile presets set `hasTouch` + `isMobile` so the game's `(hover: none) and (pointer: coarse)` media query matches naturally — no CSS injection needed to see the touch controls.
 
 **Write a new scenario** in `qa/scenarios/<name>.mjs`:
 ```js
+// Optional: pick a device preset. The CLI `--device=<name>` flag overrides this.
+export const options = { device: 'mobile-landscape' };
+
 export default async function scenario(game) {
   await game.warpToLevel(2);        // warp to level 3 (0-indexed)
   await game.waitFrames(30);        // wait ~30 frames
