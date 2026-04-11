@@ -3402,14 +3402,6 @@ const dbg = {
 };
 const isDebug = () => dbg.url || dbg.human;
 
-let fpsLastTime = 0;
-let fpsBuffer = []; // rolling 60-frame window of frame durations (ms)
-function getCurrentFps() {
-  if (fpsBuffer.length === 0) return 60;
-  const avg = fpsBuffer.reduce((a, b) => a + b, 0) / fpsBuffer.length;
-  return Math.round(1000 / avg);
-}
-
 function warpToLevel(n) {
   if (n < 0 || n >= LEVELS.length) {
     console.warn(`warpToLevel: invalid level index ${n} (valid: 0–${LEVELS.length - 1})`);
@@ -3431,7 +3423,6 @@ function warpToLevel(n) {
 addEventListener('keydown', e => {
   if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
     dbg.human = !dbg.human;
-    if (dbg.human) { fpsLastTime = 0; fpsBuffer = []; } // reset stale FPS state on enable
     e.preventDefault();
     return;
   }
@@ -3484,37 +3475,10 @@ function drawDebugOverlay() {
   });
 
   ctx.restore();
-
-  // Info readout — fixed top-left corner
-  const tx = Math.floor(player.x / TS);
-  const ty = Math.floor(player.y / TS);
-  const lines = [
-    `STATE:${game.state}  LEVEL:${game.levelNum + 1} (${LEVELS[game.levelNum].name})`,
-    `PLAYER tile:(${tx},${ty})  world:(${Math.floor(player.x)},${Math.floor(player.y)})`,
-    `vx:${player.vx.toFixed(2)}  vy:${player.vy.toFixed(2)}  onGround:${player.onGround}`,
-    `ENEMIES alive:${enemies.filter(e => e.alive).length}  ITEMS left:${items.filter(i => !i.collected).length}`,
-    `FPS:${getCurrentFps()}`,
-  ];
-  ctx.save();
-  ctx.font = '12px monospace';
-  const lh = 16, pad = 6, bw = 360, bh = lines.length * lh + pad * 2;
-  ctx.fillStyle = 'rgba(0,0,0,0.65)';
-  ctx.fillRect(4, 4, bw, bh);
-  ctx.fillStyle = '#ffffff';
-  lines.forEach((l, i) => ctx.fillText(l, 4 + pad, 4 + pad + 12 + i * lh));
-  ctx.restore();
 }
 
 // ==================== MAIN LOOP ====================
 function update() {
-  if (isDebug()) {
-    const now = performance.now();
-    if (fpsLastTime > 0) {
-      fpsBuffer.push(now - fpsLastTime);
-      if (fpsBuffer.length > 60) fpsBuffer.shift();
-    }
-    fpsLastTime = now;
-  }
   game.tick++;
 
   if (game.state === 'menu') {
