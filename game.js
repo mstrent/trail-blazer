@@ -280,6 +280,18 @@ const LEVELS = [
       ];
     },
   },
+  // ==================== BOSS 1: THUNDERBIRD ====================
+  {
+    isBoss: true,
+    bossType: 'thunderbird',
+    name: 'Thunderbird Encounter',
+    subtitle: 'A storm-bringing spirit descends on the North Cascades',
+    section: 'Washington \u2014 Cascade Crest',
+    campName: 'Thunderbird Banished',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
+  },
   // ======== LEVEL 4: ALPINE LAKES WILDERNESS ========
   {
     name: 'Alpine Lakes',
@@ -435,18 +447,6 @@ const LEVELS = [
       ];
     },
   },
-  // ==================== BOSS 1: THUNDERBIRD ====================
-  {
-    isBoss: true,
-    bossType: 'thunderbird',
-    name: 'Thunderbird Encounter',
-    subtitle: 'A storm-bringing spirit descends on the North Cascades',
-    section: 'Washington \u2014 Cascade Crest',
-    campName: 'Thunderbird Banished',
-    spawnTile: null,
-    goalTile: null,
-    goalFlagY: null,
-  },
   // ======== LEVEL 6: BRIDGE OF THE GODS ========
   {
     name: 'Bridge of the Gods',
@@ -530,6 +530,18 @@ const LEVELS = [
         makeItem('spray', 130, 4), makeItem('tent', 176, 6),
       ];
     },
+  },
+  // ==================== BOSS 2: MOTHMAN ====================
+  {
+    isBoss: true,
+    bossType: 'mothman',
+    name: 'Mothman of Shasta',
+    subtitle: 'Red eyes glowing in the ancient Oregon dark',
+    section: 'Oregon \u2014 Columbia River corridor',
+    campName: 'Mothman Dispersed',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
   },
   // ======== LEVEL 7: OREGON CASCADES ========
   {
@@ -711,18 +723,6 @@ const LEVELS = [
         makeItem('spray', 130, 5), makeItem('tent', 200, 5),
       ];
     },
-  },
-  // ==================== BOSS 2: MOTHMAN ====================
-  {
-    isBoss: true,
-    bossType: 'mothman',
-    name: 'Mothman of Shasta',
-    subtitle: 'Red eyes glowing in the ancient Oregon dark',
-    section: 'Oregon \u2014 Columbia River corridor',
-    campName: 'Mothman Dispersed',
-    spawnTile: null,
-    goalTile: null,
-    goalFlagY: null,
   },
   // ======== LEVEL 9: CASTLE CRAGS ========
   {
