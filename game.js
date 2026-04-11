@@ -1113,8 +1113,10 @@ function updateThunderbird(boss) {
       boss.state = 'telegraph';
     }
   } else if (boss.state === 'telegraph') {
+    boss.vulnerable = true;  // window A: boss is locked-on and stationary — pre-emptive strike
     boss.telegraphTimer--;
     if (boss.telegraphTimer <= 0) {
+      boss.vulnerable    = false;
       boss.swoopStartX   = boss.x;
       boss.swoopStartY   = boss.y;
       boss.swoopProgress = 0;
@@ -1130,25 +1132,25 @@ function updateThunderbird(boss) {
     boss.x = (1-t)*(1-t)*boss.swoopStartX + 2*(1-t)*t*ctrlX + t*t*boss.swoopTargetX;
     boss.y = (1-t)*(1-t)*boss.swoopStartY + 2*(1-t)*t*ctrlY + t*t*endY;
 
-    boss.vulnerable = t > 0.65 && t < 0.90;
-
-    if (!boss.vulnerable && player.hurtTimer === 0 && aabb(player, boss)) {
+    // boss.vulnerable is false during swoop — dodge or be hit
+    if (player.hurtTimer === 0 && aabb(player, boss)) {
       hurtPlayer();
     }
 
     if (boss.swoopProgress >= 1) {
-      boss.vulnerable    = false;
       boss.retreatTimer  = 30;
       boss.retreatStartX = boss.x;
       boss.retreatStartY = boss.y;
       boss.state = 'retreat';
     }
   } else if (boss.state === 'retreat') {
+    boss.vulnerable = true;  // window B: boss flying away after swoop — counterattack
     boss.retreatTimer--;
     const t = 1 - boss.retreatTimer / 30;
     boss.x = boss.retreatStartX + (boss.swoopStartX - boss.retreatStartX) * t;
     boss.y = boss.retreatStartY + (boss.swoopStartY - boss.retreatStartY) * t;
     if (boss.retreatTimer <= 0) {
+      boss.vulnerable = false;
       boss.x = boss.swoopStartX;
       boss.y = boss.swoopStartY;
       boss.stateTimer = 60 + (Math.random() * 30 | 0);
@@ -3924,9 +3926,9 @@ function drawBossArena() {
     const bsx = boss.x - cam.x + boss.w / 2;
     const bsy = boss.y - cam.y + boss.h / 2;
     const pulse = 0.55 + 0.45 * Math.sin(game.tick * 0.25);
-    ctx.strokeStyle = `rgba(0,255,100,${pulse})`;
+    ctx.strokeStyle = `rgba(255,140,0,${pulse})`;
     ctx.lineWidth = 4;
-    ctx.shadowColor = '#00ff64';
+    ctx.shadowColor = '#ff8800';
     ctx.shadowBlur = 14;
     ctx.beginPath();
     ctx.ellipse(bsx, bsy, boss.w * 0.7, boss.h * 0.7, 0, 0, Math.PI * 2);
