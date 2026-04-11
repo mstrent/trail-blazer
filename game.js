@@ -131,7 +131,7 @@ const LEVELS = [
       ];
     },
     spawnTPBlooms() {
-      return [ makeTPBloom(20, 10), makeTPBloom(95, 10) ];
+      return [ makeTPBloom(20, 10), makeTPBloom(95, 10) ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -197,7 +197,7 @@ const LEVELS = [
       ];
     },
     spawnTPBlooms() {
-      return [ makeTPBloom(40, 10), makeTPBloom(73, 10), makeTPBloom(88, 10) ];
+      return [ makeTPBloom(40, 10), makeTPBloom(73, 10), makeTPBloom(88, 10) ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -270,7 +270,7 @@ const LEVELS = [
       ];
     },
     spawnTPBlooms() {
-      return [ makeTPBloom(45, 10), makeTPBloom(86, 10), makeTPBloom(120, 10) ];
+      return [ makeTPBloom(45, 10), makeTPBloom(86, 10), makeTPBloom(120, 10) ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -349,7 +349,7 @@ const LEVELS = [
       return [
         makeTPBloom(20, 10), makeTPBloom(55, 10),
         makeTPBloom(94, 10), makeTPBloom(131, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -425,7 +425,7 @@ const LEVELS = [
       return [
         makeTPBloom(10, 10), makeTPBloom(45, 10),
         makeTPBloom(125, 10), makeTPBloom(155, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -509,7 +509,7 @@ const LEVELS = [
       return [
         makeTPBloom(30, 10), makeTPBloom(55, 10), makeTPBloom(83, 10),
         makeTPBloom(120, 10), makeTPBloom(150, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -598,7 +598,7 @@ const LEVELS = [
       return [
         makeTPBloom(25, 10), makeTPBloom(57, 10), makeTPBloom(90, 10),
         makeTPBloom(125, 10), makeTPBloom(157, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -690,7 +690,7 @@ const LEVELS = [
       return [
         makeTPBloom(30, 10), makeTPBloom(52, 10), makeTPBloom(88, 10),
         makeTPBloom(125, 10), makeTPBloom(157, 10), makeTPBloom(185, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -785,7 +785,7 @@ const LEVELS = [
         makeTPBloom(30, 10), makeTPBloom(55, 10), makeTPBloom(88, 10),
         makeTPBloom(115, 10), makeTPBloom(148, 10),
         makeTPBloom(167, 10), makeTPBloom(195, 10),
-      ];
+      ].filter(Boolean);
     },
     spawnItems() {
       return [
@@ -996,12 +996,14 @@ function makeTPBloom(tx, ty) {
     while (placeTy < level.ROWS - 1 &&
            level.map[placeTy][tx] === T_EMPTY &&
            level.map[placeTy + 1][tx] === T_EMPTY) placeTy++;
+    // Don't place above water — the empty gap row above water is not a valid surface
+    if (level.map[placeTy + 1] && level.map[placeTy + 1][tx] === T_WATER) return null;
   }
   return { x: tx * TS + 6, y: placeTy * TS + 16, w: 20, h: 16, active: true };
 }
 
-function makeBeerCan(x, y, dir) {
-  return { x, y, vx: dir * 5.5, vy: -3.2, w: 8, h: 12, alive: true };
+function makeBeerCan(x, y, dir, throwVx, throwVy) {
+  return { x, y, vx: (throwVx ?? 5.5) * dir, vy: throwVy ?? -3.2, w: 8, h: 12, alive: true };
 }
 
 function makeTrash(x, y) {
@@ -1205,8 +1207,14 @@ function updateEnemy(e) {
   if (e.type === 'redneck') {
     e.throwTimer--;
     if (e.throwTimer <= 0) {
-      const dir = e.vx > 0 ? 1 : -1;
-      beerCans.push(makeBeerCan(e.x + e.w / 2, e.y + 10, dir));
+      const playerCx  = player.x + player.w / 2;
+      const redneckCx = e.x + e.w / 2;
+      const dir = playerCx > redneckCx ? 1 : -1;
+      const dx = Math.abs(playerCx - redneckCx);
+      const dy = (player.y + player.h / 2) - (e.y + e.h / 2);
+      const throwVx = Math.max(3, Math.min(8, dx * 0.06));
+      const throwVy = Math.max(-7, Math.min(-0.5, -3.2 + dy * 0.04));
+      beerCans.push(makeBeerCan(e.x + e.w / 2, e.y + 10, dir, throwVx, throwVy));
       const sx = e.x - cam.x;
       if (sx > -e.w && sx < W + e.w) audio.sfxBeerCan();
       e.throwTimer = Math.floor(rnd(150, 280));
@@ -2105,12 +2113,14 @@ function drawPlayer() {
   // Bear spray effect
   if (player.sprayTimer > 0) {
     ctx.globalAlpha = 0.6;
-    const spx = (player.facing > 0 ? 12 : -120);
-    const grad = ctx.createLinearGradient(spx, 0, spx + 110 * player.facing, 0);
+    const spx = player.facing > 0 ? player.w / 2 : -(player.w / 2 + 120);
+    const nearX = player.facing > 0 ? spx : spx + 120;
+    const farX  = player.facing > 0 ? spx + 120 : spx;
+    const grad = ctx.createLinearGradient(nearX, 0, farX, 0);
     grad.addColorStop(0, '#ff8800');
     grad.addColorStop(1, 'rgba(255,136,0,0)');
     ctx.fillStyle = grad;
-    ctx.fillRect(spx, -8, 110 * player.facing, 18);
+    ctx.fillRect(spx, -8, 120, 18);
     ctx.globalAlpha = 1;
   }
 
@@ -2165,7 +2175,7 @@ function drawMarmot(e) {
 
   // Feet
   ctx.fillStyle = '#6A4810';
-  ctx.fillRect(-10, -2, 8, 4);
+  ctx.fillRect(-10, -2 + (e.frame ? 0 : 2), 8, 4);
   ctx.fillRect(2,   -2 + (e.frame ? 2 : 0), 8, 4);
 
   ctx.globalAlpha = 1;
@@ -2292,10 +2302,11 @@ function drawHiker(e) {
   ctx.globalAlpha = stunned ? 0.6 : 1;
 
   // Legs
-  const legSwing = e.frame ? 5 : 0;
+  const leftSwing  = e.frame ? 5 : 0;
+  const rightSwing = e.frame ? 0 : 5;
   ctx.fillStyle = '#4A3A2A';
-  ctx.fillRect(-7, -16, 6, 16);
-  ctx.fillRect(1, -16 + legSwing, 6, 16);
+  ctx.fillRect(-7, -16 + leftSwing,  6, 16);
+  ctx.fillRect( 1, -16 + rightSwing, 6, 16);
 
   // Body
   ctx.fillStyle = stunned ? '#FFD700' : '#8B3A3A';
