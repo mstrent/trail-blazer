@@ -1257,7 +1257,7 @@ function drawThunderbird(boss) {
 function makeBossMothman() {
   return {
     type: 'mothman',
-    x: BOSS_ARENA_W / 2 - 50, y: 200,
+    x: BOSS_ARENA_W / 2 - 50, y: 410,
     w: 100, h: 120,
     hp: 5,
     phase: 1,
@@ -1292,7 +1292,7 @@ function updateMothman(boss) {
     boss.x += boss.hoverDir * boss.hoverSpeed;
     if (boss.x < 100)                         { boss.x = 100;                          boss.hoverDir =  1; }
     if (boss.x > BOSS_ARENA_W - boss.w - 100) { boss.x = BOSS_ARENA_W - boss.w - 100;  boss.hoverDir = -1; }
-    boss.y = 200 + Math.sin(game.tick * 0.03) * 25;
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
     boss.stateTimer--;
     if (boss.stateTimer <= 0) {
       boss.state = 'fire';
@@ -4439,16 +4439,25 @@ addEventListener('keydown', e => {
   // preventDefault only suppresses the page event; the browser may
   // still switch tabs. Use the window.trailBlazerDebug.warpToLevel()
   // API (e.g. from DevTools console) as a reliable alternative.
-  if (isDebug() && e.ctrlKey && !e.shiftKey && !e.altKey) {
-    // Use e.code (layout-independent) to detect digit keys — e.key varies by keyboard layout
-    const m = e.code.match(/^Digit([1-9])$/);
-    if (m) {
-      const n = parseInt(m[1]) - 1; // Ctrl+1 → level index 0, Ctrl+9 → level index 8
-      if (n < LEVELS.length) {
-        audio.init();
-        warpToLevel(n);
-        e.preventDefault();
+  // Levels 1–9  (indices 0–8):  Ctrl+1 through Ctrl+9
+  // Level  10   (index  9):     Ctrl+0
+  // Levels 11–12 (indices 10–11): Ctrl+Shift+1 through Ctrl+Shift+2
+  if (isDebug() && e.ctrlKey && !e.altKey) {
+    let n = -1;
+    if (!e.shiftKey) {
+      const m = e.code.match(/^Digit([0-9])$/);
+      if (m) {
+        const d = parseInt(m[1]);
+        n = d === 0 ? 9 : d - 1; // Ctrl+1→0 … Ctrl+9→8, Ctrl+0→9
       }
+    } else {
+      const m = e.code.match(/^Digit([1-2])$/);
+      if (m) n = 9 + parseInt(m[1]); // Ctrl+Shift+1→10, Ctrl+Shift+2→11
+    }
+    if (n >= 0 && n < LEVELS.length) {
+      audio.init();
+      warpToLevel(n);
+      e.preventDefault();
     }
   }
 });
