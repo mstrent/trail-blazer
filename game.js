@@ -1002,8 +1002,8 @@ function makeTPBloom(tx, ty) {
   return { x: tx * TS + 6, y: placeTy * TS + 16, w: 20, h: 16, active: true };
 }
 
-function makeBeerCan(x, y, dir) {
-  return { x, y, vx: dir * 5.5, vy: -3.2, w: 8, h: 12, alive: true };
+function makeBeerCan(x, y, dir, throwVx, throwVy) {
+  return { x, y, vx: (throwVx ?? 5.5) * dir, vy: throwVy ?? -3.2, w: 8, h: 12, alive: true };
 }
 
 function makeTrash(x, y) {
@@ -1207,8 +1207,14 @@ function updateEnemy(e) {
   if (e.type === 'redneck') {
     e.throwTimer--;
     if (e.throwTimer <= 0) {
-      const dir = e.vx > 0 ? 1 : -1;
-      beerCans.push(makeBeerCan(e.x + e.w / 2, e.y + 10, dir));
+      const playerCx  = player.x + player.w / 2;
+      const redneckCx = e.x + e.w / 2;
+      const dir = playerCx > redneckCx ? 1 : -1;
+      const dx = Math.abs(playerCx - redneckCx);
+      const dy = (player.y + player.h / 2) - (e.y + e.h / 2);
+      const throwVx = Math.max(3, Math.min(8, dx * 0.06));
+      const throwVy = Math.max(-7, Math.min(-0.5, -3.2 + dy * 0.04));
+      beerCans.push(makeBeerCan(e.x + e.w / 2, e.y + 10, dir, throwVx, throwVy));
       const sx = e.x - cam.x;
       if (sx > -e.w && sx < W + e.w) audio.sfxBeerCan();
       e.throwTimer = Math.floor(rnd(150, 280));
