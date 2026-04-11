@@ -1075,7 +1075,7 @@ function makeBoss(type) {
 function makeBossThunderbird() {
   return {
     type: 'thunderbird',
-    x: BOSS_ARENA_W / 2 - 60, y: 160,
+    x: BOSS_ARENA_W / 2 - 60, y: 340,
     w: 120, h: 80,
     hp: 3,
     phase: 1,
@@ -1716,7 +1716,6 @@ function updateBossPlayer() {
 
   if (isSpray() && player.sprayCooldown === 0 && bossArena.boss) {
     player.sprayCooldown = 30;
-    player.sprayTimer = 20;
     const boss = bossArena.boss;
     const px = player.x + player.w / 2;
     const py = player.y + player.h / 2;
