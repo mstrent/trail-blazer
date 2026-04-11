@@ -39,7 +39,7 @@ Collect ultralight gear along the way to build your score. Your score and lives 
 
 | Hazard | Effect |
 |--------|--------|
-| 💧 Water | Instant damage — don't wade in |
+| 💧 Water | Damages once every 3 seconds while wading — get out quickly |
 | 🧻 Trail Flower (TP Bloom) | Used toilet paper left on the ground — contact damages you, jump over it |
 
 ## Enemies
@@ -60,7 +60,7 @@ All enemies can be stunned with **Bear Spray** or by landing on them while jumpi
 |------|--------|---------|
 | Titanium Spork | 100 | Ultralight utensil |
 | Protein Bar | 50 | Trail fuel |
-| Water Filter | 200 | Essential gear |
+| Water Filter | 200 (+75 if healing) | Essential gear; restores 1 health if you're hurt |
 | Cuben Fiber Tent | 500 | Shelter |
 | Bear Spray Refill | 150 | Combat consumable |
 
@@ -122,7 +122,7 @@ Each level includes:
 ## Tech
 
 - **Pure HTML5 Canvas 2D** — all rendering uses canvas primitives (ellipses, rects, paths, gradients), no sprite sheets or image assets
-- **No frameworks, no dependencies** — ~3500 lines of vanilla JavaScript, single `game.js` file, no build step
+- **No frameworks, no dependencies** — ~3950 lines of vanilla JavaScript, single `game.js` file, no build step
 - **Deterministic procedural generation** — background parallax layers use seeded PRNGs for consistent visuals
 - **Tile-based collision system** — 32px tile grid with tile types: solid, one-way platform, water, empty
 - **60 fps game loop** — `requestAnimationFrame` with fixed update and render stages
