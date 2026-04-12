@@ -1453,14 +1453,18 @@ function drawMothman(boss) {
 function makeBigfoot() {
   return {
     type: 'bigfoot',
-    x: 150, y: BOSS_GROUND_Y - 200,
+    x: BOSS_ARENA_W / 2 - 50, y: BOSS_GROUND_Y - 200,
     w: 100, h: 200,
     hp: 8,
     phase: 1,
-    state: 'idle',  // idle | windup | throw | groundpound | stagger | rage
-    stateTimer: 80,
+    state: 'land',  // land | leap | windup | groundpound | stagger
+    stateTimer: 40,
     boulders: [],
     shockwave: null,
+    leapStartX: 0, leapStartY: 0,
+    leapTargetX: 0,
+    leapProgress: 0,
+    leapDuration: 75,
     windupProgress: 0,
     rageTimer: 0,
     vulnerable: false,
@@ -1493,6 +1497,11 @@ function updateBigfoot(boss) {
     }
   }
 
+  // Contact damage when Bigfoot is on the ground
+  if (boss.state !== 'leap' && player.hurtTimer === 0 && aabb(player, boss)) {
+    hurtPlayer();
+  }
+
   if (boss.rageTimer > 0) {
     boss.rageTimer--;
     return;
@@ -1500,17 +1509,56 @@ function updateBigfoot(boss) {
 
   boss.stateTimer--;
 
-  if (boss.state === 'idle') {
+  if (boss.state === 'land') {
     if (boss.stateTimer <= 0) {
-      boss.windupProgress = 0;
-      boss.state = 'windup';
-      boss.stateTimer = 40;
+      const roll = Math.random();
+      const leapChance      = boss.phase === 3 ? 0.55 : boss.phase === 2 ? 0.62 : 0.70;
+      const groundPoundChance = boss.phase >= 2 ? 0.22 : 0;
+
+      if (roll < leapChance) {
+        boss.leapStartX = boss.x;
+        boss.leapStartY = boss.y;
+        const spread = (Math.random() - 0.5) * 160;
+        boss.leapTargetX = Math.max(20, Math.min(BOSS_ARENA_W - boss.w - 20,
+          player.x + player.w / 2 - boss.w / 2 + spread));
+        boss.leapProgress = 0;
+        boss.leapDuration  = boss.phase === 3 ? 55 : boss.phase === 2 ? 65 : 75;
+        boss.vulnerable    = true;
+        boss.state = 'leap';
+      } else if (roll < leapChance + groundPoundChance) {
+        boss.state = 'groundpound';
+        boss.stateTimer = 45;
+      } else {
+        boss.windupProgress = 0;
+        boss.state = 'windup';
+        boss.stateTimer = 40;
+      }
+    }
+  } else if (boss.state === 'leap') {
+    boss.leapProgress = Math.min(1, boss.leapProgress + 1 / boss.leapDuration);
+    const t = boss.leapProgress;
+    boss.x = boss.leapStartX + (boss.leapTargetX - boss.leapStartX) * t;
+    boss.y = boss.leapStartY - 150 * Math.sin(t * Math.PI);  // 150px arc height
+
+    // Vulnerable while airborne; brief grace window at start and landing
+    boss.vulnerable = t > 0.10 && t < 0.92;
+
+    // Contact damage near the landing impact
+    if (t > 0.88 && player.hurtTimer === 0 && aabb(player, boss)) hurtPlayer();
+
+    if (boss.leapProgress >= 1) {
+      boss.x = boss.leapTargetX;
+      boss.y = boss.leapStartY;
+      boss.vulnerable = false;
+      spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 20, 5);
+      audio.sfxStomp();
+      const pauseTime = boss.phase === 3 ? 15 : boss.phase === 2 ? 20 : 25;
+      boss.state = 'land';
+      boss.stateTimer = pauseTime;
     }
   } else if (boss.state === 'windup') {
     boss.windupProgress = Math.min(1, boss.windupProgress + 1 / 40);
-    boss.vulnerable = boss.windupProgress > 0.55;
     if (boss.stateTimer <= 0) {
-      boss.vulnerable = false;
       const count = boss.phase === 3 ? 3 : 2;
       for (let i = 0; i < count; i++) {
         const spread = count === 2 ? (i - 0.5) * 200 : (i - 1) * 160;
@@ -1520,27 +1568,12 @@ function updateBigfoot(boss) {
         const sy = boss.y + boss.h * 0.3;
         const dist = Math.hypot(tx - sx, ty - sy) || 1;
         const spd  = 7 + boss.phase;
-        boss.boulders.push({
-          x: sx, y: sy,
-          vx: (tx - sx) / dist * spd,
-          vy: (ty - sy) / dist * spd - 6,
-          r: 16,
-        });
+        boss.boulders.push({ x: sx, y: sy, vx: (tx - sx) / dist * spd, vy: (ty - sy) / dist * spd - 6, r: 16 });
       }
       boss.windupProgress = 0;
-      boss.state = 'throw';
-      boss.stateTimer = 30;
-    }
-  } else if (boss.state === 'throw') {
-    if (boss.stateTimer <= 0) {
-      const nextIdleTime = boss.phase === 3 ? 25 : boss.phase === 2 ? 45 : 65;
-      if (boss.phase >= 2 && Math.random() < 0.45) {
-        boss.state = 'groundpound';
-        boss.stateTimer = 45;
-      } else {
-        boss.state = 'idle';
-        boss.stateTimer = nextIdleTime;
-      }
+      const pauseTime = boss.phase === 3 ? 15 : boss.phase === 2 ? 20 : 30;
+      boss.state = 'land';
+      boss.stateTimer = pauseTime;
     }
   } else if (boss.state === 'groundpound') {
     if (boss.stateTimer <= 0) {
@@ -1555,9 +1588,9 @@ function updateBigfoot(boss) {
   } else if (boss.state === 'stagger') {
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
-      const nextIdleTime = boss.phase === 3 ? 20 : 40;
-      boss.state = 'idle';
-      boss.stateTimer = nextIdleTime;
+      const pauseTime = boss.phase === 3 ? 15 : 30;
+      boss.state = 'land';
+      boss.stateTimer = pauseTime;
     }
   }
 }
@@ -1590,7 +1623,8 @@ function drawBigfoot(boss) {
   ctx.save();
   ctx.translate(bx, by);
 
-  const arm = Math.min(1, boss.windupProgress);
+  // Arms raised during leap (flying pose) or windup (throw telegraph)
+  const arm = boss.state === 'leap' ? 0.8 : Math.min(1, boss.windupProgress);
 
   ctx.fillStyle = '#2a1a0a';
 
@@ -1679,7 +1713,15 @@ function updateBossArena() {
   }
 
   cam.x = Math.max(0, Math.min(BOSS_ARENA_W - W, player.x + player.w / 2 - W * 0.5));
-  cam.y = Math.max(0, Math.min(BOSS_ARENA_H - H, player.y - H * 0.80));
+
+  // Dynamic vertical camera: pull up smoothly to keep Bigfoot visible during leap
+  let _targetCamY = player.y - H * 0.80;
+  const _bfBoss = bossArena.boss;
+  if (_bfBoss && _bfBoss.state === 'leap') {
+    const bossTop = _bfBoss.y - 30;
+    if (bossTop < _targetCamY) _targetCamY = bossTop;
+  }
+  cam.y += (Math.max(0, Math.min(BOSS_ARENA_H - H, _targetCamY)) - cam.y) * 0.1;
 
   updateParticles();
   updateFloatTexts();
@@ -1745,6 +1787,9 @@ function updateBossProjectile() {
 
   spray.x += spray.vx;
   spray.y += spray.vy;
+
+  // Mist particles trailing behind the spray
+  if (game.tick % 2 === 0) spawnParticles(spray.x, spray.y, '#ff8800', 1, 2);
 
   if (spray.x < 0 || spray.x > BOSS_ARENA_W ||
       spray.y < 0 || spray.y > BOSS_ARENA_H) {
@@ -3939,13 +3984,24 @@ function drawBossArena() {
 
   const spray = bossArena.spray;
   if (spray && spray.active) {
-    ctx.fillStyle = '#ff8800';
-    ctx.shadowColor = '#ff4400';
-    ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.arc(spray.x - cam.x, spray.y - cam.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    // Expanding spray plume: narrow tail (near player) widens to head (leading edge)
+    ctx.save();
+    for (let i = 8; i >= 0; i--) {
+      const frac = (8 - i) / 8;  // 0 = tail, 1 = head
+      const r  = 2.5 + frac * 11;
+      const tx = spray.x - cam.x - spray.vx * i * 0.5;
+      const ty = spray.y - cam.y - spray.vy * i * 0.5;
+      ctx.globalAlpha  = 0.30 + frac * 0.65;
+      ctx.fillStyle    = frac > 0.6 ? '#ff4400' : '#ff8800';
+      ctx.shadowColor  = '#ff6600';
+      ctx.shadowBlur   = frac > 0.7 ? 12 : 3;
+      ctx.beginPath();
+      ctx.arc(tx, ty, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur  = 0;
+    ctx.restore();
   }
 
   if (boss.type === 'thunderbird') drawThunderbird(boss);
