@@ -366,7 +366,7 @@ const LEVELS = [
     spawnItems() {
       return [
         makeItem('bar', 9, 8), makeItem('spork', 60, 5),
-        makeItem('filter', 85, 6),
+        makeItem('filter', 75, 5),
         makeItem('spray', 109, 5), makeItem('tent', 159, 5),
       ];
     },
