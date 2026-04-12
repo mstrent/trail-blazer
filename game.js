@@ -1063,6 +1063,7 @@ function initBossArena(def) {
     phase:       'fighting',
     defeatTimer: 0,
   };
+  audio.startBossMusic(def.bossType);
 }
 
 function makeBoss(type) {
@@ -1847,7 +1848,8 @@ function bossDefeated() {
     game.leaveNoTrace[game.levelNum] = true;
   }
 
-  audio.sfxCampFanfare();
+  audio.stopBossMusic();   // halt loop before victory fanfare starts
+  audio.sfxBossVictory();
   spawnParticles(
     bossArena.boss.x + bossArena.boss.w / 2,
     bossArena.boss.y + bossArena.boss.h / 2,
@@ -2339,6 +2341,7 @@ function hurtPlayer(instant) {
   if (player.health <= 0) {
     player.lives--;
     if (player.lives <= 0) {
+      audio.stopBossMusic();
       game.state = 'gameover';
     } else {
       // Respawn
@@ -2451,6 +2454,7 @@ function qualifiesForLeaderboard(score) {
 }
 
 function loadLevel(num) {
+  audio.stopBossMusic();
   game.levelNum = num;
   const def = LEVELS[num];
   if (def.isBoss) {
@@ -4808,8 +4812,8 @@ const audio = (() => {
     return { osc: o, gain: g };
   }
 
-  function oscSweep(type, freqFrom, freqTo, dur, gainVal, dest) {
-    const t = ctx.currentTime;
+  function oscSweep(type, freqFrom, freqTo, dur, gainVal, dest, startTime) {
+    const t = startTime !== undefined ? startTime : ctx.currentTime;
     const g = ctx.createGain();
     g.gain.setValueAtTime(gainVal, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
@@ -4837,7 +4841,26 @@ const audio = (() => {
     src.start(t); src.stop(t + dur);
   }
 
+  function scheduleNoise(dur, gainVal, filterFreq, startTime) {
+    const t = startTime !== undefined ? startTime : ctx.currentTime;
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass'; f.frequency.value = filterFreq || 1000; f.Q.value = 0.5;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(gainVal, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f); f.connect(g); g.connect(masterGain);
+    src.start(t); src.stop(t + dur);
+  }
+
   // ---- sound effects (all guard with ensureRunning) ----
+
+  let bossMusicActive = false;
+  let bossMusicTimeout = null;
 
   function sfx(fn) {
     ensureRunning().then(fn).catch(() => {});
@@ -4904,6 +4927,30 @@ const audio = (() => {
     });
   }
 
+  // ---- boss victory fanfare: 3-part triumph, plays on boss defeat ----
+  function sfxBossVictory() {
+    sfx(() => {
+      const t0 = ctx.currentTime;
+      // Part 1: ascending run — sawtooth for bite (0–0.75s)
+      osc('sawtooth', 261.6, 0.15, 0.20, masterGain, t0 + 0.00); // C4
+      osc('sawtooth', 329.6, 0.15, 0.20, masterGain, t0 + 0.18); // E4
+      osc('sawtooth', 392.0, 0.15, 0.20, masterGain, t0 + 0.36); // G4
+      osc('sawtooth', 523.3, 0.18, 0.22, masterGain, t0 + 0.54); // C5
+      osc('triangle', 130.8, 0.70, 0.08, masterGain, t0 + 0.00); // C3 undertone
+      // Part 2: swelling chord (0.8–2.2s)
+      osc('triangle', 523.3, 1.35, 0.22, masterGain, t0 + 0.80); // C5
+      osc('triangle', 659.3, 1.35, 0.19, masterGain, t0 + 0.80); // E5
+      osc('triangle', 784.0, 1.35, 0.16, masterGain, t0 + 0.80); // G5
+      osc('sine',     261.6, 1.35, 0.10, masterGain, t0 + 0.80); // C4
+      osc('sine',     130.8, 1.35, 0.07, masterGain, t0 + 0.80); // C3 bass
+      // Part 3: final accent (2.3–3.4s)
+      osc('sawtooth', 659.3,  0.9, 0.25, masterGain, t0 + 2.30); // E5 sharp hit
+      osc('triangle', 659.3,  1.0, 0.16, masterGain, t0 + 2.30); // E5 sustained
+      osc('sine',     329.6,  1.0, 0.10, masterGain, t0 + 2.30); // E4 below
+      osc('sawtooth', 1318.5, 0.12, 0.10, masterGain, t0 + 2.48); // E6 sparkle
+    });
+  }
+
   // ---- trail runner: quick footsteps whoosh past ----
   function sfxTrailRunner() {
     sfx(() => {
@@ -4947,11 +4994,107 @@ const audio = (() => {
     });
   }
 
+  // ---- boss music phrases ----
+
+  function thunderbirdPhrase(t0) {
+    // Low E drone throughout
+    osc('sine', 82.4,  6.0, 0.07, masterGain, t0);         // E2 bass drone
+    osc('sine', 164.8, 6.0, 0.04, masterGain, t0);         // E3 octave, faint
+    // High descending sweep — bird circling down
+    oscSweep('sine', 990, 440, 2.5, 0.06, masterGain, t0 + 0.2);
+    // Eerie mid tone
+    osc('triangle', 330, 0.8, 0.06, masterGain, t0 + 1.5); // E4
+    // Lightning crackle — sharp transient
+    osc('sawtooth', 1320, 0.08, 0.04, masterGain, t0 + 2.0);
+    // Second sweep — another pass
+    oscSweep('sine', 880, 330, 2.0, 0.05, masterGain, t0 + 2.8);
+    // Mid tone
+    osc('triangle', 220, 0.6, 0.06, masterGain, t0 + 3.5); // A3
+    // Second crackle
+    osc('sawtooth', 1100, 0.10, 0.04, masterGain, t0 + 4.2);
+    // Final sweep — leads back into loop
+    oscSweep('sine', 660, 165, 1.4, 0.05, masterGain, t0 + 4.5);
+  }
+
+  function mothmanPhrase(t0) {
+    // Bass pulse: i – v – bVI – iv in D minor
+    osc('sine', 73.4,  1.3, 0.11, masterGain, t0 + 0.0); // D2 (i)
+    osc('sine', 110.0, 1.3, 0.10, masterGain, t0 + 2.0); // A2 (v)
+    osc('sine', 116.5, 1.3, 0.10, masterGain, t0 + 4.0); // Bb2 (bVI)
+    osc('sine', 98.0,  1.3, 0.09, masterGain, t0 + 6.0); // G2 (iv)
+    // Chromatic melodic figure — floats and descends
+    osc('triangle', 293.7, 0.7, 0.06, masterGain, t0 + 0.5); // D4
+    osc('triangle', 311.1, 0.5, 0.05, masterGain, t0 + 1.2); // Eb4 (chromatic)
+    osc('triangle', 293.7, 0.6, 0.06, masterGain, t0 + 2.5); // D4
+    osc('triangle', 329.6, 0.7, 0.06, masterGain, t0 + 3.2); // E4
+    osc('triangle', 311.1, 0.5, 0.05, masterGain, t0 + 4.2); // Eb4 (return)
+    osc('triangle', 293.7, 0.6, 0.06, masterGain, t0 + 5.0); // D4
+    osc('triangle', 261.6, 0.8, 0.06, masterGain, t0 + 5.8); // C4 (descend)
+    osc('triangle', 246.9, 0.9, 0.06, masterGain, t0 + 6.8); // B3 (deeper)
+  }
+
+  function bigfootPhrase(t0) {
+    // Continuous sub-bass rumble
+    osc('sawtooth', 41.2, 5.0, 0.08, masterGain, t0);    // E1
+
+    // Rhythmic stomp pattern
+    scheduleNoise(0.08, 0.16, 180, t0 + 0.0);
+    osc('sawtooth', 41.2, 0.2, 0.10, masterGain, t0 + 0.0);  // beat 1 — E1
+    scheduleNoise(0.06, 0.10, 180, t0 + 0.6);
+    osc('sawtooth', 55.0, 0.2, 0.09, masterGain, t0 + 0.6);  // beat 2 — A1
+    scheduleNoise(0.10, 0.18, 160, t0 + 1.0);
+    osc('sawtooth', 41.2, 0.2, 0.12, masterGain, t0 + 1.0);  // beat 3 (heavy)
+    scheduleNoise(0.06, 0.10, 180, t0 + 1.5);
+    osc('sawtooth', 36.7, 0.2, 0.08, masterGain, t0 + 1.5);  // beat 4 — D1
+    scheduleNoise(0.10, 0.18, 160, t0 + 2.0);
+    osc('sawtooth', 41.2, 0.3, 0.14, masterGain, t0 + 2.0);  // beat 5 (loudest)
+    scheduleNoise(0.06, 0.08, 200, t0 + 2.6);                 // beat 6 — ghost hit (noise only)
+    scheduleNoise(0.10, 0.18, 160, t0 + 3.0);
+    osc('sawtooth', 41.2, 0.2, 0.12, masterGain, t0 + 3.0);  // beat 7
+    scheduleNoise(0.06, 0.10, 180, t0 + 3.5);
+    osc('sawtooth', 49.0, 0.2, 0.09, masterGain, t0 + 3.5);  // beat 8 — G1
+    scheduleNoise(0.12, 0.20, 150, t0 + 4.0);
+    osc('sawtooth', 41.2, 0.4, 0.14, masterGain, t0 + 4.0);  // final beat before loop
+  }
+
+  // ---- boss music loop engine ----
+
+  function playBossMusic(phraseFn, phraseDur) {
+    if (!bossMusicActive) return;
+    phraseFn(ctx.currentTime);
+    bossMusicTimeout = setTimeout(
+      () => playBossMusic(phraseFn, phraseDur),
+      (phraseDur - 0.3) * 1000
+    );
+  }
+
+  function startBossMusic(bossType) {
+    stopBossMusic();
+    bossMusicActive = true;
+    const tracks = {
+      thunderbird: { fn: thunderbirdPhrase, dur: 6.0 },
+      mothman:     { fn: mothmanPhrase,     dur: 8.0 },
+      bigfoot:     { fn: bigfootPhrase,     dur: 5.0 },
+    };
+    const track = tracks[bossType];
+    if (!track) { bossMusicActive = false; return; }
+    sfx(() => playBossMusic(track.fn, track.dur));
+  }
+
+  function stopBossMusic() {
+    bossMusicActive = false;
+    if (bossMusicTimeout !== null) {
+      clearTimeout(bossMusicTimeout);
+      bossMusicTimeout = null;
+    }
+  }
+
   return {
     init,
     sfxJump, sfxStomp, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
     sfxGlissade, sfxStun, sfxHeal, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
     sfxBeerCan, sfxBeerCanHit, sfxTPBloom, sfxTrailRunner,
+    startBossMusic, stopBossMusic, sfxBossVictory,
   };
 })();
 
