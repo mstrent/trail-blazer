@@ -4997,23 +4997,20 @@ const audio = (() => {
   // ---- boss music phrases ----
 
   function thunderbirdPhrase(t0) {
-    // Low E drone throughout
-    osc('sine', 82.4,  6.0, 0.07, masterGain, t0);         // E2 bass drone
-    osc('sine', 164.8, 6.0, 0.04, masterGain, t0);         // E3 octave, faint
-    // High descending sweep — bird circling down
-    oscSweep('sine', 990, 440, 2.5, 0.06, masterGain, t0 + 0.2);
-    // Eerie mid tone
-    osc('triangle', 330, 0.8, 0.06, masterGain, t0 + 1.5); // E4
-    // Lightning crackle — sharp transient
-    osc('sawtooth', 1320, 0.08, 0.04, masterGain, t0 + 2.0);
-    // Second sweep — another pass
-    oscSweep('sine', 880, 330, 2.0, 0.05, masterGain, t0 + 2.8);
-    // Mid tone
-    osc('triangle', 220, 0.6, 0.06, masterGain, t0 + 3.5); // A3
-    // Second crackle
-    osc('sawtooth', 1100, 0.10, 0.04, masterGain, t0 + 4.2);
-    // Final sweep — leads back into loop
-    oscSweep('sine', 660, 165, 1.4, 0.05, masterGain, t0 + 4.5);
+    // Relentless pulse at ~100 BPM — "something is coming for you"
+    [0.0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8].forEach(b => {
+      osc('sawtooth', 82.4, 0.22, 0.14, masterGain, t0 + b); // E2 driving bass
+      scheduleNoise(0.07, 0.10, 450, t0 + b);                 // percussive hit
+    });
+    // Tritone off-beat stabs (Bb2 against E2) — maximum dissonance
+    [0.3, 0.9, 2.1, 3.3, 4.5].forEach(b => {
+      osc('sawtooth', 116.5, 0.18, 0.09, masterGain, t0 + b);
+    });
+    // E4/F4 minor-second cluster on strong beats — upper tension
+    [0.0, 1.8, 3.6].forEach(b => {
+      osc('triangle', 329.6, 0.35, 0.05, masterGain, t0 + b); // E4
+      osc('triangle', 349.2, 0.35, 0.05, masterGain, t0 + b); // F4
+    });
   }
 
   function mothmanPhrase(t0) {
