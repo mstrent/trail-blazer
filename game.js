@@ -1453,8 +1453,8 @@ function drawMothman(boss) {
 function makeBigfoot() {
   return {
     type: 'bigfoot',
-    x: BOSS_ARENA_W / 2 - 50, y: BOSS_GROUND_Y - 200,
-    w: 100, h: 200,
+    x: BOSS_ARENA_W / 2 - 38, y: BOSS_GROUND_Y - 150,
+    w: 75, h: 150,
     hp: 8,
     phase: 1,
     state: 'land',  // land | leap | windup | groundpound | stagger
@@ -1622,6 +1622,7 @@ function drawBigfoot(boss) {
 
   ctx.save();
   ctx.translate(bx, by);
+  ctx.scale(0.75, 0.75);  // 25% smaller; arc height unchanged so jump clearance is preserved
 
   // Arms raised during leap (flying pose) or windup (throw telegraph)
   const arm = boss.state === 'leap' ? 0.8 : Math.min(1, boss.windupProgress);
@@ -3949,6 +3950,77 @@ function drawBossArena() {
     ctx.lineTo(mx * W, my * H);
     ctx.lineTo(mx * W + mw * W, gsy);
     ctx.fill();
+  }
+
+  // Mothman: eerie red atmosphere, Mount Shasta silhouette, ground mist
+  if (boss && boss.type === 'mothman') {
+    // Red atmospheric wash
+    ctx.fillStyle = 'rgba(70,8,8,0.30)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Blood moon
+    ctx.fillStyle = 'rgba(180,30,30,0.90)';
+    ctx.shadowColor = '#cc0000';
+    ctx.shadowBlur = 28;
+    ctx.beginPath();
+    ctx.arc(W * 0.82, H * 0.16, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Mount Shasta — dominant symmetric stratovolcano
+    ctx.fillStyle = '#160808';
+    ctx.beginPath();
+    ctx.moveTo(W * 0.10, gsy);
+    ctx.lineTo(W * 0.50, H * 0.28);
+    ctx.lineTo(W * 0.90, gsy);
+    ctx.fill();
+    // Snow cap
+    ctx.fillStyle = '#221010';
+    ctx.beginPath();
+    ctx.moveTo(W * 0.44, H * 0.36);
+    ctx.lineTo(W * 0.50, H * 0.28);
+    ctx.lineTo(W * 0.56, H * 0.36);
+    ctx.fill();
+
+    // Ground mist
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(100,20,20,${0.14 - i * 0.025})`;
+      ctx.fillRect(0, gsy - 8 + i * 6, W, 18);
+    }
+  }
+
+  // Bigfoot: deep forest, pine silhouettes, ground mist
+  if (boss && boss.type === 'bigfoot') {
+    // Forest atmosphere
+    ctx.fillStyle = 'rgba(0,18,4,0.30)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Pine trees — back layer (shorter, slightly transparent)
+    ctx.fillStyle = 'rgba(8,20,8,0.75)';
+    for (const px of [0.04, 0.17, 0.29, 0.44, 0.57, 0.70, 0.83, 0.95]) {
+      const ph = H * 0.20, pw = W * 0.055;
+      ctx.beginPath();
+      ctx.moveTo(px * W, gsy - ph);
+      ctx.lineTo(px * W - pw / 2, gsy);
+      ctx.lineTo(px * W + pw / 2, gsy);
+      ctx.fill();
+    }
+    // Pine trees — front layer (taller, darker)
+    ctx.fillStyle = '#070e07';
+    for (const px of [0.0, 0.11, 0.23, 0.35, 0.50, 0.63, 0.76, 0.88, 1.0]) {
+      const ph = H * 0.29, pw = W * 0.068;
+      ctx.beginPath();
+      ctx.moveTo(px * W, gsy - ph);
+      ctx.lineTo(px * W - pw / 2, gsy);
+      ctx.lineTo(px * W + pw / 2, gsy);
+      ctx.fill();
+    }
+
+    // Ground mist
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(15,40,15,${0.16 - i * 0.035})`;
+      ctx.fillRect(0, gsy - 8 + i * 7, W, 20);
+    }
   }
 
   // Storm clouds (Thunderbird only)
