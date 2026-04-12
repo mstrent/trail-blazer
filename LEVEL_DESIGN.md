@@ -233,6 +233,23 @@ Apply this pattern to **any new static object** placed at a tile coordinate.
 Without it, objects will float in mid-air, render inside boulders, or appear
 below the visible ground.
 
+### Item spawns above water (pit-style lakes)
+
+`makeItem`'s terrain-snap treats the empty gap row directly above water as a
+valid surface — it stops scanning down when `level.map[placeTy + 1][tx]` is
+`T_WATER`. This means an item spawned at any column that falls entirely over a
+**pit-style lake** (no solid bridge floor, e.g. Alpine Lakes) will appear
+floating in mid-air above the water surface.
+
+**Rule:** Never call `makeItem` at a tile column that lies inside a pit-style
+water zone (see "Gorge-style vs. pit-style water zones" above). Always use a
+column with a platform or solid tile above the water line. `makeTPBloom`
+already rejects this placement explicitly — `makeItem` does not.
+
+**Known instance fixed:** Alpine Lakes Level 4 — `makeItem('filter', 85, 6)`
+moved to `makeItem('filter', 75, 5)` (column 75 sits on the granite slab
+platform `hline(72,77,6,T_PLATFORM)` just before Lake 2).
+
 ---
 
 ## Decorative Fish
