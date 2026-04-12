@@ -280,6 +280,18 @@ const LEVELS = [
       ];
     },
   },
+  // ==================== BOSS 1: THUNDERBIRD ====================
+  {
+    isBoss: true,
+    bossType: 'thunderbird',
+    name: 'Thunderbird Encounter',
+    subtitle: 'A storm-bringing spirit descends on the North Cascades',
+    section: 'Washington \u2014 Cascade Crest',
+    campName: 'Thunderbird Banished',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
+  },
   // ======== LEVEL 4: ALPINE LAKES WILDERNESS ========
   {
     name: 'Alpine Lakes',
@@ -518,6 +530,18 @@ const LEVELS = [
         makeItem('spray', 130, 4), makeItem('tent', 176, 6),
       ];
     },
+  },
+  // ==================== BOSS 2: MOTHMAN ====================
+  {
+    isBoss: true,
+    bossType: 'mothman',
+    name: 'Mothman of Shasta',
+    subtitle: 'Red eyes glowing in the ancient Oregon dark',
+    section: 'Oregon \u2014 Columbia River corridor',
+    campName: 'Mothman Dispersed',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
   },
   // ======== LEVEL 7: OREGON CASCADES ========
   {
@@ -795,6 +819,18 @@ const LEVELS = [
       ];
     },
   },
+  // ==================== BOSS 3: BIGFOOT ====================
+  {
+    isBoss: true,
+    bossType: 'bigfoot',
+    name: 'Bigfoot',
+    subtitle: 'The legend of the PCT emerges from the California shadows',
+    section: 'California \u2014 Castle Crags Wilderness',
+    campName: 'Bigfoot Bested',
+    spawnTile: null,
+    goalTile: null,
+    goalFlagY: null,
+  },
 ];
 
 let level = LEVELS[0].build();
@@ -1008,6 +1044,815 @@ function makeBeerCan(x, y, dir, throwVx, throwVy) {
 
 function makeTrash(x, y) {
   return { x: x - 16, y: y - 10, w: 32, h: 18 };
+}
+
+// ==================== BOSS ARENA ====================
+const BOSS_ARENA_W  = 800;
+const BOSS_ARENA_H  = 800;
+const BOSS_GROUND_Y = 720;
+const BOSS_SPAWN_X  = BOSS_ARENA_W / 2 - 10;  // center minus half PLAYER_W (20)
+const BOSS_SPAWN_Y  = BOSS_GROUND_Y - 30;       // BOSS_GROUND_Y minus PLAYER_H (30)
+
+let bossArena = null;
+
+function initBossArena(def) {
+  bossArena = {
+    boss:        makeBoss(def.bossType),
+    spray:       null,
+    noHit:       true,
+    phase:       'fighting',
+    defeatTimer: 0,
+  };
+}
+
+function makeBoss(type) {
+  if (type === 'thunderbird') return makeBossThunderbird();
+  if (type === 'mothman')     return makeBossMothman();
+  if (type === 'bigfoot')     return makeBigfoot();
+  throw new Error('Unknown boss type: ' + type);
+}
+
+function makeBossThunderbird() {
+  return {
+    type: 'thunderbird',
+    x: BOSS_ARENA_W / 2 - 60, y: 390,
+    w: 120, h: 80,
+    hp: 3,
+    phase: 1,
+    state: 'patrol',  // patrol | telegraph | swoop | retreat
+    stateTimer: 90,
+    patrolDir: 1,
+    patrolSpeed: 1.8,
+    swoopStartX: 0, swoopStartY: 0,
+    swoopTargetX: 0,
+    swoopProgress: 0,
+    swoopDuration: 45,
+    telegraphTimer: 0,
+    retreatTimer: 0,
+    retreatStartX: 0, retreatStartY: 0,
+    vulnerable: false,
+    hitTimer: 0,
+  };
+}
+
+function updateThunderbird(boss) {
+  if (boss.hitTimer > 0) boss.hitTimer--;
+
+  const swoopDur    = boss.hp === 3 ? 45 : boss.hp === 2 ? 33 : 22;
+  const telegraphDur = boss.hp === 3 ? 30 : boss.hp === 2 ? 20 : 12;
+
+  if (boss.state === 'patrol') {
+    boss.x += boss.patrolDir * boss.patrolSpeed;
+    if (boss.x < 80)                             { boss.x = 80;                          boss.patrolDir =  1; }
+    if (boss.x > BOSS_ARENA_W - boss.w - 80)     { boss.x = BOSS_ARENA_W - boss.w - 80;  boss.patrolDir = -1; }
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.telegraphTimer = telegraphDur;
+      boss.swoopTargetX = Math.max(50, Math.min(BOSS_ARENA_W - boss.w - 50,
+        player.x + player.w / 2 - boss.w / 2));
+      boss.state = 'telegraph';
+    }
+  } else if (boss.state === 'telegraph') {
+    boss.vulnerable = true;  // window A: boss is locked-on and stationary — pre-emptive strike
+    boss.telegraphTimer--;
+    if (boss.telegraphTimer <= 0) {
+      boss.vulnerable    = false;
+      boss.swoopStartX   = boss.x;
+      boss.swoopStartY   = boss.y;
+      boss.swoopProgress = 0;
+      boss.swoopDuration = swoopDur;
+      boss.state = 'swoop';
+    }
+  } else if (boss.state === 'swoop') {
+    boss.swoopProgress = Math.min(1, boss.swoopProgress + 1 / boss.swoopDuration);
+    const t = boss.swoopProgress;
+    const ctrlX = (boss.swoopStartX + boss.swoopTargetX) / 2;
+    const ctrlY = BOSS_GROUND_Y - 60;
+    const endY  = BOSS_GROUND_Y - 110;
+    boss.x = (1-t)*(1-t)*boss.swoopStartX + 2*(1-t)*t*ctrlX + t*t*boss.swoopTargetX;
+    boss.y = (1-t)*(1-t)*boss.swoopStartY + 2*(1-t)*t*ctrlY + t*t*endY;
+
+    // boss.vulnerable is false during swoop — dodge or be hit
+    if (player.hurtTimer === 0 && aabb(player, boss)) {
+      hurtPlayer();
+    }
+
+    if (boss.swoopProgress >= 1) {
+      boss.retreatTimer  = 30;
+      boss.retreatStartX = boss.x;
+      boss.retreatStartY = boss.y;
+      boss.state = 'retreat';
+    }
+  } else if (boss.state === 'retreat') {
+    boss.vulnerable = true;  // window B: boss flying away after swoop — counterattack
+    boss.retreatTimer--;
+    const t = 1 - boss.retreatTimer / 30;
+    boss.x = boss.retreatStartX + (boss.swoopStartX - boss.retreatStartX) * t;
+    boss.y = boss.retreatStartY + (boss.swoopStartY - boss.retreatStartY) * t;
+    if (boss.retreatTimer <= 0) {
+      boss.vulnerable = false;
+      boss.x = boss.swoopStartX;
+      boss.y = boss.swoopStartY;
+      boss.stateTimer = 60 + (Math.random() * 30 | 0);
+      boss.state = 'patrol';
+    }
+  }
+}
+
+function drawThunderbird(boss) {
+  const t  = game.tick;
+  const bx = boss.x - cam.x + boss.w / 2;
+  const by = boss.y - cam.y + boss.h / 2;
+  const wing = Math.sin(t * 0.1) * 18;
+
+  ctx.save();
+  ctx.translate(bx, by);
+
+  // Wings
+  ctx.fillStyle = '#1a1a4a';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 10, 0);
+    ctx.quadraticCurveTo(s * 75, -wing - 20, s * boss.w * 0.9, wing * 0.8);
+    ctx.quadraticCurveTo(s * 55, 12, s * 10, 12);
+    ctx.fill();
+  }
+
+  // Electric blue wing highlights
+  ctx.strokeStyle = '#4488ff';
+  ctx.lineWidth = 2;
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 10, 0);
+    ctx.quadraticCurveTo(s * 65, -wing - 15, s * boss.w * 0.85, wing * 0.7);
+    ctx.stroke();
+  }
+
+  // Body
+  ctx.fillStyle = '#2a2a6a';
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 18, 26, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#2a2a6a';
+  ctx.beginPath();
+  ctx.ellipse(2, -24, 11, 9, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = '#ffaa00';
+  ctx.beginPath();
+  ctx.moveTo(9, -26);
+  ctx.lineTo(22, -22);
+  ctx.lineTo(9, -19);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = '#88ccff';
+  ctx.beginPath();
+  ctx.arc(5, -26, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(6, -27, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lightning bolts during telegraph/swoop
+  if (boss.state === 'telegraph' || boss.state === 'swoop') {
+    ctx.strokeStyle = `rgba(120,200,255,${0.6 + Math.sin(t * 0.4) * 0.4})`;
+    ctx.lineWidth = 2;
+    for (let i = -1; i <= 1; i++) {
+      const lx = i * 22;
+      ctx.beginPath();
+      ctx.moveTo(lx, 28);
+      ctx.lineTo(lx - 6, 50);
+      ctx.lineTo(lx + 6, 72);
+      ctx.lineTo(lx, 95);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+
+  // Hit flash
+  if (boss.hitTimer > 0 && Math.floor(boss.hitTimer / 6) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(boss.x - cam.x, boss.y - cam.y, boss.w, boss.h);
+  }
+
+  // Telegraph indicator
+  if (boss.state === 'telegraph' && Math.floor(game.tick / 4) % 2 === 0) {
+    ctx.strokeStyle = 'rgba(100,180,255,0.5)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(boss.x - cam.x + boss.w / 2, boss.y - cam.y + boss.h);
+    ctx.lineTo(boss.swoopTargetX - cam.x + boss.w / 2, BOSS_GROUND_Y - 110 - cam.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function makeBossMothman() {
+  return {
+    type: 'mothman',
+    x: BOSS_ARENA_W / 2 - 50, y: 410,
+    w: 100, h: 120,
+    hp: 5,
+    phase: 1,
+    state: 'hover',  // hover | fire | freeze | chargeWind | charge | stall
+    stateTimer: 90,
+    hoverDir: 1,
+    hoverSpeed: 1.2,
+    orbs: [],
+    eyeGlow: 0,
+    chargeVx: 0,
+    vulnerable: false,
+    hitTimer: 0,
+  };
+}
+
+function updateMothman(boss) {
+  if (boss.hitTimer > 0) boss.hitTimer--;
+
+  boss.orbs = boss.orbs.filter(orb => {
+    orb.x += orb.vx;
+    orb.y += orb.vy;
+    if (player.hurtTimer === 0 &&
+        aabb(player, { x: orb.x - 8, y: orb.y - 8, w: 16, h: 16 })) {
+      hurtPlayer();
+      return false;
+    }
+    return orb.x > -50 && orb.x < BOSS_ARENA_W + 50 &&
+           orb.y > -50 && orb.y < BOSS_ARENA_H + 50;
+  });
+
+  if (boss.state === 'hover') {
+    boss.x += boss.hoverDir * boss.hoverSpeed;
+    if (boss.x < 100)                         { boss.x = 100;                          boss.hoverDir =  1; }
+    if (boss.x > BOSS_ARENA_W - boss.w - 100) { boss.x = BOSS_ARENA_W - boss.w - 100;  boss.hoverDir = -1; }
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.state = 'fire';
+      boss.stateTimer = 20;
+    }
+  } else if (boss.state === 'fire') {
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      const px = player.x + player.w / 2;
+      const py = player.y + player.h / 2;
+      const bx = boss.x + boss.w / 2;
+      const by = boss.y + boss.h / 2;
+      for (let i = -1; i <= 1; i++) {
+        const spread = i * 80;
+        const tx = px + spread;
+        const ty = py;
+        const dist = Math.hypot(tx - bx, ty - by) || 1;
+        const speed = boss.phase === 2 ? 5 : 4;
+        boss.orbs.push({
+          x: bx, y: by,
+          vx: (tx - bx) / dist * speed,
+          vy: (ty - by) / dist * speed,
+        });
+      }
+      audio.sfxStun();
+      boss.state = 'freeze';
+      boss.stateTimer = boss.phase === 2 ? 20 : 30;
+    }
+  } else if (boss.state === 'freeze') {
+    boss.vulnerable = true;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      if (boss.phase === 2 && Math.random() < 0.5) {
+        boss.eyeGlow = 0;
+        boss.state = 'chargeWind';
+        boss.stateTimer = 35;
+      } else {
+        boss.state = 'hover';
+        boss.stateTimer = 60 + (Math.random() * 30 | 0);
+      }
+    }
+  } else if (boss.state === 'chargeWind') {
+    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 35);
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      const dir = player.x < boss.x ? -1 : 1;
+      boss.chargeVx = dir * 14;
+      boss.state = 'charge';
+      boss.stateTimer = 50;
+    }
+  } else if (boss.state === 'charge') {
+    boss.x += boss.chargeVx;
+    const targetY = BOSS_GROUND_Y - boss.h - 10;
+    boss.y += (targetY - boss.y) * 0.15;
+
+    if (player.hurtTimer === 0 && aabb(player, boss)) {
+      hurtPlayer();
+    }
+
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0 || boss.x < -boss.w || boss.x > BOSS_ARENA_W) {
+      boss.chargeVx = 0;
+      boss.x = Math.max(100, Math.min(BOSS_ARENA_W - boss.w - 100, boss.x));
+      boss.eyeGlow = 0;
+      boss.vulnerable = true;
+      boss.state = 'stall';
+      boss.stateTimer = 25;
+    }
+  } else if (boss.state === 'stall') {
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      boss.state = 'hover';
+      boss.stateTimer = 50;
+    }
+  }
+}
+
+function drawMothman(boss) {
+  const t  = game.tick;
+  const bx = boss.x - cam.x + boss.w / 2;
+  const by = boss.y - cam.y + boss.h / 2;
+
+  // Orbs (draw behind boss)
+  boss.orbs.forEach(orb => {
+    ctx.fillStyle = 'rgba(255,50,50,0.85)';
+    ctx.shadowColor = '#ff0000';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(orb.x - cam.x, orb.y - cam.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  ctx.save();
+  ctx.translate(bx, by);
+
+  const flapAmp  = boss.state === 'charge' ? 25 : 12;
+  const wingFlap = Math.sin(t * 0.15) * flapAmp;
+
+  // Upper wings
+  ctx.fillStyle = '#1a0a2a';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 8, -20);
+    ctx.quadraticCurveTo(s * 72, -55 - wingFlap, s * 88, -8);
+    ctx.quadraticCurveTo(s * 58, 12, s * 8, -8);
+    ctx.fill();
+  }
+
+  // Lower wings
+  ctx.fillStyle = '#15082a';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 8, 8);
+    ctx.quadraticCurveTo(s * 48, 42, s * 52, 52);
+    ctx.quadraticCurveTo(s * 28, 58, s * 8, 42);
+    ctx.fill();
+  }
+
+  // Body
+  ctx.fillStyle = '#2a1040';
+  ctx.beginPath();
+  ctx.ellipse(0, 14, 11, 33, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Glowing red eyes
+  const eyeAlpha = boss.state === 'chargeWind' || boss.state === 'charge'
+    ? 0.7 + boss.eyeGlow * 0.3
+    : 0.6 + Math.sin(t * 0.05) * 0.3;
+  ctx.fillStyle = `rgba(255,0,0,${eyeAlpha})`;
+  ctx.shadowColor = '#ff0000';
+  ctx.shadowBlur = 8 + boss.eyeGlow * 18;
+  ctx.beginPath(); ctx.arc(-7, -30, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 7, -30, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Wing pattern veins
+  ctx.strokeStyle = 'rgba(100,40,150,0.35)';
+  ctx.lineWidth = 1;
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 8, -15);
+    ctx.quadraticCurveTo(s * 50, -42 - wingFlap * 0.8, s * 72, -4);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // Hit flash
+  if (boss.hitTimer > 0 && Math.floor(boss.hitTimer / 6) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(boss.x - cam.x, boss.y - cam.y, boss.w, boss.h);
+  }
+}
+
+function makeBigfoot() {
+  return {
+    type: 'bigfoot',
+    x: BOSS_ARENA_W / 2 - 38, y: BOSS_GROUND_Y - 150,
+    w: 75, h: 150,
+    hp: 8,
+    phase: 1,
+    state: 'land',  // land | leap | windup | groundpound | stagger
+    stateTimer: 40,
+    boulders: [],
+    shockwave: null,
+    leapStartX: 0, leapStartY: 0,
+    leapTargetX: 0,
+    leapProgress: 0,
+    leapDuration: 75,
+    windupProgress: 0,
+    rageTimer: 0,
+    vulnerable: false,
+    hitTimer: 0,
+  };
+}
+
+function updateBigfoot(boss) {
+  if (boss.hitTimer > 0) boss.hitTimer--;
+
+  boss.boulders = boss.boulders.filter(b => {
+    b.x += b.vx;
+    b.y += b.vy;
+    b.vy += GRAVITY_FORCE * 0.6;
+    if (player.hurtTimer === 0 &&
+        aabb(player, { x: b.x - b.r, y: b.y - b.r, w: b.r * 2, h: b.r * 2 })) {
+      hurtPlayer();
+    }
+    return b.y < BOSS_GROUND_Y + 60;
+  });
+
+  if (boss.shockwave && boss.shockwave.active) {
+    const sw = boss.shockwave;
+    sw.x    += sw.dir * sw.speed;
+    sw.alpha -= 0.012;
+    if (sw.alpha <= 0 || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
+    if (player.hurtTimer === 0 && player.onGround) {
+      const swHit = { x: sw.dir > 0 ? sw.x - 30 : 0, y: BOSS_GROUND_Y - 30, w: 60, h: 30 };
+      if (aabb(player, swHit)) hurtPlayer();
+    }
+  }
+
+  // Contact damage when Bigfoot is on the ground
+  if (boss.state !== 'leap' && player.hurtTimer === 0 && aabb(player, boss)) {
+    hurtPlayer();
+  }
+
+  if (boss.rageTimer > 0) {
+    boss.rageTimer--;
+    return;
+  }
+
+  boss.stateTimer--;
+
+  if (boss.state === 'land') {
+    if (boss.stateTimer <= 0) {
+      const roll = Math.random();
+      const leapChance      = boss.phase === 3 ? 0.55 : boss.phase === 2 ? 0.62 : 0.70;
+      const groundPoundChance = boss.phase >= 2 ? 0.22 : 0;
+
+      if (roll < leapChance) {
+        boss.leapStartX = boss.x;
+        boss.leapStartY = boss.y;
+        const spread = (Math.random() - 0.5) * 160;
+        boss.leapTargetX = Math.max(20, Math.min(BOSS_ARENA_W - boss.w - 20,
+          player.x + player.w / 2 - boss.w / 2 + spread));
+        boss.leapProgress = 0;
+        boss.leapDuration  = boss.phase === 3 ? 55 : boss.phase === 2 ? 65 : 75;
+        boss.vulnerable    = true;
+        boss.state = 'leap';
+      } else if (roll < leapChance + groundPoundChance) {
+        boss.state = 'groundpound';
+        boss.stateTimer = 45;
+      } else {
+        boss.windupProgress = 0;
+        boss.state = 'windup';
+        boss.stateTimer = 40;
+      }
+    }
+  } else if (boss.state === 'leap') {
+    boss.leapProgress = Math.min(1, boss.leapProgress + 1 / boss.leapDuration);
+    const t = boss.leapProgress;
+    boss.x = boss.leapStartX + (boss.leapTargetX - boss.leapStartX) * t;
+    boss.y = boss.leapStartY - 150 * Math.sin(t * Math.PI);  // 150px arc height
+
+    // Vulnerable while airborne; brief grace window at start and landing
+    boss.vulnerable = t > 0.10 && t < 0.92;
+
+    // Contact damage near the landing impact
+    if (t > 0.88 && player.hurtTimer === 0 && aabb(player, boss)) hurtPlayer();
+
+    if (boss.leapProgress >= 1) {
+      boss.x = boss.leapTargetX;
+      boss.y = boss.leapStartY;
+      boss.vulnerable = false;
+      spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 20, 5);
+      audio.sfxStomp();
+      const pauseTime = boss.phase === 3 ? 15 : boss.phase === 2 ? 20 : 25;
+      boss.state = 'land';
+      boss.stateTimer = pauseTime;
+    }
+  } else if (boss.state === 'windup') {
+    boss.windupProgress = Math.min(1, boss.windupProgress + 1 / 40);
+    if (boss.stateTimer <= 0) {
+      const count = boss.phase === 3 ? 3 : 2;
+      for (let i = 0; i < count; i++) {
+        const spread = count === 2 ? (i - 0.5) * 200 : (i - 1) * 160;
+        const tx = Math.max(50, Math.min(BOSS_ARENA_W - 50, player.x + player.w / 2 + spread));
+        const ty = BOSS_GROUND_Y;
+        const sx = boss.x + boss.w / 2;
+        const sy = boss.y + boss.h * 0.3;
+        const dist = Math.hypot(tx - sx, ty - sy) || 1;
+        const spd  = 7 + boss.phase;
+        boss.boulders.push({ x: sx, y: sy, vx: (tx - sx) / dist * spd, vy: (ty - sy) / dist * spd - 6, r: 16 });
+      }
+      boss.windupProgress = 0;
+      const pauseTime = boss.phase === 3 ? 15 : boss.phase === 2 ? 20 : 30;
+      boss.state = 'land';
+      boss.stateTimer = pauseTime;
+    }
+  } else if (boss.state === 'groundpound') {
+    if (boss.stateTimer <= 0) {
+      const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
+      boss.shockwave = { x: boss.x + boss.w / 2, dir, speed: 7, alpha: 0.85, active: true };
+      spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
+      audio.sfxStun();
+      boss.vulnerable = true;
+      boss.state = 'stagger';
+      boss.stateTimer = 28;
+    }
+  } else if (boss.state === 'stagger') {
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      const pauseTime = boss.phase === 3 ? 15 : 30;
+      boss.state = 'land';
+      boss.stateTimer = pauseTime;
+    }
+  }
+}
+
+function drawBigfoot(boss) {
+  const t  = game.tick;
+  const bx = boss.x - cam.x + boss.w / 2;
+  const by = boss.y - cam.y + boss.h;  // translate to feet
+
+  boss.boulders.forEach(b => {
+    ctx.fillStyle = '#666';
+    ctx.beginPath();
+    ctx.arc(b.x - cam.x, b.y - cam.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#999';
+    ctx.beginPath();
+    ctx.arc(b.x - cam.x - b.r * 0.3, b.y - cam.y - b.r * 0.3, b.r * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  if (boss.shockwave && boss.shockwave.active) {
+    const sw  = boss.shockwave;
+    const swx = sw.x - cam.x;
+    const swy = BOSS_GROUND_Y - cam.y - 22;
+    ctx.fillStyle = `rgba(90,58,26,${sw.alpha})`;
+    if (sw.dir > 0) ctx.fillRect(swx, swy, BOSS_ARENA_W - sw.x, 22);
+    else            ctx.fillRect(0,   swy, swx, 22);
+  }
+
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.scale(0.75, 0.75);  // 25% smaller; arc height unchanged so jump clearance is preserved
+
+  // Arms raised during leap (flying pose) or windup (throw telegraph)
+  const arm = boss.state === 'leap' ? 0.8 : Math.min(1, boss.windupProgress);
+
+  ctx.fillStyle = '#2a1a0a';
+
+  ctx.beginPath(); ctx.ellipse(-22, 0, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 22, 0, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillRect(-32, -75, 26, 75);
+  ctx.fillRect(  6, -75, 26, 75);
+
+  ctx.beginPath();
+  ctx.ellipse(0, -120, 46, 62, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(-50, -150 - arm * 30);
+  ctx.rotate(-arm * 0.9 - 0.25);
+  ctx.fillRect(-10, 0, 20, 70);
+  ctx.beginPath(); ctx.ellipse(0, 76, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(50, -150 - arm * 30);
+  ctx.rotate(arm * 0.9 + 0.25);
+  ctx.fillRect(-10, 0, 20, 70);
+  ctx.beginPath(); ctx.ellipse(0, 76, 14, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.ellipse(0, -188, 28, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = boss.phase === 3 ? '#ff6600' : '#cc3300';
+  ctx.beginPath(); ctx.arc(-10, -193, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 10, -193, 4, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(80,50,20,0.5)';
+  ctx.lineWidth = 1.5;
+  for (let i = -36; i <= 36; i += 12) {
+    const yy = -90 + Math.sin(i * 0.45) * 14;
+    ctx.beginPath();
+    ctx.moveTo(i, yy);
+    ctx.lineTo(i + 4, yy - 14);
+    ctx.stroke();
+  }
+
+  if (boss.phase === 3) {
+    ctx.strokeStyle = `rgba(255,100,0,${0.4 + Math.sin(t * 0.2) * 0.4})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, -130, 60, 95, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (boss.rageTimer > 60) {
+    ctx.fillStyle = '#ff2200';
+    ctx.beginPath();
+    ctx.ellipse(0, -178, 10, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Hit flash
+  if (boss.hitTimer > 0 && Math.floor(boss.hitTimer / 6) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(boss.x - cam.x, boss.y - cam.y, boss.w, boss.h);
+  }
+}
+
+function updateBossArena() {
+  if (!bossArena) return;
+  game.levelTick++;
+
+  if (bossArena.phase === 'fighting') {
+    updateBossPlayer();
+    updateBossProjectile();
+    const type = bossArena.boss.type;
+    if (type === 'thunderbird') updateThunderbird(bossArena.boss);
+    else if (type === 'mothman') updateMothman(bossArena.boss);
+    else if (type === 'bigfoot') updateBigfoot(bossArena.boss);
+  } else if (bossArena.phase === 'defeated') {
+    bossArena.defeatTimer++;
+    if (bossArena.defeatTimer > 120) {
+      game.state = 'levelcomplete';
+    }
+  }
+
+  cam.x = Math.max(0, Math.min(BOSS_ARENA_W - W, player.x + player.w / 2 - W * 0.5));
+
+  // Dynamic vertical camera: pull up smoothly to keep Bigfoot visible during leap
+  let _targetCamY = player.y - H * 0.80;
+  const _bfBoss = bossArena.boss;
+  if (_bfBoss && _bfBoss.state === 'leap') {
+    const bossTop = _bfBoss.y - 30;
+    if (bossTop < _targetCamY) _targetCamY = bossTop;
+  }
+  cam.y += (Math.max(0, Math.min(BOSS_ARENA_H - H, _targetCamY)) - cam.y) * 0.1;
+
+  updateParticles();
+  updateFloatTexts();
+}
+
+function updateBossPlayer() {
+  if (player.dead) return;
+  if (player.hurtTimer > 0) player.hurtTimer--;
+  if (player.sprayCooldown > 0) player.sprayCooldown--;
+  if (player.sprayTimer > 0) player.sprayTimer--;
+
+  let dx = 0;
+  if (isLeft())  { dx = -MOVE_SPEED; player.facing = -1; }
+  if (isRight()) { dx =  MOVE_SPEED; player.facing =  1; }
+  player.vx = dx;
+
+  if (dx !== 0 && player.onGround) {
+    player.frameTimer++;
+    if (player.frameTimer > 8) { player.frameTimer = 0; player.frame ^= 1; }
+  } else if (player.onGround) {
+    player.frame = 0; player.frameTimer = 0;
+  }
+
+  if (isJump() && !wasJump()) player.jumpBuffer = 8;
+  if (player.jumpBuffer > 0) player.jumpBuffer--;
+  if (player.jumpBuffer > 0 && player.onGround) {
+    player.jumpBuffer = 0;
+    player.vy = JUMP_FORCE;
+    player.jumpHeld = true;
+    audio.sfxJump();
+  }
+  if (player.jumpHeld && !isJump()) {
+    player.jumpHeld = false;
+    if (player.vy < -5) player.vy = -5;
+  }
+
+  if (isSpray() && player.sprayCooldown === 0 && bossArena.boss) {
+    player.sprayCooldown = 30;
+    const px = player.x + player.w / 2;
+    const py = player.y + player.h / 2;
+    bossArena.spray = { x: px, y: py, vx: 0, vy: -14, active: true };
+    spawnParticles(px, player.y + 8, '#ff8800', 12, 4);
+  }
+
+  player.vy = Math.min(player.vy + GRAVITY_FORCE, MAX_FALL);
+  player.x += player.vx;
+  player.y += player.vy;
+
+  if (player.y + player.h >= BOSS_GROUND_Y) {
+    player.y = BOSS_GROUND_Y - player.h;
+    player.vy = 0;
+    player.onGround = true;
+  } else {
+    player.onGround = false;
+  }
+
+  player.x = Math.max(0, Math.min(BOSS_ARENA_W - player.w, player.x));
+}
+
+function updateBossProjectile() {
+  const spray = bossArena.spray;
+  if (!spray || !spray.active) return;
+
+  spray.x += spray.vx;
+  spray.y += spray.vy;
+
+  // Mist particles trailing behind the spray
+  if (game.tick % 2 === 0) spawnParticles(spray.x, spray.y, '#ff8800', 1, 2);
+
+  if (spray.x < 0 || spray.x > BOSS_ARENA_W ||
+      spray.y < 0 || spray.y > BOSS_ARENA_H) {
+    spray.active = false;
+    return;
+  }
+
+  const boss = bossArena.boss;
+  if (boss.vulnerable && boss.hitTimer === 0 &&
+      aabb({ x: spray.x - 6, y: spray.y - 6, w: 12, h: 12 }, boss)) {
+    spray.active = false;
+    boss.hp--;
+    boss.hitTimer = 60;
+    boss.vulnerable = false;
+    spawnParticles(boss.x + boss.w / 2, boss.y + boss.h / 2, '#ff8800', 20, 6);
+    audio.sfxStomp();
+    if (boss.hp <= 0) {
+      bossDefeated();
+    } else {
+      checkBossPhase(boss);
+    }
+  }
+}
+
+function checkBossPhase(boss) {
+  if (boss.type === 'mothman') {
+    if (boss.hp <= 2 && boss.phase === 1) boss.phase = 2;
+  }
+  if (boss.type === 'bigfoot') {
+    if (boss.hp <= 5 && boss.phase === 1) boss.phase = 2;
+    if (boss.hp <= 2 && boss.phase === 2) {
+      boss.phase = 3;
+      boss.rageTimer = 90;
+    }
+  }
+}
+
+function bossDefeated() {
+  bossArena.phase = 'defeated';
+  bossArena.defeatTimer = 0;
+
+  const timeSeconds = Math.floor(game.levelTick / 60);
+  const targets = { thunderbird: 30, mothman: 60, bigfoot: 90 };
+  const targetTime = targets[bossArena.boss.type] || 60;
+  const timeDiff = targetTime - timeSeconds;
+  game.levelCompletionTime = game.levelTick;
+  game.levelTimeBonus = timeDiff >= 0
+    ? Math.min(500, Math.floor(50 * Math.pow(1.04, timeDiff)))
+    : Math.floor(timeDiff * 2);
+  player.score += game.levelTimeBonus;
+
+  if (bossArena.noHit) {
+    player.score += 500;
+    game.leaveNoTrace[game.levelNum] = true;
+  }
+
+  audio.sfxCampFanfare();
+  spawnParticles(
+    bossArena.boss.x + bossArena.boss.w / 2,
+    bossArena.boss.y + bossArena.boss.h / 2,
+    '#FFD700', 40, 8
+  );
 }
 
 // ==================== FISH ====================
@@ -1467,7 +2312,7 @@ function updatePlayer() {
     const timeSeconds = Math.floor(game.levelTick / 60);
     // Target = 4× theoretical minimum sprint time (goalTile * 32px / 3.5px/tick / 60fps)
     // L1: ~71s, L2: ~90s, L3: ~108s
-    const levelDistances = [117*32, 132*32, 147*32, 162*32, 172*32, 182*32, 197*32, 207*32, 217*32];
+    const levelDistances = [117*32, 132*32, 147*32, 0, 162*32, 172*32, 182*32, 0, 197*32, 207*32, 217*32, 0];
     const targetTime = Math.ceil(levelDistances[game.levelNum] / 3.5 / 60 * 4);
     const timeDiff = targetTime - timeSeconds;
     game.levelTimeBonus = timeDiff >= 0
@@ -1480,13 +2325,14 @@ function updatePlayer() {
   }
 
   // Fallen off bottom
-  if (player.y > level.ROWS * TS + 64) {
+  if (level && player.y > level.ROWS * TS + 64) {
     hurtPlayer(true);
   }
 }
 
 function hurtPlayer(instant) {
   if (player.hurtTimer > 0 && !instant) return;
+  if (bossArena) bossArena.noHit = false;
   player.health--;
   audio.sfxHurt();
   spawnParticles(player.x + player.w / 2, player.y + player.h / 2, '#ff4444', 10, 4);
@@ -1496,15 +2342,20 @@ function hurtPlayer(instant) {
       game.state = 'gameover';
     } else {
       // Respawn
-      const sp = LEVELS[game.levelNum].spawnTile;
-      player.x = sp[0] * TS;
-      player.y = sp[1] * TS;
+      if (LEVELS[game.levelNum].isBoss) {
+        player.x = BOSS_SPAWN_X;
+        player.y = BOSS_SPAWN_Y;
+      } else {
+        const sp = LEVELS[game.levelNum].spawnTile;
+        player.x = sp[0] * TS;
+        player.y = sp[1] * TS;
+        cam.x = 0;
+      }
       player.vx = 0;
       player.vy = 0;
       player.health = 3;
       player.hurtTimer = 120;
       player.waterDmgTimer = 0;
-      cam.x = 0;
     }
   } else {
     player.hurtTimer = 90;
@@ -1602,6 +2453,27 @@ function qualifiesForLeaderboard(score) {
 function loadLevel(num) {
   game.levelNum = num;
   const def = LEVELS[num];
+  if (def.isBoss) {
+    level = null;
+    items = [];
+    enemies = [];
+    tpBlooms = [];
+    fish = [];
+    trailRunners = [];
+    beerCans = [];
+    trashPiles = [];
+    particles.length = 0;
+    floatTexts.length = 0;
+    cam.x = 0;
+    cam.y = 0;
+    game.levelTimeBonus = 0;
+    game.levelCompletionTime = 0;
+    game.winScrollY = 0;
+    game.levelTick = 0;
+    initBossArena(def);
+    game.state = 'boss';
+    return;
+  }
   level = def.build();
   spawnItems();
   spawnEnemies();
@@ -1644,13 +2516,19 @@ function advanceLevel() {
   const savedLives = player.lives;
   loadLevel(nextNum);
   player = makePlayer();
-  const spawn = LEVELS[nextNum].spawnTile;
-  player.x = spawn[0] * TS;
-  player.y = spawn[1] * TS;
+  const nextDef = LEVELS[nextNum];
+  if (nextDef.isBoss) {
+    player.x = BOSS_SPAWN_X;
+    player.y = BOSS_SPAWN_Y;
+  } else {
+    const spawn = nextDef.spawnTile;
+    player.x = spawn[0] * TS;
+    player.y = spawn[1] * TS;
+    game.state = 'playing';
+    audio.sfxStartJingle();
+  }
   player.score = savedScore;
   player.lives = savedLives;
-  game.state = 'playing';
-  audio.sfxStartJingle();
 }
 
 // ==================== DRAWING ====================
@@ -1979,6 +2857,7 @@ function drawTile(tx, ty) {
 }
 
 function drawLevel() {
+  if (!level) return;
   const startX = Math.max(0, Math.floor(cam.x / TS));
   const endX   = Math.min(level.COLS - 1, Math.ceil((cam.x + W) / TS));
   const startY = Math.max(0, Math.floor(cam.y / TS));
@@ -2854,6 +3733,7 @@ function drawItems() {
 
 function drawCampsite() {
   const def = LEVELS[game.levelNum];
+  if (!def.goalTile) return;
   const fx = def.goalTile[0] * TS - cam.x;
   const gy = def.goalFlagY * TS - cam.y;  // ground surface (top of end block)
   const t = game.tick;
@@ -2997,8 +3877,8 @@ function drawHUD() {
   ctx.fillText(`TIME: ${timeStr}`, 260, 22);
   ctx.textAlign = 'right';
 
-  // Trail progress bar
-  const progress = clamp(player.x / (level.COLS * TS), 0, 1);
+  // Trail progress bar (not applicable in boss arenas)
+  const progress = level ? clamp(player.x / (level.COLS * TS), 0, 1) : 0;
   ctx.fillStyle = '#333';
   ctx.fillRect(W - 180, 8, 170, 12);
   ctx.fillStyle = '#4E7D3A';
@@ -3043,6 +3923,246 @@ function drawFloatTexts() {
     ctx.fillText(f.str, f.x - cam.x, f.y - cam.y);
   });
   ctx.globalAlpha = 1;
+}
+
+function drawBossArena() {
+  if (!bossArena) return;
+  const boss = bossArena.boss;
+
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0d0d2a');
+  grad.addColorStop(1, '#1a0d00');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  const gsy = BOSS_GROUND_Y - cam.y;
+  ctx.fillStyle = '#2a1a0a';
+  ctx.fillRect(0, gsy, W, H - gsy);
+  ctx.fillStyle = '#4a2a10';
+  ctx.fillRect(0, gsy, W, 4);
+
+  // Mountain silhouettes — fixed screen positions (cam.x always 0 since arena width = viewport)
+  ctx.fillStyle = '#1a1a35';
+  const mts = [[0, 0.72, 0.14], [0.18, 0.68, 0.16], [0.42, 0.75, 0.13], [0.65, 0.70, 0.17], [0.82, 0.74, 0.12]];
+  for (const [mx, my, mw] of mts) {
+    ctx.beginPath();
+    ctx.moveTo(mx * W - mw * W, gsy);
+    ctx.lineTo(mx * W, my * H);
+    ctx.lineTo(mx * W + mw * W, gsy);
+    ctx.fill();
+  }
+
+  // Mothman: eerie red atmosphere, Mount Shasta silhouette, ground mist
+  if (boss && boss.type === 'mothman') {
+    // Red atmospheric wash
+    ctx.fillStyle = 'rgba(70,8,8,0.30)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Blood moon
+    ctx.fillStyle = 'rgba(180,30,30,0.90)';
+    ctx.shadowColor = '#cc0000';
+    ctx.shadowBlur = 28;
+    ctx.beginPath();
+    ctx.arc(W * 0.82, H * 0.16, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Mount Shasta — dominant symmetric stratovolcano
+    ctx.fillStyle = '#160808';
+    ctx.beginPath();
+    ctx.moveTo(W * 0.10, gsy);
+    ctx.lineTo(W * 0.50, H * 0.28);
+    ctx.lineTo(W * 0.90, gsy);
+    ctx.fill();
+    // Snow cap
+    ctx.fillStyle = '#221010';
+    ctx.beginPath();
+    ctx.moveTo(W * 0.44, H * 0.36);
+    ctx.lineTo(W * 0.50, H * 0.28);
+    ctx.lineTo(W * 0.56, H * 0.36);
+    ctx.fill();
+
+    // Ground mist
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(100,20,20,${0.14 - i * 0.025})`;
+      ctx.fillRect(0, gsy - 8 + i * 6, W, 18);
+    }
+  }
+
+  // Bigfoot: deep forest, pine silhouettes, ground mist
+  if (boss && boss.type === 'bigfoot') {
+    // Forest atmosphere
+    ctx.fillStyle = 'rgba(0,18,4,0.30)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Pine trees — back layer (shorter, slightly transparent)
+    ctx.fillStyle = 'rgba(8,20,8,0.75)';
+    for (const px of [0.04, 0.17, 0.29, 0.44, 0.57, 0.70, 0.83, 0.95]) {
+      const ph = H * 0.20, pw = W * 0.055;
+      ctx.beginPath();
+      ctx.moveTo(px * W, gsy - ph);
+      ctx.lineTo(px * W - pw / 2, gsy);
+      ctx.lineTo(px * W + pw / 2, gsy);
+      ctx.fill();
+    }
+    // Pine trees — front layer (taller, darker)
+    ctx.fillStyle = '#070e07';
+    for (const px of [0.0, 0.11, 0.23, 0.35, 0.50, 0.63, 0.76, 0.88, 1.0]) {
+      const ph = H * 0.29, pw = W * 0.068;
+      ctx.beginPath();
+      ctx.moveTo(px * W, gsy - ph);
+      ctx.lineTo(px * W - pw / 2, gsy);
+      ctx.lineTo(px * W + pw / 2, gsy);
+      ctx.fill();
+    }
+
+    // Ground mist
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(15,40,15,${0.16 - i * 0.035})`;
+      ctx.fillRect(0, gsy - 8 + i * 7, W, 20);
+    }
+  }
+
+  // Storm clouds (Thunderbird only)
+  if (boss && boss.type === 'thunderbird') {
+    const t = game.tick;
+    const clouds = [[0.15, 0.12], [0.45, 0.08], [0.75, 0.14], [0.30, 0.20], [0.62, 0.18]];
+    for (const [cx, cy] of clouds) {
+      const drift = Math.sin(t * 0.008 + cx * 10) * 6;
+      const sx = cx * W + drift;
+      const sy = cy * H;
+      ctx.fillStyle = 'rgba(30,30,60,0.7)';
+      ctx.beginPath(); ctx.ellipse(sx,      sy,      38, 18, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(sx - 28, sy + 6,  26, 14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(sx + 28, sy + 6,  26, 14, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Vulnerability glow — pulsing green ring when boss is hittable
+  if (boss && boss.vulnerable) {
+    const bsx = boss.x - cam.x + boss.w / 2;
+    const bsy = boss.y - cam.y + boss.h / 2;
+    const pulse = 0.55 + 0.45 * Math.sin(game.tick * 0.25);
+    ctx.strokeStyle = `rgba(255,140,0,${pulse})`;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#ff8800';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.ellipse(bsx, bsy, boss.w * 0.7, boss.h * 0.7, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 1;
+  }
+
+  const spray = bossArena.spray;
+  if (spray && spray.active) {
+    // Expanding spray plume: narrow tail (near player) widens to head (leading edge)
+    ctx.save();
+    for (let i = 8; i >= 0; i--) {
+      const frac = (8 - i) / 8;  // 0 = tail, 1 = head
+      const r  = 2.5 + frac * 11;
+      const tx = spray.x - cam.x - spray.vx * i * 0.5;
+      const ty = spray.y - cam.y - spray.vy * i * 0.5;
+      ctx.globalAlpha  = 0.30 + frac * 0.65;
+      ctx.fillStyle    = frac > 0.6 ? '#ff4400' : '#ff8800';
+      ctx.shadowColor  = '#ff6600';
+      ctx.shadowBlur   = frac > 0.7 ? 12 : 3;
+      ctx.beginPath();
+      ctx.arc(tx, ty, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur  = 0;
+    ctx.restore();
+  }
+
+  if (boss.type === 'thunderbird') drawThunderbird(boss);
+  else if (boss.type === 'mothman') drawMothman(boss);
+  else if (boss.type === 'bigfoot') drawBigfoot(boss);
+
+  drawPlayer();
+  drawParticles();
+  drawFloatTexts();
+  drawBossHUD();
+
+  if (bossArena.phase === 'defeated') {
+    const alpha = Math.min(0.7, bossArena.defeatTimer / 40);
+    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+    ctx.fillRect(0, 0, W, H);
+    if (bossArena.defeatTimer > 20) {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowColor = '#aa6600';
+      ctx.shadowBlur = 12;
+      ctx.font = 'bold 48px Courier New';
+      ctx.fillText('BOSS DEFEATED!', W / 2, H / 2 - 20);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 22px Courier New';
+      ctx.fillText(`Score: ${player.score}`, W / 2, H / 2 + 30);
+    }
+  }
+}
+
+function drawBossHUD() {
+  const boss = bossArena.boss;
+  const bossNames  = { thunderbird: 'THUNDERBIRD', mothman: 'MOTHMAN OF SHASTA', bigfoot: 'BIGFOOT' };
+  const bossColors = { thunderbird: '#4488ff',     mothman: '#ff4444',           bigfoot: '#885533' };
+  const maxHps     = { thunderbird: 3,             mothman: 5,                   bigfoot: 8 };
+
+  const color  = bossColors[boss.type];
+  const maxHp  = maxHps[boss.type];
+  const barW   = W * 0.5;
+  const barX   = (W - barW) / 2;
+  const barY   = 26;
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = color;
+  ctx.font = 'bold 13px Courier New';
+  ctx.fillText(bossNames[boss.type], W / 2, 18);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(barX - 2, barY - 2, barW + 4, 16);
+
+  const hpFrac = Math.max(0, boss.hp / maxHp);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(barX, barY, barW, 12);
+  ctx.fillStyle = hpFrac > 0.5 ? color : hpFrac > 0.25 ? '#ffaa00' : '#ff4444';
+  ctx.fillRect(barX, barY, barW * hpFrac, 12);
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < maxHp; i++) {
+    const segX = barX + (barW / maxHp) * i;
+    ctx.beginPath();
+    ctx.moveTo(segX, barY);
+    ctx.lineTo(segX, barY + 12);
+    ctx.stroke();
+  }
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ff4444';
+  ctx.font = '16px Courier New';
+  ctx.fillText('\u2665'.repeat(Math.max(0, player.lives)), 8, 18);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#FFD700';
+  ctx.font = '13px Courier New';
+  ctx.fillText(player.score.toString(), W - 8, 18);
+
+  if (boss.phase && boss.phase > 1) {
+    ctx.fillStyle = '#ff8800';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('PHASE ' + boss.phase, W / 2, 50);
+  }
+
+  if (bossArena.noHit) {
+    ctx.fillStyle = 'rgba(255,215,0,0.65)';
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'right';
+    ctx.fillText('NO HIT +500', W - 8, 32);
+  }
 }
 
 // ==================== SCREENS ====================
@@ -3266,12 +4386,12 @@ function drawLevelComplete() {
   const def = LEVELS[game.levelNum];
   const nextDef = LEVELS[game.levelNum + 1];
 
-  ctx.fillStyle = '#88FF88';
+  ctx.fillStyle = def.isBoss ? '#FFD700' : '#88FF88';
   ctx.font = 'bold 48px Courier New';
   ctx.textAlign = 'center';
-  ctx.shadowColor = '#44AA44';
+  ctx.shadowColor = def.isBoss ? '#aa6600' : '#44AA44';
   ctx.shadowBlur = 12;
-  ctx.fillText('CAMP REACHED!', W / 2, H / 2 - 120);
+  ctx.fillText(def.isBoss ? 'BOSS DEFEATED!' : 'CAMP REACHED!', W / 2, H / 2 - 120);
   ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#FFD700';
@@ -3293,7 +4413,11 @@ function drawLevelComplete() {
   infoY += lineHeight + 4;
   ctx.fillStyle = '#AADDFF';
   ctx.font = '14px Courier New';
-  ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, infoY);
+  if (!def.isBoss) {
+    ctx.fillText('Gear: ' + items.filter(i => i.collected).length + ' / ' + items.length, W / 2, infoY);
+  } else {
+    ctx.fillText('Bear spray hits landed!', W / 2, infoY);
+  }
   infoY += lineHeight;
   ctx.fillText(`Time: ${timeStr}`, W / 2, infoY);
   infoY += lineHeight;
@@ -3301,9 +4425,9 @@ function drawLevelComplete() {
   ctx.fillText(`${timeBonus >= 0 ? 'SPEED BONUS' : 'TIME PENALTY'} ${timeBonus >= 0 ? '+' : ''}${timeBonus}`, W / 2, infoY);
   infoY += lineHeight + 8; // extra gap before awards
   if (game.leaveNoTrace[game.levelNum]) {
-    ctx.fillStyle = '#44ffaa';
+    ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 16px Courier New';
-    ctx.fillText('LEAVE NO TRACE +1000', W / 2, infoY);
+    ctx.fillText(def.isBoss ? 'NO HIT BONUS +500' : 'LEAVE NO TRACE +1000', W / 2, infoY);
     infoY += lineHeight;
   }
   if (game.trailAngel[game.levelNum]) {
@@ -3377,8 +4501,15 @@ function drawWin() {
     if (itemY < scrollTop - itemH || itemY > scrollBot + itemH) return;
     const lnt = game.leaveNoTrace[i];
     const ta = game.trailAngel[i];
-    const awards = (lnt && ta) ? ' \u2605 LNT+Angel!' : lnt ? ' \u2605 LNT' : ta ? ' \u2605 Angel' : '';
-    ctx.fillStyle = (lnt && ta) ? '#FFD700' : (lnt || ta) ? '#44ffaa' : '#AAAAFF';
+    let awards, fillColor;
+    if (l.isBoss) {
+      awards    = lnt ? ' \u2605 NO HIT' : '';
+      fillColor = lnt ? '#FFD700' : '#cc8833';
+    } else {
+      awards    = (lnt && ta) ? ' \u2605 LNT+Angel!' : lnt ? ' \u2605 LNT' : ta ? ' \u2605 Angel' : '';
+      fillColor = (lnt && ta) ? '#FFD700' : (lnt || ta) ? '#44ffaa' : '#AAAAFF';
+    }
+    ctx.fillStyle = fillColor;
     ctx.fillText((i + 1) + '. ' + l.campName + awards, W / 2, itemY);
     ctx.fillStyle = 'rgba(170,170,255,0.5)';
     ctx.font = '10px Courier New';
@@ -3404,20 +4535,26 @@ const isDebug = () => dbg.url || dbg.human;
 
 function warpToLevel(n) {
   if (n < 0 || n >= LEVELS.length) {
-    console.warn(`warpToLevel: invalid level index ${n} (valid: 0–${LEVELS.length - 1})`);
+    console.warn(`warpToLevel: invalid level index ${n} (valid: 0\u2013${LEVELS.length - 1})`);
     return;
   }
   const savedScore = player ? player.score : 0;
   const savedLives = player ? player.lives : 3;
   loadLevel(n);
   player = makePlayer();
-  const spawn = LEVELS[n].spawnTile;
-  player.x = spawn[0] * TS;
-  player.y = spawn[1] * TS;
+  const def = LEVELS[n];
+  if (def.isBoss) {
+    player.x = BOSS_SPAWN_X;
+    player.y = BOSS_SPAWN_Y;
+  } else {
+    const spawn = def.spawnTile;
+    player.x = spawn[0] * TS;
+    player.y = spawn[1] * TS;
+    game.state = 'playing';
+  }
   player.score = savedScore;
   player.lives = savedLives;
   game.levelTick = 0;
-  game.state = 'playing';
 }
 
 addEventListener('keydown', e => {
@@ -3430,16 +4567,25 @@ addEventListener('keydown', e => {
   // preventDefault only suppresses the page event; the browser may
   // still switch tabs. Use the window.trailBlazerDebug.warpToLevel()
   // API (e.g. from DevTools console) as a reliable alternative.
-  if (isDebug() && e.ctrlKey && !e.shiftKey && !e.altKey) {
-    // Use e.code (layout-independent) to detect digit keys — e.key varies by keyboard layout
-    const m = e.code.match(/^Digit([1-9])$/);
-    if (m) {
-      const n = parseInt(m[1]) - 1; // Ctrl+1 → level index 0, Ctrl+9 → level index 8
-      if (n < LEVELS.length) {
-        audio.init();
-        warpToLevel(n);
-        e.preventDefault();
+  // Levels 1–9  (indices 0–8):  Ctrl+1 through Ctrl+9
+  // Level  10   (index  9):     Ctrl+0
+  // Levels 11–12 (indices 10–11): Ctrl+Shift+1 through Ctrl+Shift+2
+  if (isDebug() && e.ctrlKey && !e.altKey) {
+    let n = -1;
+    if (!e.shiftKey) {
+      const m = e.code.match(/^Digit([0-9])$/);
+      if (m) {
+        const d = parseInt(m[1]);
+        n = d === 0 ? 9 : d - 1; // Ctrl+1→0 … Ctrl+9→8, Ctrl+0→9
       }
+    } else {
+      const m = e.code.match(/^Digit([1-2])$/);
+      if (m) n = 9 + parseInt(m[1]); // Ctrl+Shift+1→10, Ctrl+Shift+2→11
+    }
+    if (n >= 0 && n < LEVELS.length) {
+      audio.init();
+      warpToLevel(n);
+      e.preventDefault();
     }
   }
 });
@@ -3510,6 +4656,9 @@ function update() {
       }
     }
 
+  } else if (game.state === 'boss') {
+    updateBossArena();
+
   } else if (game.state === 'levelcomplete') {
     game.levelTick++;
     if (game.hiScore < player.score) { game.hiScore = player.score; saveHiScore(); }
@@ -3544,7 +4693,7 @@ function setTouchControlsVisible(visible) {
 
 function draw() {
   // Hide touch controls on non-gameplay screens so they don't cover title/UI content
-  setTouchControlsVisible(game.state === 'playing');
+  setTouchControlsVisible(game.state === 'playing' || game.state === 'boss');
   ctx.clearRect(0, 0, W, H);
 
   if (game.state === 'menu') {
@@ -3575,6 +4724,10 @@ function draw() {
     drawFloatTexts();
     drawHUD();
     drawGameOver();
+    return;
+  }
+  if (game.state === 'boss') {
+    drawBossArena();
     return;
   }
   if (game.state === 'levelcomplete') {
