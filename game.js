@@ -1461,7 +1461,7 @@ function makeBigfoot() {
     state: 'land',  // land | leap | windup | groundpound | stagger
     stateTimer: 40,
     boulders: [],
-    shockwave: null,
+    shockwaves: [],
     leapStartX: 0, leapStartY: 0,
     leapTargetX: 0,
     leapProgress: 0,
@@ -1488,16 +1488,17 @@ function updateBigfoot(boss) {
     return b.y < BOSS_GROUND_Y + 60;
   });
 
-  if (boss.shockwave && boss.shockwave.active) {
-    const sw = boss.shockwave;
-    sw.x    += sw.dir * sw.speed;
+  boss.shockwaves = boss.shockwaves.filter(sw => {
+    if (!sw.active) return false;
+    sw.x += sw.dir * sw.speed;
     sw.alpha -= 0.012;
     if (sw.alpha <= 0 || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
     if (player.hurtTimer === 0 && player.onGround) {
       const swHit = { x: sw.dir > 0 ? sw.x - 30 : 0, y: BOSS_GROUND_Y - 30, w: 60, h: 30 };
       if (aabb(player, swHit)) hurtPlayer();
     }
-  }
+    return sw.active;
+  });
 
   // Contact damage when Bigfoot is on the ground
   if (boss.state !== 'leap' && player.hurtTimer === 0 && aabb(player, boss)) {
@@ -1584,7 +1585,7 @@ function updateBigfoot(boss) {
   } else if (boss.state === 'groundpound') {
     if (boss.stateTimer <= 0) {
       const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
-      boss.shockwave = { x: boss.x + boss.w / 2, dir, speed: 7, alpha: 0.85, active: true };
+      boss.shockwaves.push({ x: boss.x + boss.w / 2, dir, speed: 7, alpha: 0.85, active: true });
       spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
       audio.sfxStun();
       boss.vulnerable = true;
@@ -1617,14 +1618,14 @@ function drawBigfoot(boss) {
     ctx.fill();
   });
 
-  if (boss.shockwave && boss.shockwave.active) {
-    const sw  = boss.shockwave;
+  boss.shockwaves.forEach(sw => {
+    if (!sw.active) return;
     const swx = sw.x - cam.x;
     const swy = BOSS_GROUND_Y - cam.y - 22;
     ctx.fillStyle = `rgba(90,58,26,${sw.alpha})`;
     if (sw.dir > 0) ctx.fillRect(swx, swy, BOSS_ARENA_W - sw.x, 22);
     else            ctx.fillRect(0,   swy, swx, 22);
-  }
+  });
 
   ctx.save();
   ctx.translate(bx, by);
@@ -5227,7 +5228,7 @@ window.trailBlazerDebug = {
       poundSubPhase: b.poundSubPhase ?? null,
       poundProgress: b.poundProgress ?? null,
       poundIsDual: b.poundIsDual ?? false,
-      shockwaves: (b.shockwaves || (b.shockwave ? [b.shockwave] : [])).map(sw => ({
+      shockwaves: (b.shockwaves || []).map(sw => ({
         x: sw.x, dir: sw.dir, speed: sw.speed, active: sw.active,
       })),
     };
