@@ -1521,7 +1521,9 @@ function updateBigfoot(boss) {
   });
 
   // Contact damage when Bigfoot is on the ground
-  if (boss.state !== 'leap' && player.hurtTimer === 0 && aabb(player, boss)) {
+  const airbornePound = boss.state === 'groundpound' &&
+    (boss.poundSubPhase === 'rise' || boss.poundSubPhase === 'hold' || boss.poundSubPhase === 'slam');
+  if (boss.state !== 'leap' && !airbornePound && player.hurtTimer === 0 && aabb(player, boss)) {
     hurtPlayer();
   }
 
@@ -2598,6 +2600,8 @@ function loadLevel(num) {
     floatTexts.length = 0;
     cam.x = 0;
     cam.y = 0;
+    cam.shakeTimer = 0;
+    cam.shakeMag = 0;
     game.levelTimeBonus = 0;
     game.levelCompletionTime = 0;
     game.winScrollY = 0;
@@ -2618,6 +2622,8 @@ function loadLevel(num) {
   floatTexts.length = 0;
   cam.x = 0;
   cam.y = 0;
+  cam.shakeTimer = 0;
+  cam.shakeMag = 0;
   game.levelTimeBonus = 0;
   game.levelCompletionTime = 0;
   game.winScrollY = 0;
