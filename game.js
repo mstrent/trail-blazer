@@ -1660,6 +1660,27 @@ function drawBigfoot(boss) {
   const bx = boss.x - cam.x + boss.w / 2;
   const by = boss.y - cam.y + boss.h;  // translate to feet
 
+  // Hop-and-slam pose offsets (zero outside groundpound)
+  let hopY = 0;           // positive = lifted off ground
+  let squashY = 1.0;      // y scale
+  let squashX = 1.0;      // x scale
+  if (boss.state === 'groundpound') {
+    const sub = boss.poundSubPhase;
+    const durs = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+    const subIdx = ['squat','rise','hold','slam'].indexOf(sub);
+    const subLen = durs[subIdx] || 1;
+    const t01    = 1 - (boss.poundSubTimer / subLen);  // 0..1 through current sub-phase
+    if (sub === 'squat')      { squashY = 1 - 0.08 * t01; squashX = 1 + 0.04 * t01; }
+    else if (sub === 'rise')  { hopY = 40 * t01 * (2 - t01); squashY = 0.92 + 0.08 * t01; squashX = 1.04 - 0.04 * t01; }
+    else if (sub === 'hold')  { hopY = 40; }
+    else if (sub === 'slam')  {
+      // Ease-in descent from 40 -> 0
+      hopY = 40 * (1 - t01 * t01);
+      // Final impact frame squash
+      if (t01 > 0.85) { squashY = 0.85; squashX = 1.10; }
+    }
+  }
+
   boss.boulders.forEach(b => {
     ctx.fillStyle = '#666';
     ctx.beginPath();
@@ -1693,11 +1714,22 @@ function drawBigfoot(boss) {
   });
 
   ctx.save();
-  ctx.translate(bx, by);
-  ctx.scale(0.75, 0.75);  // 25% smaller; arc height unchanged so jump clearance is preserved
+  ctx.translate(bx, by - hopY);
+  ctx.scale(0.75 * squashX, 0.75 * squashY);
 
-  // Arms raised during leap (flying pose) or windup (throw telegraph)
-  const arm = boss.state === 'leap' ? 0.8 : Math.min(1, boss.windupProgress);
+  // Arm raise amount: leap, boulder windup, or ground-pound sub-phase
+  let poundArm = 0;
+  if (boss.state === 'groundpound') {
+    const sub = boss.poundSubPhase;
+    if (sub === 'rise' || sub === 'hold') poundArm = 1;
+    else if (sub === 'slam') {
+      const durs = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+      const subLen = durs[3] || 1;
+      const t01 = 1 - (boss.poundSubTimer / subLen);
+      poundArm = 1 - t01;  // snap from 1 -> 0 during slam
+    }
+  }
+  const arm = boss.state === 'leap' ? 0.8 : Math.max(Math.min(1, boss.windupProgress), poundArm);
 
   ctx.fillStyle = '#2a1a0a';
 
@@ -1729,9 +1761,10 @@ function drawBigfoot(boss) {
   ctx.ellipse(0, -188, 28, 28, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = boss.phase === 3 ? '#ff6600' : '#cc3300';
-  ctx.beginPath(); ctx.arc(-10, -193, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc( 10, -193, 4, 0, Math.PI * 2); ctx.fill();
+  const eyeGlow = (boss.state === 'groundpound' && boss.poundSubPhase === 'hold');
+  ctx.fillStyle = eyeGlow ? '#ffaa00' : (boss.phase === 3 ? '#ff6600' : '#cc3300');
+  ctx.beginPath(); ctx.arc(-10, -193, eyeGlow ? 5 : 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 10, -193, eyeGlow ? 5 : 4, 0, Math.PI * 2); ctx.fill();
 
   ctx.strokeStyle = 'rgba(80,50,20,0.5)';
   ctx.lineWidth = 1.5;
