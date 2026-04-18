@@ -1470,6 +1470,7 @@ function makeBigfoot() {
     rageTimer: 0,
     vulnerable: false,
     hitTimer: 0,
+    forcedNextAttack: null,  // 'leap' | 'groundpound' | 'boulders' | null (test hook)
   };
 }
 
@@ -1512,11 +1513,15 @@ function updateBigfoot(boss) {
 
   if (boss.state === 'land') {
     if (boss.stateTimer <= 0) {
+      const forced = boss.forcedNextAttack;
+      boss.forcedNextAttack = null;
       const roll = Math.random();
       const leapChance      = boss.phase === 3 ? 0.55 : boss.phase === 2 ? 0.62 : 0.70;
       const groundPoundChance = boss.phase >= 2 ? 0.22 : 0;
+      const pickLeap      = forced === 'leap'       || (!forced && roll < leapChance);
+      const pickGroundPound = forced === 'groundpound' || (!forced && !pickLeap && roll < leapChance + groundPoundChance);
 
-      if (roll < leapChance) {
+      if (pickLeap) {
         boss.leapStartX = boss.x;
         boss.leapStartY = boss.y;
         const spread = (Math.random() - 0.5) * 160;
@@ -1526,7 +1531,7 @@ function updateBigfoot(boss) {
         boss.leapDuration  = boss.phase === 3 ? 55 : boss.phase === 2 ? 65 : 75;
         boss.vulnerable    = true;
         boss.state = 'leap';
-      } else if (roll < leapChance + groundPoundChance) {
+      } else if (pickGroundPound) {
         boss.state = 'groundpound';
         boss.stateTimer = 45;
       } else {
@@ -5202,6 +5207,29 @@ window.trailBlazerDebug = {
       playerScore: player ? player.score : null,
       enemyCount: enemies.filter(e => e.alive).length,
       itemCount: items.filter(i => !i.collected).length,
+    };
+  },
+  forceBossAttack(attackName) {
+    if (!bossArena || !bossArena.boss) return false;
+    if (!['leap', 'groundpound', 'boulders'].includes(attackName)) return false;
+    bossArena.boss.forcedNextAttack = attackName;
+    return true;
+  },
+  getBossState() {
+    if (!bossArena || !bossArena.boss) return null;
+    const b = bossArena.boss;
+    return {
+      type: b.type,
+      state: b.state,
+      phase: b.phase,
+      hp: b.hp,
+      x: b.x, y: b.y,
+      poundSubPhase: b.poundSubPhase ?? null,
+      poundProgress: b.poundProgress ?? null,
+      poundIsDual: b.poundIsDual ?? false,
+      shockwaves: (b.shockwaves || (b.shockwave ? [b.shockwave] : [])).map(sw => ({
+        x: sw.x, dir: sw.dir, speed: sw.speed, active: sw.active,
+      })),
     };
   },
 };
