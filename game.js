@@ -1490,11 +1490,15 @@ function updateBigfoot(boss) {
 
   boss.shockwaves = boss.shockwaves.filter(sw => {
     if (!sw.active) return false;
-    sw.x += sw.dir * sw.speed;
-    sw.alpha -= 0.012;
-    if (sw.alpha <= 0 || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
+    sw.x        += sw.dir * sw.speed;
+    sw.travelled = (sw.travelled || 0) + sw.speed;
+    if (sw.travelled >= sw.maxTravel || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
+
+    // Dust-puff trail: 2 particles per tick behind the wave
+    spawnParticles(sw.x - sw.dir * 15, BOSS_GROUND_Y - 6, '#a88655', 2, 2);
+
     if (player.hurtTimer === 0 && player.onGround) {
-      const swHit = { x: sw.x - 30, y: BOSS_GROUND_Y - 30, w: 60, h: 30 };
+      const swHit = { x: sw.x - 30, y: BOSS_GROUND_Y - 40, w: 60, h: 40 };
       if (aabb(player, swHit)) hurtPlayer();
     }
     return sw.active;
@@ -1585,7 +1589,14 @@ function updateBigfoot(boss) {
   } else if (boss.state === 'groundpound') {
     if (boss.stateTimer <= 0) {
       const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
-      boss.shockwaves.push({ x: boss.x + boss.w / 2, dir, speed: 7, alpha: 0.85, active: true });
+      boss.shockwaves.push({
+        x: boss.x + boss.w / 2,
+        dir,
+        speed: 7,
+        travelled: 0,
+        maxTravel: 500,
+        active: true,
+      });
       spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
       audio.sfxStun();
       boss.vulnerable = true;
@@ -1621,10 +1632,22 @@ function drawBigfoot(boss) {
   boss.shockwaves.forEach(sw => {
     if (!sw.active) return;
     const swx = sw.x - cam.x;
-    const swy = BOSS_GROUND_Y - cam.y - 22;
-    ctx.fillStyle = `rgba(90,58,26,${sw.alpha})`;
-    if (sw.dir > 0) ctx.fillRect(swx, swy, BOSS_ARENA_W - sw.x, 22);
-    else            ctx.fillRect(0,   swy, swx, 22);
+    const swy = BOSS_GROUND_Y - cam.y;
+    // Base fill — brown crescent
+    ctx.fillStyle = '#5a3a1a';
+    ctx.beginPath();
+    ctx.moveTo(swx - 30, swy);
+    ctx.quadraticCurveTo(swx, swy - 40, swx + 30, swy);
+    ctx.quadraticCurveTo(swx, swy - 28, swx - 30, swy);
+    ctx.closePath();
+    ctx.fill();
+    // Highlight edge — light brown
+    ctx.strokeStyle = '#8a5a2a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(swx - 30, swy);
+    ctx.quadraticCurveTo(swx, swy - 40, swx + 30, swy);
+    ctx.stroke();
   });
 
   ctx.save();

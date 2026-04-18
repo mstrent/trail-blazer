@@ -44,7 +44,7 @@ export default async function scenario(game) {
   // at x=400..420. With the fix, the hitbox tracks sw.x and damages the player
   // as the wave passes.
   assert(await game.page.evaluate(() => window.trailBlazerDebug.pokeBoss({
-    shockwaves: [{ x: 600, dir: -1, speed: 7, alpha: 0.85, active: true }],
+    shockwaves: [{ x: 600, dir: -1, speed: 7, travelled: 0, maxTravel: 500, active: true }],
   })), 'pokeBoss(inject wave) failed');
 
   const livesBefore = (await game.getState()).playerLives;
