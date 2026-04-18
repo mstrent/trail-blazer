@@ -1467,12 +1467,23 @@ function makeBigfoot() {
     leapProgress: 0,
     leapDuration: 75,
     windupProgress: 0,
+    poundProgress: 0,
+    poundSubPhase: 'squat',   // 'squat' | 'rise' | 'hold' | 'slam'
+    poundSubTimer: 0,
+    poundIsDual: false,
     rageTimer: 0,
     vulnerable: false,
     hitTimer: 0,
     forcedNextAttack: null,  // 'leap' | 'groundpound' | 'boulders' | null (test hook)
   };
 }
+
+const BIGFOOT_POUND_TICKS = {
+  // [squat, rise, hold, slam] per phase
+  1: [8, 10, 10, 12],
+  2: [7,  8,  9, 10],
+  3: [6,  7,  7,  8],
+};
 
 function updateBigfoot(boss) {
   if (boss.hitTimer > 0) boss.hitTimer--;
@@ -1538,7 +1549,11 @@ function updateBigfoot(boss) {
         boss.state = 'leap';
       } else if (pickGroundPound) {
         boss.state = 'groundpound';
-        boss.stateTimer = 45;
+        const [squat] = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+        boss.poundSubPhase = 'squat';
+        boss.poundSubTimer = squat;
+        boss.poundProgress = 0;
+        boss.poundIsDual = false;  // Task 7 may set true for phase 3
       } else {
         boss.windupProgress = 0;
         boss.state = 'windup';
@@ -1587,22 +1602,49 @@ function updateBigfoot(boss) {
       boss.stateTimer = pauseTime;
     }
   } else if (boss.state === 'groundpound') {
-    if (boss.stateTimer <= 0) {
-      const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
-      boss.shockwaves.push({
-        x: boss.x + boss.w / 2,
-        dir,
-        speed: 7,
-        travelled: 0,
-        maxTravel: 500,
-        active: true,
-      });
-      spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
-      audio.sfxStun();
-      boss.vulnerable = true;
-      boss.state = 'stagger';
-      boss.stateTimer = 28;
+    const durs = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+    const total = durs[0] + durs[1] + durs[2] + durs[3];
+    const elapsedInPhase = {
+      squat: 0,
+      rise:  durs[0],
+      hold:  durs[0] + durs[1],
+      slam:  durs[0] + durs[1] + durs[2],
+    };
+    boss.poundSubTimer--;
+    if (boss.poundSubTimer <= 0) {
+      if (boss.poundSubPhase === 'squat') {
+        boss.poundSubPhase = 'rise';
+        boss.poundSubTimer = durs[1];
+      } else if (boss.poundSubPhase === 'rise') {
+        boss.poundSubPhase = 'hold';
+        boss.poundSubTimer = durs[2];
+      } else if (boss.poundSubPhase === 'hold') {
+        boss.poundSubPhase = 'slam';
+        boss.poundSubTimer = durs[3];
+      } else if (boss.poundSubPhase === 'slam') {
+        // Impact frame — spawn shockwave(s), particles, sfx, enter stagger
+        const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
+        boss.shockwaves.push({
+          x: boss.x + boss.w / 2,
+          dir,
+          speed: boss.phase === 3 ? 8 : 7,
+          travelled: 0,
+          maxTravel: 500,
+          active: true,
+        });
+        spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
+        audio.sfxStun();  // Task 8 will switch this to sfxSlam
+
+        boss.vulnerable = true;
+        boss.state = 'stagger';
+        boss.stateTimer = boss.phase === 3 ? 18 : boss.phase === 2 ? 22 : 28;
+      }
     }
+    // Update progress 0..1 for the draw function to read.
+    const startFor = elapsedInPhase[boss.poundSubPhase];
+    const subLen   = durs[['squat','rise','hold','slam'].indexOf(boss.poundSubPhase)];
+    const ticksIntoPhase = subLen - boss.poundSubTimer;
+    boss.poundProgress = Math.min(1, (startFor + ticksIntoPhase) / total);
   } else if (boss.state === 'stagger') {
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
