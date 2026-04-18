@@ -845,7 +845,12 @@ function isPlatform(tx, ty) { return getTile(tx, ty) === T_PLATFORM; }
 function isWater(tx, ty) { return getTile(tx, ty) === T_WATER; }
 
 // ==================== CAMERA ====================
-const cam = { x: 0, y: 0 };
+const cam = { x: 0, y: 0, shakeTimer: 0, shakeMag: 0 };
+
+function triggerCamShake(magnitude, ticks) {
+  cam.shakeTimer = ticks;
+  cam.shakeMag = magnitude;
+}
 function updateCamera(px, py) {
   const targetX = px - W / 2 + 16;
   const targetY = py - H / 2 + 16;
@@ -1643,7 +1648,8 @@ function updateBigfoot(boss) {
           pushWave(dir);
         }
         spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
-        audio.sfxStun();  // Task 8 will switch this to sfxSlam
+        audio.sfxSlam();
+        triggerCamShake(3, 6);
 
         boss.vulnerable = true;
         boss.state = 'stagger';
@@ -4055,6 +4061,15 @@ function drawBossArena() {
   if (!bossArena) return;
   const boss = bossArena.boss;
 
+  // Camera shake: decay + alternating ±offset applied for this frame only.
+  let shakeOffset = 0;
+  if (cam.shakeTimer > 0) {
+    cam.shakeTimer--;
+    shakeOffset = cam.shakeMag * ((game.tick % 2) ? 1 : -1);
+    cam.shakeMag *= 0.9;
+    cam.x += shakeOffset;
+  }
+
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#0d0d2a');
   grad.addColorStop(1, '#1a0d00');
@@ -4228,6 +4243,8 @@ function drawBossArena() {
       ctx.fillText(`Score: ${player.score}`, W / 2, H / 2 + 30);
     }
   }
+
+  if (shakeOffset !== 0) cam.x -= shakeOffset;
 }
 
 function drawBossHUD() {
@@ -4990,6 +5007,7 @@ const audio = (() => {
 
   function sfxJump()      { sfx(() => { oscSweep('sine', 200, 420, 0.12, 0.18); }); }
   function sfxStomp()     { sfx(() => { oscSweep('sine', 180, 60, 0.15, 0.22); noise(0.1, 0.14, 800); }); }
+  function sfxSlam()      { sfx(() => { oscSweep('sine', 120, 40, 0.28, 0.32); noise(0.20, 0.18, 400); oscSweep('sawtooth', 80, 30, 0.18, 0.18); }); }
   function sfxCollect()   { sfx(() => { osc('sine', 880, 0.12, 0.15); osc('sine', 1320, 0.18, 0.12, masterGain, ctx.currentTime + 0.07); }); }
   function sfxHurt()      { sfx(() => { oscSweep('sawtooth', 320, 100, 0.25, 0.2); noise(0.15, 0.1, 600); }); }
   function sfxWater()     { sfx(() => { oscSweep('sine', 600, 300, 0.08, 0.08); oscSweep('sine', 500, 250, 0.08, 0.06); }); }
@@ -5210,7 +5228,7 @@ const audio = (() => {
 
   return {
     init,
-    sfxJump, sfxStomp, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
+    sfxJump, sfxStomp, sfxSlam, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
     sfxGlissade, sfxStun, sfxHeal, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
     sfxBeerCan, sfxBeerCanHit, sfxTPBloom, sfxTrailRunner,
     startBossMusic, stopBossMusic, sfxBossVictory,
