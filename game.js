@@ -1534,8 +1534,11 @@ function updateBigfoot(boss) {
       const roll = Math.random();
       const leapChance      = boss.phase === 3 ? 0.55 : boss.phase === 2 ? 0.62 : 0.70;
       const groundPoundChance = boss.phase >= 2 ? 0.22 : 0;
-      const pickLeap      = forced === 'leap'       || (!forced && roll < leapChance);
-      const pickGroundPound = forced === 'groundpound' || (!forced && !pickLeap && roll < leapChance + groundPoundChance);
+      const pickDual        = forced === 'groundpound-dual';
+      const pickLeap        = forced === 'leap'        || (!forced && roll < leapChance);
+      const pickGroundPound = forced === 'groundpound' || pickDual ||
+                              (!forced && !pickLeap && roll < leapChance + groundPoundChance);
+      const pickBoulders    = forced === 'boulders'   || (!forced && !pickLeap && !pickGroundPound);
 
       if (pickLeap) {
         boss.leapStartX = boss.x;
@@ -1553,8 +1556,9 @@ function updateBigfoot(boss) {
         boss.poundSubPhase = 'squat';
         boss.poundSubTimer = squat;
         boss.poundProgress = 0;
-        boss.poundIsDual = false;  // Task 7 may set true for phase 3
-      } else {
+        // Phase-3 only: ~33% of pounds become dual-wave. The forced-dual hook overrides.
+        boss.poundIsDual = pickDual || (boss.phase === 3 && Math.random() < 0.33);
+      } else if (pickBoulders) {
         boss.windupProgress = 0;
         boss.state = 'windup';
         boss.stateTimer = 40;
@@ -1623,8 +1627,7 @@ function updateBigfoot(boss) {
         boss.poundSubTimer = durs[3];
       } else if (boss.poundSubPhase === 'slam') {
         // Impact frame — spawn shockwave(s), particles, sfx, enter stagger
-        const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
-        boss.shockwaves.push({
+        const pushWave = (dir) => boss.shockwaves.push({
           x: boss.x + boss.w / 2,
           dir,
           speed: boss.phase === 3 ? 8 : 7,
@@ -1632,6 +1635,13 @@ function updateBigfoot(boss) {
           maxTravel: 500,
           active: true,
         });
+        if (boss.poundIsDual) {
+          pushWave(+1);
+          pushWave(-1);
+        } else {
+          const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
+          pushWave(dir);
+        }
         spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
         audio.sfxStun();  // Task 8 will switch this to sfxSlam
 
@@ -1765,6 +1775,14 @@ function drawBigfoot(boss) {
   ctx.fillStyle = eyeGlow ? '#ffaa00' : (boss.phase === 3 ? '#ff6600' : '#cc3300');
   ctx.beginPath(); ctx.arc(-10, -193, eyeGlow ? 5 : 4, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc( 10, -193, eyeGlow ? 5 : 4, 0, Math.PI * 2); ctx.fill();
+
+  if (boss.state === 'groundpound' && boss.poundSubPhase === 'hold' && boss.poundIsDual) {
+    ctx.strokeStyle = 'rgba(255,150,0,0.55)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(0, -130, 70, 105, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   ctx.strokeStyle = 'rgba(80,50,20,0.5)';
   ctx.lineWidth = 1.5;
@@ -5310,7 +5328,8 @@ window.trailBlazerDebug = {
   },
   forceBossAttack(attackName) {
     if (!bossArena || !bossArena.boss) return false;
-    if (!['leap', 'groundpound', 'boulders'].includes(attackName)) return false;
+    const valid = ['leap', 'groundpound', 'groundpound-dual', 'boulders'];
+    if (!valid.includes(attackName)) return false;
     bossArena.boss.forcedNextAttack = attackName;
     return true;
   },
