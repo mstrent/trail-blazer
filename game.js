@@ -1537,8 +1537,8 @@ function updateBigfoot(boss) {
       const forced = boss.forcedNextAttack;
       boss.forcedNextAttack = null;
       const roll = Math.random();
-      const leapChance      = boss.phase === 3 ? 0.55 : boss.phase === 2 ? 0.62 : 0.70;
-      const groundPoundChance = boss.phase >= 2 ? 0.22 : 0;
+      const leapChance        = boss.phase === 3 ? 0.42 : boss.phase === 2 ? 0.52 : 0.56;
+      const groundPoundChance = boss.phase === 3 ? 0.40 : boss.phase === 2 ? 0.35 : 0.20;
       const pickDual        = forced === 'groundpound-dual';
       const pickLeap        = forced === 'leap'        || (!forced && roll < leapChance);
       const pickGroundPound = forced === 'groundpound' || pickDual ||
@@ -1664,7 +1664,7 @@ function updateBigfoot(boss) {
   } else if (boss.state === 'stagger') {
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
-      const pauseTime = boss.phase === 3 ? 15 : 30;
+      const pauseTime = boss.phase === 3 ? 12 : boss.phase === 2 ? 16 : 24;
       boss.state = 'land';
       boss.stateTimer = pauseTime;
     }
