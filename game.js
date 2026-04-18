@@ -1494,7 +1494,7 @@ function updateBigfoot(boss) {
     sw.alpha -= 0.012;
     if (sw.alpha <= 0 || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
     if (player.hurtTimer === 0 && player.onGround) {
-      const swHit = { x: sw.dir > 0 ? sw.x - 30 : 0, y: BOSS_GROUND_Y - 30, w: 60, h: 30 };
+      const swHit = { x: sw.x - 30, y: BOSS_GROUND_Y - 30, w: 60, h: 30 };
       if (aabb(player, swHit)) hurtPlayer();
     }
     return sw.active;
@@ -5232,6 +5232,16 @@ window.trailBlazerDebug = {
         x: sw.x, dir: sw.dir, speed: sw.speed, active: sw.active,
       })),
     };
+  },
+  pokeBoss(patch) {
+    if (!bossArena || !bossArena.boss || !patch) return false;
+    Object.assign(bossArena.boss, patch);
+    return true;
+  },
+  pokePlayer(patch) {
+    if (!player || !patch) return false;
+    Object.assign(player, patch);
+    return true;
   },
 };
 
