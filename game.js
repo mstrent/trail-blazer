@@ -845,7 +845,12 @@ function isPlatform(tx, ty) { return getTile(tx, ty) === T_PLATFORM; }
 function isWater(tx, ty) { return getTile(tx, ty) === T_WATER; }
 
 // ==================== CAMERA ====================
-const cam = { x: 0, y: 0 };
+const cam = { x: 0, y: 0, shakeTimer: 0, shakeMag: 0 };
+
+function triggerCamShake(magnitude, ticks) {
+  cam.shakeTimer = ticks;
+  cam.shakeMag = magnitude;
+}
 function updateCamera(px, py) {
   const targetX = px - W / 2 + 16;
   const targetY = py - H / 2 + 16;
@@ -1461,17 +1466,29 @@ function makeBigfoot() {
     state: 'land',  // land | leap | windup | groundpound | stagger
     stateTimer: 40,
     boulders: [],
-    shockwave: null,
+    shockwaves: [],
     leapStartX: 0, leapStartY: 0,
     leapTargetX: 0,
     leapProgress: 0,
     leapDuration: 75,
     windupProgress: 0,
+    poundProgress: 0,
+    poundSubPhase: 'squat',   // 'squat' | 'rise' | 'hold' | 'slam'
+    poundSubTimer: 0,
+    poundIsDual: false,
     rageTimer: 0,
     vulnerable: false,
     hitTimer: 0,
+    forcedNextAttack: null,  // 'leap' | 'groundpound' | 'boulders' | null (test hook)
   };
 }
+
+const BIGFOOT_POUND_TICKS = {
+  // [squat, rise, hold, slam] per phase
+  1: [8, 10, 10, 12],
+  2: [7,  8,  9, 10],
+  3: [6,  7,  7,  8],
+};
 
 function updateBigfoot(boss) {
   if (boss.hitTimer > 0) boss.hitTimer--;
@@ -1487,19 +1504,26 @@ function updateBigfoot(boss) {
     return b.y < BOSS_GROUND_Y + 60;
   });
 
-  if (boss.shockwave && boss.shockwave.active) {
-    const sw = boss.shockwave;
-    sw.x    += sw.dir * sw.speed;
-    sw.alpha -= 0.012;
-    if (sw.alpha <= 0 || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
+  boss.shockwaves = boss.shockwaves.filter(sw => {
+    if (!sw.active) return false;
+    sw.x        += sw.dir * sw.speed;
+    sw.travelled = (sw.travelled || 0) + sw.speed;
+    if (sw.travelled >= sw.maxTravel || sw.x < 0 || sw.x > BOSS_ARENA_W) sw.active = false;
+
+    // Dust-puff trail: 2 particles per tick behind the wave
+    spawnParticles(sw.x - sw.dir * 15, BOSS_GROUND_Y - 6, '#a88655', 2, 2);
+
     if (player.hurtTimer === 0 && player.onGround) {
-      const swHit = { x: sw.dir > 0 ? sw.x - 30 : 0, y: BOSS_GROUND_Y - 30, w: 60, h: 30 };
+      const swHit = { x: sw.x - 30, y: BOSS_GROUND_Y - 40, w: 60, h: 40 };
       if (aabb(player, swHit)) hurtPlayer();
     }
-  }
+    return sw.active;
+  });
 
   // Contact damage when Bigfoot is on the ground
-  if (boss.state !== 'leap' && player.hurtTimer === 0 && aabb(player, boss)) {
+  const airbornePound = boss.state === 'groundpound' &&
+    (boss.poundSubPhase === 'rise' || boss.poundSubPhase === 'hold' || boss.poundSubPhase === 'slam');
+  if (boss.state !== 'leap' && !airbornePound && player.hurtTimer === 0 && aabb(player, boss)) {
     hurtPlayer();
   }
 
@@ -1512,11 +1536,18 @@ function updateBigfoot(boss) {
 
   if (boss.state === 'land') {
     if (boss.stateTimer <= 0) {
+      const forced = boss.forcedNextAttack;
+      boss.forcedNextAttack = null;
       const roll = Math.random();
-      const leapChance      = boss.phase === 3 ? 0.55 : boss.phase === 2 ? 0.62 : 0.70;
-      const groundPoundChance = boss.phase >= 2 ? 0.22 : 0;
+      const leapChance        = boss.phase === 3 ? 0.42 : boss.phase === 2 ? 0.52 : 0.56;
+      const groundPoundChance = boss.phase === 3 ? 0.40 : boss.phase === 2 ? 0.35 : 0.20;
+      const pickDual        = forced === 'groundpound-dual';
+      const pickLeap        = forced === 'leap'        || (!forced && roll < leapChance);
+      const pickGroundPound = forced === 'groundpound' || pickDual ||
+                              (!forced && !pickLeap && roll < leapChance + groundPoundChance);
+      const pickBoulders    = forced === 'boulders'   || (!forced && !pickLeap && !pickGroundPound);
 
-      if (roll < leapChance) {
+      if (pickLeap) {
         boss.leapStartX = boss.x;
         boss.leapStartY = boss.y;
         const spread = (Math.random() - 0.5) * 160;
@@ -1526,10 +1557,15 @@ function updateBigfoot(boss) {
         boss.leapDuration  = boss.phase === 3 ? 55 : boss.phase === 2 ? 65 : 75;
         boss.vulnerable    = true;
         boss.state = 'leap';
-      } else if (roll < leapChance + groundPoundChance) {
+      } else if (pickGroundPound) {
         boss.state = 'groundpound';
-        boss.stateTimer = 45;
-      } else {
+        const [squat] = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+        boss.poundSubPhase = 'squat';
+        boss.poundSubTimer = squat;
+        boss.poundProgress = 0;
+        // Phase-3 only: ~33% of pounds become dual-wave. The forced-dual hook overrides.
+        boss.poundIsDual = pickDual || (boss.phase === 3 && Math.random() < 0.33);
+      } else if (pickBoulders) {
         boss.windupProgress = 0;
         boss.state = 'windup';
         boss.stateTimer = 40;
@@ -1577,19 +1613,60 @@ function updateBigfoot(boss) {
       boss.stateTimer = pauseTime;
     }
   } else if (boss.state === 'groundpound') {
-    if (boss.stateTimer <= 0) {
-      const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
-      boss.shockwave = { x: boss.x + boss.w / 2, dir, speed: 7, alpha: 0.85, active: true };
-      spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
-      audio.sfxStun();
-      boss.vulnerable = true;
-      boss.state = 'stagger';
-      boss.stateTimer = 28;
+    const durs = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+    const total = durs[0] + durs[1] + durs[2] + durs[3];
+    const elapsedInPhase = {
+      squat: 0,
+      rise:  durs[0],
+      hold:  durs[0] + durs[1],
+      slam:  durs[0] + durs[1] + durs[2],
+    };
+    boss.poundSubTimer--;
+    if (boss.poundSubTimer <= 0) {
+      if (boss.poundSubPhase === 'squat') {
+        boss.poundSubPhase = 'rise';
+        boss.poundSubTimer = durs[1];
+      } else if (boss.poundSubPhase === 'rise') {
+        boss.poundSubPhase = 'hold';
+        boss.poundSubTimer = durs[2];
+      } else if (boss.poundSubPhase === 'hold') {
+        boss.poundSubPhase = 'slam';
+        boss.poundSubTimer = durs[3];
+      } else if (boss.poundSubPhase === 'slam') {
+        // Impact frame — spawn shockwave(s), particles, sfx, enter stagger
+        const pushWave = (dir) => boss.shockwaves.push({
+          x: boss.x + boss.w / 2,
+          dir,
+          speed: boss.phase === 3 ? 8 : 7,
+          travelled: 0,
+          maxTravel: 500,
+          active: true,
+        });
+        if (boss.poundIsDual) {
+          pushWave(+1);
+          pushWave(-1);
+        } else {
+          const dir = player.x + player.w / 2 > boss.x + boss.w / 2 ? 1 : -1;
+          pushWave(dir);
+        }
+        spawnParticles(boss.x + boss.w / 2, BOSS_GROUND_Y, '#5a3a1a', 24, 6);
+        audio.sfxSlam();
+        triggerCamShake(3, 6);
+
+        boss.vulnerable = true;
+        boss.state = 'stagger';
+        boss.stateTimer = boss.phase === 3 ? 18 : boss.phase === 2 ? 22 : 28;
+      }
     }
+    // Update progress 0..1 for the draw function to read.
+    const startFor = elapsedInPhase[boss.poundSubPhase];
+    const subLen   = durs[['squat','rise','hold','slam'].indexOf(boss.poundSubPhase)];
+    const ticksIntoPhase = subLen - boss.poundSubTimer;
+    boss.poundProgress = Math.min(1, (startFor + ticksIntoPhase) / total);
   } else if (boss.state === 'stagger') {
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
-      const pauseTime = boss.phase === 3 ? 15 : 30;
+      const pauseTime = boss.phase === 3 ? 12 : boss.phase === 2 ? 16 : 24;
       boss.state = 'land';
       boss.stateTimer = pauseTime;
     }
@@ -1600,6 +1677,27 @@ function drawBigfoot(boss) {
   const t  = game.tick;
   const bx = boss.x - cam.x + boss.w / 2;
   const by = boss.y - cam.y + boss.h;  // translate to feet
+
+  // Hop-and-slam pose offsets (zero outside groundpound)
+  let hopY = 0;           // positive = lifted off ground
+  let squashY = 1.0;      // y scale
+  let squashX = 1.0;      // x scale
+  if (boss.state === 'groundpound') {
+    const sub = boss.poundSubPhase;
+    const durs = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+    const subIdx = ['squat','rise','hold','slam'].indexOf(sub);
+    const subLen = durs[subIdx] || 1;
+    const t01    = 1 - (boss.poundSubTimer / subLen);  // 0..1 through current sub-phase
+    if (sub === 'squat')      { squashY = 1 - 0.08 * t01; squashX = 1 + 0.04 * t01; }
+    else if (sub === 'rise')  { hopY = 40 * t01 * (2 - t01); squashY = 0.92 + 0.08 * t01; squashX = 1.04 - 0.04 * t01; }
+    else if (sub === 'hold')  { hopY = 40; }
+    else if (sub === 'slam')  {
+      // Ease-in descent from 40 -> 0
+      hopY = 40 * (1 - t01 * t01);
+      // Final impact frame squash
+      if (t01 > 0.85) { squashY = 0.85; squashX = 1.10; }
+    }
+  }
 
   boss.boulders.forEach(b => {
     ctx.fillStyle = '#666';
@@ -1612,21 +1710,44 @@ function drawBigfoot(boss) {
     ctx.fill();
   });
 
-  if (boss.shockwave && boss.shockwave.active) {
-    const sw  = boss.shockwave;
+  boss.shockwaves.forEach(sw => {
+    if (!sw.active) return;
     const swx = sw.x - cam.x;
-    const swy = BOSS_GROUND_Y - cam.y - 22;
-    ctx.fillStyle = `rgba(90,58,26,${sw.alpha})`;
-    if (sw.dir > 0) ctx.fillRect(swx, swy, BOSS_ARENA_W - sw.x, 22);
-    else            ctx.fillRect(0,   swy, swx, 22);
-  }
+    const swy = BOSS_GROUND_Y - cam.y;
+    // Base fill — brown crescent
+    ctx.fillStyle = '#5a3a1a';
+    ctx.beginPath();
+    ctx.moveTo(swx - 30, swy);
+    ctx.quadraticCurveTo(swx, swy - 40, swx + 30, swy);
+    ctx.quadraticCurveTo(swx, swy - 28, swx - 30, swy);
+    ctx.closePath();
+    ctx.fill();
+    // Highlight edge — light brown
+    ctx.strokeStyle = '#8a5a2a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(swx - 30, swy);
+    ctx.quadraticCurveTo(swx, swy - 40, swx + 30, swy);
+    ctx.stroke();
+  });
 
   ctx.save();
-  ctx.translate(bx, by);
-  ctx.scale(0.75, 0.75);  // 25% smaller; arc height unchanged so jump clearance is preserved
+  ctx.translate(bx, by - hopY);
+  ctx.scale(0.75 * squashX, 0.75 * squashY);
 
-  // Arms raised during leap (flying pose) or windup (throw telegraph)
-  const arm = boss.state === 'leap' ? 0.8 : Math.min(1, boss.windupProgress);
+  // Arm raise amount: leap, boulder windup, or ground-pound sub-phase
+  let poundArm = 0;
+  if (boss.state === 'groundpound') {
+    const sub = boss.poundSubPhase;
+    if (sub === 'rise' || sub === 'hold') poundArm = 1;
+    else if (sub === 'slam') {
+      const durs = BIGFOOT_POUND_TICKS[boss.phase] || BIGFOOT_POUND_TICKS[1];
+      const subLen = durs[3] || 1;
+      const t01 = 1 - (boss.poundSubTimer / subLen);
+      poundArm = 1 - t01;  // snap from 1 -> 0 during slam
+    }
+  }
+  const arm = boss.state === 'leap' ? 0.8 : Math.max(Math.min(1, boss.windupProgress), poundArm);
 
   ctx.fillStyle = '#2a1a0a';
 
@@ -1658,9 +1779,18 @@ function drawBigfoot(boss) {
   ctx.ellipse(0, -188, 28, 28, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = boss.phase === 3 ? '#ff6600' : '#cc3300';
-  ctx.beginPath(); ctx.arc(-10, -193, 4, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc( 10, -193, 4, 0, Math.PI * 2); ctx.fill();
+  const eyeGlow = (boss.state === 'groundpound' && boss.poundSubPhase === 'hold');
+  ctx.fillStyle = eyeGlow ? '#ffaa00' : (boss.phase === 3 ? '#ff6600' : '#cc3300');
+  ctx.beginPath(); ctx.arc(-10, -193, eyeGlow ? 5 : 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 10, -193, eyeGlow ? 5 : 4, 0, Math.PI * 2); ctx.fill();
+
+  if (boss.state === 'groundpound' && boss.poundSubPhase === 'hold' && boss.poundIsDual) {
+    ctx.strokeStyle = 'rgba(255,150,0,0.55)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(0, -130, 70, 105, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   ctx.strokeStyle = 'rgba(80,50,20,0.5)';
   ctx.lineWidth = 1.5;
@@ -2470,6 +2600,8 @@ function loadLevel(num) {
     floatTexts.length = 0;
     cam.x = 0;
     cam.y = 0;
+    cam.shakeTimer = 0;
+    cam.shakeMag = 0;
     game.levelTimeBonus = 0;
     game.levelCompletionTime = 0;
     game.winScrollY = 0;
@@ -2490,6 +2622,8 @@ function loadLevel(num) {
   floatTexts.length = 0;
   cam.x = 0;
   cam.y = 0;
+  cam.shakeTimer = 0;
+  cam.shakeMag = 0;
   game.levelTimeBonus = 0;
   game.levelCompletionTime = 0;
   game.winScrollY = 0;
@@ -3933,6 +4067,15 @@ function drawBossArena() {
   if (!bossArena) return;
   const boss = bossArena.boss;
 
+  // Camera shake: decay + alternating ±offset applied for this frame only.
+  let shakeOffset = 0;
+  if (cam.shakeTimer > 0) {
+    cam.shakeTimer--;
+    shakeOffset = cam.shakeMag * ((game.tick % 2) ? 1 : -1);
+    cam.shakeMag *= 0.9;
+    cam.x += shakeOffset;
+  }
+
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   grad.addColorStop(0, '#0d0d2a');
   grad.addColorStop(1, '#1a0d00');
@@ -4106,6 +4249,8 @@ function drawBossArena() {
       ctx.fillText(`Score: ${player.score}`, W / 2, H / 2 + 30);
     }
   }
+
+  if (shakeOffset !== 0) cam.x -= shakeOffset;
 }
 
 function drawBossHUD() {
@@ -4868,6 +5013,7 @@ const audio = (() => {
 
   function sfxJump()      { sfx(() => { oscSweep('sine', 200, 420, 0.12, 0.18); }); }
   function sfxStomp()     { sfx(() => { oscSweep('sine', 180, 60, 0.15, 0.22); noise(0.1, 0.14, 800); }); }
+  function sfxSlam()      { sfx(() => { oscSweep('sine', 120, 40, 0.28, 0.32); noise(0.20, 0.18, 400); oscSweep('sawtooth', 80, 30, 0.18, 0.18); }); }
   function sfxCollect()   { sfx(() => { osc('sine', 880, 0.12, 0.15); osc('sine', 1320, 0.18, 0.12, masterGain, ctx.currentTime + 0.07); }); }
   function sfxHurt()      { sfx(() => { oscSweep('sawtooth', 320, 100, 0.25, 0.2); noise(0.15, 0.1, 600); }); }
   function sfxWater()     { sfx(() => { oscSweep('sine', 600, 300, 0.08, 0.08); oscSweep('sine', 500, 250, 0.08, 0.06); }); }
@@ -5088,7 +5234,7 @@ const audio = (() => {
 
   return {
     init,
-    sfxJump, sfxStomp, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
+    sfxJump, sfxStomp, sfxSlam, sfxCollect, sfxHurt, sfxWater, sfxSpray, sfxBonus,
     sfxGlissade, sfxStun, sfxHeal, sfxStartJingle, sfxCampFanfare, sfxWinFanfare,
     sfxBeerCan, sfxBeerCanHit, sfxTPBloom, sfxTrailRunner,
     startBossMusic, stopBossMusic, sfxBossVictory,
@@ -5203,6 +5349,40 @@ window.trailBlazerDebug = {
       enemyCount: enemies.filter(e => e.alive).length,
       itemCount: items.filter(i => !i.collected).length,
     };
+  },
+  forceBossAttack(attackName) {
+    if (!bossArena || !bossArena.boss) return false;
+    const valid = ['leap', 'groundpound', 'groundpound-dual', 'boulders'];
+    if (!valid.includes(attackName)) return false;
+    bossArena.boss.forcedNextAttack = attackName;
+    return true;
+  },
+  getBossState() {
+    if (!bossArena || !bossArena.boss) return null;
+    const b = bossArena.boss;
+    return {
+      type: b.type,
+      state: b.state,
+      phase: b.phase,
+      hp: b.hp,
+      x: b.x, y: b.y,
+      poundSubPhase: b.poundSubPhase ?? null,
+      poundProgress: b.poundProgress ?? null,
+      poundIsDual: b.poundIsDual ?? false,
+      shockwaves: (b.shockwaves || []).map(sw => ({
+        x: sw.x, dir: sw.dir, speed: sw.speed, active: sw.active,
+      })),
+    };
+  },
+  pokeBoss(patch) {
+    if (!bossArena || !bossArena.boss || !patch) return false;
+    Object.assign(bossArena.boss, patch);
+    return true;
+  },
+  pokePlayer(patch) {
+    if (!player || !patch) return false;
+    Object.assign(player, patch);
+    return true;
   },
 };
 
