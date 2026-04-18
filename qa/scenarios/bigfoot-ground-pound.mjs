@@ -37,7 +37,8 @@ export default async function scenario(game) {
   await game.screenshot('bigfoot-crescent');
 
   // Phase 3 dual-wave
-  await waitFor(game, s => s && s.state === 'land', 180);
+  const landed = await waitFor(game, s => s && s.state === 'land', 180);
+  assert(landed, 'never returned to land between phase-2 and phase-3 sequences');
   await game.page.evaluate(() => window.trailBlazerDebug.pokeBoss({ hp: 2, phase: 3 }));
   await game.page.evaluate(() => window.trailBlazerDebug.forceBossAttack('groundpound-dual'));
 
