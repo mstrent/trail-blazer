@@ -15,7 +15,7 @@ There are no linting tools and no root-level package.json. The primary verificat
 
 ## Architecture
 
-The entire game is ~3785 lines of vanilla JavaScript in a single IIFE in `game.js`. There are no modules, no transpilation, no dependencies beyond Firebase (loaded via CDN in `index.html`). All rendering uses Canvas 2D primitives — no sprite sheets or image assets.
+The entire game is ~5400 lines of vanilla JavaScript in a single IIFE in `game.js`. There are no modules, no transpilation, no dependencies beyond Firebase (loaded via CDN in `index.html`). All rendering uses Canvas 2D primitives — no sprite sheets or image assets.
 
 ### File Structure
 
@@ -30,24 +30,29 @@ The entire game is ~3785 lines of vanilla JavaScript in a single IIFE in `game.j
 | SETUP | 7 | Canvas init, responsive resize for mobile landscape |
 | INPUT | 39 | `keys`/`prev` objects, helper functions (`isLeft`, `isJump`, etc.) |
 | TILE TYPES | 57 | Constants: `T_EMPTY=0`, `T_SOLID=1`, `T_PLATFORM=2`, `T_WATER=3` |
+| UTILITIES | 63 | Generic helpers shared across sections |
+| LEVEL HELPERS | 72 | `makeMap()`, `set/hline/fill` tile-painting helpers |
 | LEVEL DEFINITIONS | 81 | `LEVELS[]` array — 9 level objects, each with `build()`, `spawnEnemies()`, `spawnTPBlooms()`, `spawnItems()` |
-| CAMERA | 811 | `cam` object, smooth-follow `updateCamera()` |
-| PARTICLES | 822 | Particle system for effects |
-| ITEMS | 860 | `ITEM_DEFS`, `makeItem()` with terrain-snap, `spawnItems()` |
-| ENEMIES | 911 | Factory functions: `makeMarmot`, `makeMosquito`, `makeHiker`, `makeMouse`, `makeRedneck`, `makeTPBloom`, `makeBeerCan`, `makeTrash` |
-| FISH | 1012 | Decorative fish auto-spawned from water tiles; tile-boundary patrol |
-| TRAIL RUNNERS | 1063 | Background animated hikers |
-| PLAYER | 1237 | `makePlayer()`, `updatePlayer()` — physics, movement, bear spray, glissade |
-| GAME STATE | 1532 | `game` object, `loadLevel()`, `initGame()`, `advanceLevel()` |
-| LEADERBOARD | 1549 | Firebase Firestore top-10, `fetchLeaderboard()`, `submitScore()` |
-| DRAWING | 1641 | All `draw*()` functions — color palette `C`, background parallax, terrain, HUD, enemies, player |
-| SCREENS | 3024 | `drawMenu()`, `drawGameOver()`, `drawLevelComplete()`, `drawWin()` |
-| MAIN LOOP | 3374 | `update()` and `draw()` dispatch by `game.state`; `requestAnimationFrame` loop at ~60fps |
-| AUDIO | 3514 | Web Audio API synth — all sound effects generated procedurally, no audio files |
-| TOUCH CONTROLS | 3704 | Mobile button bindings |
-| DEBUG | ~3800 | `dbg` flag, `isDebug()`, `warpToLevel()`, FPS tracking, `drawDebugOverlay()`, keydown shortcuts |
-| DEBUG API | ~3885 | `window.trailBlazerDebug` — Playwright automation surface |
-| BOOT | ~3915 | `fetchLeaderboard()`, starts `requestAnimationFrame` loop |
+| CAMERA | 847 | `cam` object, smooth-follow `updateCamera()` |
+| PARTICLES | 863 | Particle system for effects |
+| ITEMS | 901 | `ITEM_DEFS`, `makeItem()` with terrain-snap, `spawnItems()` |
+| FLOATING TEXT | 937 | Damage/score popup text overlay |
+| ENEMIES | 951 | Factory functions: `makeMarmot`, `makeMosquito`, `makeHiker`, `makeMouse`, `makeRedneck`, `makeTPBloom`, `makeBeerCan`, `makeTrash` |
+| BOSS ARENA | 1054 | Bigfoot boss state machine, ground-pound shockwaves, phase logic |
+| FISH | 1988 | Decorative fish auto-spawned from water tiles; tile-boundary patrol |
+| TRAIL RUNNERS | 2039 | Background animated hikers |
+| PLAYER | 2220 | `makePlayer()`, `updatePlayer()` — physics, movement, bear spray, glissade |
+| GAME STATE | 2529 | `game` object, `loadLevel()`, `initGame()`, `advanceLevel()` |
+| LEADERBOARD | 2546 | Firebase Firestore top-10, `fetchLeaderboard()`, `submitScore()` |
+| DRAWING | 2666 | All `draw*()` functions — color palette `C`, background parallax, terrain, HUD, enemies, player |
+| SCREENS | 4311 | `drawMenu()`, `drawGameOver()`, `drawLevelComplete()`, `drawWin()` |
+| DEBUG | 4672 | `dbg` flag, `isDebug()`, `warpToLevel()`, FPS tracking, `drawDebugOverlay()`, keydown shortcuts |
+| MAIN LOOP | 4769 | `update()` and `draw()` dispatch by `game.state`; `requestAnimationFrame` loop at ~60fps |
+| AUDIO | 4917 | Web Audio API synth — all sound effects generated procedurally, no audio files |
+| TOUCH CONTROLS | 5244 | Mobile button bindings |
+| INITIALS INPUT | 5295 | Player-name entry for leaderboard submission |
+| DEBUG API | 5320 | `window.trailBlazerDebug` — Playwright automation surface |
+| BOOT | 5383 | `fetchLeaderboard()`, starts `requestAnimationFrame` loop |
 
 ### Game Loop
 
@@ -75,7 +80,7 @@ Each entry in `LEVELS[]` has:
 - Map is stored as `Uint8Array` rows; base floor is always `fill(0, 11, COLS-1, 14, T_SOLID)`
 - Floor surface is tile row 11 (pixel y=352)
 
-### Physics Constants (defined near line 1237)
+### Physics Constants (defined near line 2220)
 
 | Constant | Value |
 |---|---|
