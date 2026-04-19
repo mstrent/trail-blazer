@@ -4097,25 +4097,7 @@ function drawHUD() {
     ctx.fill();
   }
 
-  // Level name
-  ctx.fillStyle = '#AADDFF';
-  ctx.font = '10px Courier New';
-  ctx.textAlign = 'center';
-  ctx.fillText(LEVELS[game.levelNum].name.toUpperCase(), W / 2, 13);
-
-  // Score
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 14px Courier New';
-  ctx.fillText(`SCORE: ${player.score}`, W / 2, 28);
-
-  // Time
-  const timeSeconds = Math.floor(game.levelTick / 60);
-  const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
-  ctx.fillStyle = '#88DDFF';
-  ctx.font = 'bold 12px Courier New';
-  ctx.textAlign = 'left';
-  ctx.fillText(`TIME: ${timeStr}`, 260, 22);
-  ctx.textAlign = 'right';
+  // Level name, score, and time are rendered by DOM HUD (updateHUD()).
 
   // Trail progress bar (not applicable in boss arenas)
   const progress = level ? clamp(player.x / (level.COLS * TS), 0, 1) : 0;
