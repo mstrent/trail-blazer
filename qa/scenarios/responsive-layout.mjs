@@ -60,5 +60,19 @@ export default async function scenario(game) {
       `expected scale near ${expect.scaleNear}, got ${layout.scale}`);
   }
 
+  // Verify touch controls visibility during gameplay matches device capability.
+  // (Game hides touch controls on menu; warp into a level to test the intended state.)
+  await game.warpToLevel(0);
+  await game.waitFrames(5);
+  const touchVisible = await game.page.evaluate(() => {
+    const el = document.getElementById('touch-controls');
+    if (!el) return null;
+    const style = getComputedStyle(el);
+    return style.display !== 'none';
+  });
+  const expectTouch = (device === 'mobile-portrait' || device === 'mobile-landscape');
+  assert(touchVisible === expectTouch,
+    `touch-controls display on '${device}' expected ${expectTouch}, got ${touchVisible}`);
+
   console.log(`responsive-layout [${device}] PASSED`);
 }
