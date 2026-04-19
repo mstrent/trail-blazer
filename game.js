@@ -80,7 +80,31 @@ const layout = {
     const { vw, vh } = this._getViewport();
     const next = this._compute(vw, vh);
     Object.assign(this, next);
-    // Canvas/CSS mutation added in Phase 2.
+
+    // Mutate game globals (read by camera clamp, draw code, etc.)
+    W = 800;
+    H = next.H_logical;
+
+    // Canvas internal buffer is at logical resolution.
+    canvas.width = W;
+    canvas.height = H;
+
+    // Canvas CSS size drives display rendering (browser upscales).
+    canvas.style.width = next.display.w + 'px';
+    canvas.style.height = next.display.h + 'px';
+
+    // Write CSS custom properties for stylesheet consumption.
+    const root = document.documentElement;
+    root.style.setProperty('--game-scale', next.scale.toFixed(4));
+    root.style.setProperty('--game-display-width', next.display.w + 'px');
+    root.style.setProperty('--game-display-height', next.display.h + 'px');
+    root.style.setProperty('--game-offset-x', next.display.x + 'px');
+    root.style.setProperty('--game-offset-y', next.display.y + 'px');
+    root.style.setProperty('--margin-top', next.margin.top + 'px');
+    root.style.setProperty('--margin-bottom', next.margin.bottom + 'px');
+    root.style.setProperty('--margin-left', next.margin.left + 'px');
+    root.style.setProperty('--margin-right', next.margin.right + 'px');
+    root.dataset.overlayMode = next.overlayMode;
   },
 };
 layout.recompute();
@@ -89,30 +113,6 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', () => layout.recompute());
 }
 addEventListener('orientationchange', () => layout.recompute());
-
-// Resize canvas to match viewport aspect ratio on mobile landscape
-function resizeCanvas() {
-  const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
-  const isLandscape = window.innerWidth > window.innerHeight;
-  if (isTouch && isLandscape) {
-    // Use visualViewport dimensions which match 100dvh/100dvw — the actual visible
-    // area excluding Android/iOS browser chrome (address bar, nav bar). This keeps
-    // the canvas logical size in sync with the CSS dvh sizing so content isn't clipped.
-    const vp = window.visualViewport;
-    const vh = vp ? vp.height : window.innerHeight;
-    const vw = vp ? vp.width : window.innerWidth;
-    H = Math.min(480, Math.round(vh));
-    W = Math.round(vw);
-  } else {
-    W = 800;
-    H = 480;
-  }
-  canvas.width = W;
-  canvas.height = H;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
 
 // ==================== INPUT ====================
 const keys = {}, prev = {};
