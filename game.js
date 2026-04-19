@@ -5423,6 +5423,15 @@ window.trailBlazerDebug = {
       itemCount: items.filter(i => !i.collected).length,
     };
   },
+  getLayout() {
+    return {
+      scale: layout.scale,
+      H_logical: layout.H_logical,
+      overlayMode: layout.overlayMode,
+      display: { ...layout.display },
+      margin: { ...layout.margin },
+    };
+  },
   forceBossAttack(attackName) {
     if (!bossArena || !bossArena.boss) return false;
     const valid = ['leap', 'groundpound', 'groundpound-dual', 'boulders'];
