@@ -39,6 +39,37 @@ const EXPECTATIONS = {
     H_logical: 480,
     scaleNear: 393 / 800, // fit by width
   },
+  // desktop-fhd 1920x1080: aspect 1.78 → margin mode
+  'desktop-fhd': {
+    overlayMode: 'margin',
+    H_logical: 480,
+    scaleNear: 2.25, // min(1920/800, 1080/480) = min(2.4, 2.25) = 2.25
+  },
+  // desktop-4k 3840x2160: aspect 1.78 → margin mode
+  'desktop-4k': {
+    overlayMode: 'margin',
+    H_logical: 480,
+    scaleNear: 4.50, // min(3840/800, 2160/480) = min(4.8, 4.5) = 4.5
+  },
+  // desktop-ultrawide 3440x1440: aspect 2.39 → canvas mode (above threshold 2.167)
+  'desktop-ultrawide': {
+    overlayMode: 'canvas',
+    // H_logical = floor(1440 / (3440/800)) = floor(1440 / 4.3) = 334
+    H_logical: 334,
+    scaleNear: 3440 / 800,
+  },
+  // tablet-landscape 1194x834: aspect 1.43 → margin mode (fit by width)
+  'tablet-landscape': {
+    overlayMode: 'margin',
+    H_logical: 480,
+    scaleNear: 1194 / 800, // min(1194/800, 834/480) = min(1.49, 1.74) = 1.49
+  },
+  // tablet-portrait 768x1024: aspect 0.75 → margin mode (fit by width)
+  'tablet-portrait': {
+    overlayMode: 'margin',
+    H_logical: 480,
+    scaleNear: 768 / 800,
+  },
 };
 
 export default async function scenario(game) {
@@ -70,7 +101,10 @@ export default async function scenario(game) {
     const style = getComputedStyle(el);
     return style.display !== 'none';
   });
-  const expectTouch = (device === 'mobile-portrait' || device === 'mobile-landscape');
+  const TOUCH_DEVICES = new Set([
+    'mobile-portrait', 'mobile-landscape', 'tablet-portrait', 'tablet-landscape',
+  ]);
+  const expectTouch = TOUCH_DEVICES.has(device);
   assert(touchVisible === expectTouch,
     `touch-controls display on '${device}' expected ${expectTouch}, got ${touchVisible}`);
 
