@@ -32,6 +32,7 @@ const { default: scenario, options: scenarioOptions } = await import(
 
 const deviceName = deviceOverride || scenarioOptions?.device || DEFAULT_DEVICE;
 const devicePreset = resolveDevice(deviceName);
+process.env.QA_DEVICE = deviceName; // expose active device to scenarios
 
 let browser;
 let exitCode = 0;
