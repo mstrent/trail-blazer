@@ -2749,6 +2749,30 @@ function advanceLevel() {
 
 // ==================== DRAWING ====================
 
+// ==================== DOM HUD UPDATE ====================
+const _hudEls = {
+  root: document.getElementById('hud'),
+  levelName: document.getElementById('hud-level-name'),
+  score: document.getElementById('hud-score'),
+  time: document.getElementById('hud-time'),
+};
+function updateHUD() {
+  const visible = game.state === 'playing';
+  if (_hudEls.root) _hudEls.root.style.display = visible ? 'block' : 'none';
+  if (!visible) return;
+
+  if (LEVELS[game.levelNum]) {
+    _hudEls.levelName.textContent = LEVELS[game.levelNum].name.toUpperCase();
+  }
+  if (player) {
+    _hudEls.score.textContent = `SCORE: ${player.score}`;
+  }
+  const timeSeconds = Math.floor(game.levelTick / 60);
+  const mm = Math.floor(timeSeconds / 60);
+  const ss = (timeSeconds % 60).toString().padStart(2, '0');
+  _hudEls.time.textContent = `TIME: ${mm}:${ss}`;
+}
+
 // Color palette
 const C = {
   skyTop:    '#5B9BD5',
@@ -5322,6 +5346,7 @@ const audio = (() => {
 function loop() {
   update();
   draw();
+  updateHUD();
   requestAnimationFrame(loop);
 }
 
