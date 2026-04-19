@@ -12,6 +12,79 @@ canvas.width = W;
 canvas.height = H;
 const TS = 32; // tile size in pixels
 
+// ==================== LAYOUT MODULE ====================
+// Unified viewport-to-game mapping. See docs/superpowers/specs/2026-04-18-responsive-layout-design.md.
+const GAME_ASPECT = 800 / 480;
+const PAN_THRESHOLD = 1.25;
+const LAYOUT_HYST = 0.05;
+
+const layout = {
+  // Public read-only state (populated by recompute())
+  scale: 1,
+  H_logical: 480,
+  display: { w: 800, h: 480, x: 0, y: 0 },
+  margin: { top: 0, bottom: 0, left: 0, right: 0 },
+  overlayMode: 'margin', // 'margin' or 'canvas'
+
+  _getViewport() {
+    const vp = window.visualViewport;
+    const vw = Math.max(1, Math.round(vp ? vp.width : window.innerWidth));
+    const vh = Math.max(1, Math.round(vp ? vp.height : window.innerHeight));
+    return { vw, vh };
+  },
+
+  _decideMode(viewportAspect) {
+    // Hysteresis: asymmetric thresholds prevent flicker on live resize.
+    const enterCanvas = GAME_ASPECT * (PAN_THRESHOLD + LAYOUT_HYST);
+    const exitCanvas  = GAME_ASPECT * (PAN_THRESHOLD - LAYOUT_HYST);
+    if (this.overlayMode === 'canvas') {
+      return viewportAspect > exitCanvas ? 'canvas' : 'margin';
+    }
+    return viewportAspect > enterCanvas ? 'canvas' : 'margin';
+  },
+
+  _compute(vw, vh) {
+    const viewportAspect = vw / vh;
+    const mode = this._decideMode(viewportAspect);
+    let scale, H_logical, displayW, displayH;
+    if (mode === 'canvas') {
+      // Fit by width; camera pans vertically.
+      scale = vw / 800;
+      H_logical = Math.floor(vh / scale);
+      displayW = vw;
+      displayH = vh;
+    } else {
+      // Fit entire 800x480 game with letterbox.
+      scale = Math.min(vw / 800, vh / 480);
+      H_logical = 480;
+      displayW = Math.round(800 * scale);
+      displayH = Math.round(480 * scale);
+    }
+    const offsetX = Math.floor((vw - displayW) / 2);
+    const offsetY = Math.floor((vh - displayH) / 2);
+    return {
+      scale,
+      H_logical,
+      overlayMode: mode,
+      display: { w: displayW, h: displayH, x: offsetX, y: offsetY },
+      margin: {
+        top: offsetY,
+        bottom: vh - displayH - offsetY,
+        left: offsetX,
+        right: vw - displayW - offsetX,
+      },
+    };
+  },
+
+  recompute() {
+    const { vw, vh } = this._getViewport();
+    const next = this._compute(vw, vh);
+    Object.assign(this, next);
+    // Canvas/CSS mutation added in Phase 2.
+  },
+};
+layout.recompute();
+
 // Resize canvas to match viewport aspect ratio on mobile landscape
 function resizeCanvas() {
   const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
