@@ -155,11 +155,13 @@ html[data-overlay-mode="margin"] canvas#game {
 
 /* ===== Mode-aware touch-control positioning (only on touch-capable devices) ===== */
 @media (any-pointer: coarse) {
-  /* Overlay mode: buttons sit on top of the canvas in its bottom corners */
+  /* Overlay mode: buttons sit on top of the canvas in its bottom corners.
+     env(safe-area-inset-*) keeps them clear of Android gesture/status bars
+     when viewport-fit=cover lets the page extend under them. */
   html[data-overlay-mode="canvas"] #touch-left {
     position: fixed;
-    left: calc(var(--game-offset-x) + 8px);
-    bottom: calc(var(--margin-bottom) + 8px);
+    left: calc(var(--game-offset-x) + 8px + env(safe-area-inset-left, 0px));
+    bottom: calc(var(--margin-bottom) + 8px + env(safe-area-inset-bottom, 0px));
     width: clamp(140px, 22vw, 220px);
     height: clamp(60px, 10vw, 90px);
     display: flex;
@@ -168,8 +170,8 @@ html[data-overlay-mode="margin"] canvas#game {
   }
   html[data-overlay-mode="canvas"] #touch-right {
     position: fixed;
-    right: calc(var(--margin-right) + 8px);
-    bottom: calc(var(--margin-bottom) + 8px);
+    right: calc(var(--margin-right) + 8px + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--margin-bottom) + 8px + env(safe-area-inset-bottom, 0px));
     width: clamp(160px, 26vw, 240px);
     height: clamp(90px, 16vw, 140px);
     display: flex;
@@ -183,14 +185,19 @@ html[data-overlay-mode="margin"] canvas#game {
   }
   html[data-overlay-mode="canvas"] .touch-btn { flex: 1; }
 
-  /* Margin mode: buttons sit in the bottom letterbox strip */
+  /* Margin mode: buttons sit in the bottom letterbox strip.
+     Cap height so buttons keep a reasonable aspect ratio on portrait
+     devices where the letterbox strip can be ~250px tall. */
   html[data-overlay-mode="margin"] #touch-controls {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
-    height: var(--margin-bottom);
+    height: min(var(--margin-bottom), clamp(100px, 28vw, 180px));
     padding: 6px 10px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
     display: flex;
     flex-direction: row;
     gap: 12px;
