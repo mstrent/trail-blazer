@@ -62,6 +62,12 @@ const layout = {
     return mode;
   },
 
+  // Mirrors the margin-mode touch-controls CSS: clamp(150px, 42vw, 270px).
+  // Kept in sync manually — if the CSS changes, update this too.
+  _touchButtonStripHeight(vw) {
+    return Math.max(150, Math.min(270, Math.round(0.42 * vw)));
+  },
+
   _compute(vw, vh) {
     const viewportAspect = vw / vh;
     const mode = this._decideMode(viewportAspect, vw, vh);
@@ -80,7 +86,19 @@ const layout = {
       displayH = Math.round(480 * scale);
     }
     const offsetX = Math.floor((vw - displayW) / 2);
-    const offsetY = Math.floor((vh - displayH) / 2);
+    let offsetY;
+    if (mode === 'margin' && this._isTouch()) {
+      // Centre (canvas + button strip) together so the cluster doesn't
+      // feel bottom-heavy. Falls back to simple centring if there isn't
+      // room for the full strip height.
+      const buttonH = this._touchButtonStripHeight(vw);
+      const cluster = displayH + buttonH;
+      offsetY = cluster <= vh
+        ? Math.floor((vh - cluster) / 2)
+        : Math.floor((vh - displayH) / 2);
+    } else {
+      offsetY = Math.floor((vh - displayH) / 2);
+    }
     return {
       scale,
       H_logical,
