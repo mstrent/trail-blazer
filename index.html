@@ -5,6 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trail Blazer: An Ultralight Backpacking Adventure</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --game-scale: 1;
+      --game-display-width: 800px;
+      --game-display-height: 480px;
+      --game-offset-x: 0px;
+      --game-offset-y: 0px;
+      --margin-top: 0px;
+      --margin-bottom: 0px;
+      --margin-left: 0px;
+      --margin-right: 0px;
+    }
+    html[data-overlay-mode="canvas"] { /* styles wait for CSS rewrite */ }
+    html[data-overlay-mode="margin"]  { /* styles wait for CSS rewrite */ }
+  </style>
 </head>
 <body>
   <canvas id="game"></canvas>
