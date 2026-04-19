@@ -58,11 +58,22 @@ const EXPECTATIONS = {
     H_logical: 334,
     scaleNear: 3440 / 800,
   },
-  // tablet-landscape 1194x834: aspect 1.43 → margin mode (fit by width)
+  // tablet-landscape 1194x834: aspect 1.43. Natural letterbox fit leaves a
+  // ~59px bottom margin — too small for touch buttons — so the touch-aware
+  // layout falls back to canvas (overlay) mode.
   'tablet-landscape': {
-    overlayMode: 'margin',
-    H_logical: 480,
-    scaleNear: 1194 / 800, // min(1194/800, 834/480) = min(1.49, 1.74) = 1.49
+    validate(layout) {
+      if (layout.overlayMode === 'canvas') {
+        const expectedScale = 1194 / 800;
+        assert(Math.abs(layout.scale - expectedScale) < 0.01,
+          `canvas-mode scale should ~= ${expectedScale}, got ${layout.scale}`);
+        const expectedHLogical = Math.floor(834 / expectedScale);
+        assert(layout.H_logical === expectedHLogical,
+          `canvas-mode H_logical should == ${expectedHLogical}, got ${layout.H_logical}`);
+      } else {
+        assert(layout.H_logical === 480, 'margin-mode H_logical should be 480');
+      }
+    },
   },
   // tablet-portrait 768x1024: aspect 0.75 → margin mode (fit by width)
   'tablet-portrait': {

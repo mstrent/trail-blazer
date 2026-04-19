@@ -17,6 +17,10 @@ const TS = 32; // tile size in pixels
 const GAME_ASPECT = 800 / 480;
 const PAN_THRESHOLD = 1.25;
 const LAYOUT_HYST = 0.05;
+// On touch devices, if margin-mode bottom letterbox would be smaller than
+// this, switch to canvas (overlay) mode so buttons don't get squeezed into
+// a tiny strip below the canvas.
+const TOUCH_MIN_BOTTOM_STRIP = 100;
 
 const layout = {
   // Public read-only state (populated by recompute())
@@ -33,19 +37,34 @@ const layout = {
     return { vw, vh };
   },
 
-  _decideMode(viewportAspect) {
+  _isTouch() {
+    return typeof window.matchMedia === 'function'
+      && window.matchMedia('(any-pointer: coarse)').matches;
+  },
+
+  _decideMode(viewportAspect, vw, vh) {
     // Hysteresis: asymmetric thresholds prevent flicker on live resize.
     const enterCanvas = GAME_ASPECT * (PAN_THRESHOLD + LAYOUT_HYST);
     const exitCanvas  = GAME_ASPECT * (PAN_THRESHOLD - LAYOUT_HYST);
+    let mode;
     if (this.overlayMode === 'canvas') {
-      return viewportAspect > exitCanvas ? 'canvas' : 'margin';
+      mode = viewportAspect > exitCanvas ? 'canvas' : 'margin';
+    } else {
+      mode = viewportAspect > enterCanvas ? 'canvas' : 'margin';
     }
-    return viewportAspect > enterCanvas ? 'canvas' : 'margin';
+    // On touch devices, margin-mode buttons sit in the bottom letterbox.
+    // When the letterbox is too small for them, overlay on the canvas instead.
+    if (mode === 'margin' && this._isTouch()) {
+      const scale = Math.min(vw / 800, vh / 480);
+      const bottomMargin = Math.floor((vh - Math.round(480 * scale)) / 2);
+      if (bottomMargin < TOUCH_MIN_BOTTOM_STRIP) mode = 'canvas';
+    }
+    return mode;
   },
 
   _compute(vw, vh) {
     const viewportAspect = vw / vh;
-    const mode = this._decideMode(viewportAspect);
+    const mode = this._decideMode(viewportAspect, vw, vh);
     let scale, H_logical, displayW, displayH;
     if (mode === 'canvas') {
       // Fit by width; camera pans vertically.
