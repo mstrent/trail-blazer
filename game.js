@@ -153,6 +153,28 @@ addEventListener('orientationchange', () => layout.recompute());
 
 // ==================== INPUT ====================
 const keys = {}, prev = {};
+
+// Firefox Android (and some other mobile browsers) don't extend the viewport
+// under system gesture bars via viewport-fit=cover alone. The Fullscreen API
+// reliably gives us edge-to-edge on every browser, but it requires a user
+// gesture. Attempt it once on the first touch-device interaction.
+let _fsAttempted = false;
+function tryEnterFullscreenOnTouch() {
+  if (_fsAttempted) return;
+  if (document.fullscreenElement || document.webkitFullscreenElement) return;
+  if (!window.matchMedia || !window.matchMedia('(any-pointer: coarse)').matches) return;
+  _fsAttempted = true;
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+  if (!req) return;
+  try {
+    const p = req.call(el);
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (_) { /* silently ignore */ }
+}
+addEventListener('pointerdown', tryEnterFullscreenOnTouch, true);
+addEventListener('keydown', tryEnterFullscreenOnTouch, true);
+
 addEventListener('keydown', e => {
   audio.init();
   keys[e.code] = true;
