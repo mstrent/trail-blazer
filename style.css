@@ -3,9 +3,11 @@
 
 /* ==================== BODY / LAYOUT ==================== */
 /* Lock the page to the viewport: no scrolling, no rubber-band, no
-   horizontal scrollbar from a stray `100vw` (which includes scrollbar width). */
+   horizontal scrollbar from a stray `100vw` (which includes scrollbar width).
+   Explicit 100dvh on html (not just body) lets viewport-fit=cover extend the
+   initial containing block under Android's gesture bar — without it, the ICB
+   resolves to the visual viewport excluding system UI. */
 html, body {
-  height: 100%;
   background: #1a1a2e;
   font-family: 'Courier New', monospace;
   overflow: hidden;
@@ -13,9 +15,13 @@ html, body {
   touch-action: none;
 }
 
+html {
+  height: 100dvh;
+}
+
 body {
   position: relative;
-  height: 100dvh; /* mobile address-bar aware; falls back to html's 100% */
+  height: 100dvh;
 }
 
 /* ==================== CANVAS ==================== */
@@ -185,17 +191,17 @@ html[data-overlay-mode="margin"] canvas#game {
   }
   html[data-overlay-mode="canvas"] .touch-btn { flex: 1; }
 
-  /* Margin mode: buttons sit in the bottom letterbox strip.
-     Cap height so buttons keep a reasonable aspect ratio on portrait
-     devices where the letterbox strip can be ~250px tall. */
+  /* Margin mode: buttons hug the bottom edge of the canvas so they are
+     easy to thumb-reach, not pinned to the screen bottom. Cap height so
+     buttons keep a reasonable aspect ratio on portrait devices. */
   html[data-overlay-mode="margin"] #touch-controls {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    height: min(var(--margin-bottom), clamp(100px, 28vw, 180px));
+    top: calc(var(--game-offset-y) + var(--game-display-height));
+    bottom: auto;
+    height: min(var(--margin-bottom), clamp(150px, 42vw, 270px));
     padding: 6px 10px;
-    padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
     padding-left: max(10px, env(safe-area-inset-left, 0px));
     padding-right: max(10px, env(safe-area-inset-right, 0px));
     display: flex;
