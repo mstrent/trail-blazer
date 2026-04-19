@@ -108,5 +108,44 @@ export default async function scenario(game) {
   assert(touchVisible === expectTouch,
     `touch-controls display on '${device}' expected ${expectTouch}, got ${touchVisible}`);
 
+  // Page must not scroll. scrollWidth/scrollHeight should not exceed the
+  // viewport client dimensions — a mismatch means something is forcing overflow.
+  const overflow = await game.page.evaluate(() => ({
+    scrollW: document.documentElement.scrollWidth,
+    scrollH: document.documentElement.scrollHeight,
+    clientW: document.documentElement.clientWidth,
+    clientH: document.documentElement.clientHeight,
+  }));
+  assert(overflow.scrollW <= overflow.clientW,
+    `horizontal overflow on '${device}': scrollW=${overflow.scrollW} clientW=${overflow.clientW}`);
+  assert(overflow.scrollH <= overflow.clientH,
+    `vertical overflow on '${device}': scrollH=${overflow.scrollH} clientH=${overflow.clientH}`);
+
+  // HUD level-name and time must not horizontally overlap.
+  const hudRects = await game.page.evaluate(() => {
+    const t = document.getElementById('hud-time');
+    const l = document.getElementById('hud-level-name');
+    if (!t || !l) return null;
+    const tr = t.getBoundingClientRect();
+    const lr = l.getBoundingClientRect();
+    return { timeRight: tr.right, timeLeft: tr.left, levelLeft: lr.left, levelRight: lr.right };
+  });
+  if (hudRects) {
+    // Level-name's visible text is centered in its full-width box; measure by
+    // actual text width via range.
+    const levelTextBounds = await game.page.evaluate(() => {
+      const el = document.getElementById('hud-level-name');
+      if (!el || !el.firstChild) return null;
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const r = range.getBoundingClientRect();
+      return { left: r.left, right: r.right };
+    });
+    if (levelTextBounds) {
+      assert(hudRects.timeRight <= levelTextBounds.left,
+        `HUD time overlaps level-name on '${device}': time.right=${hudRects.timeRight} level.left=${levelTextBounds.left}`);
+    }
+  }
+
   console.log(`responsive-layout [${device}] PASSED`);
 }

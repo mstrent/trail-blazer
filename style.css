@@ -2,19 +2,20 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 /* ==================== BODY / LAYOUT ==================== */
+/* Lock the page to the viewport: no scrolling, no rubber-band, no
+   horizontal scrollbar from a stray `100vw` (which includes scrollbar width). */
 html, body {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
   background: #1a1a2e;
   font-family: 'Courier New', monospace;
-  overflow: hidden; /* canvas + HUD are positioned; no page scrolling */
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 body {
   position: relative;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  height: 100dvh; /* mobile address-bar aware; falls back to html's 100% */
 }
 
 /* ==================== CANVAS ==================== */
@@ -56,12 +57,17 @@ html[data-overlay-mode="margin"] canvas#game {
   #controls { display: none; }
 }
 
-/* ==================== HUD (DOM OVERLAY) ==================== */
+/* ==================== HUD (DOM OVERLAY) ====================
+   HUD positions and font sizes scale 1:1 with the canvas via --game-scale.
+   This keeps DOM text inside the canvas-drawn HUD strip (36 game-px tall)
+   and prevents the time/level-name overlap that happens when sizes scale
+   by vw but the HUD is sized to the canvas. */
 #hud {
   position: absolute;
   left: var(--game-offset-x);
   top: var(--game-offset-y);
   width: var(--game-display-width);
+  height: calc(36px * var(--game-scale));
   pointer-events: none;
   font-family: 'Courier New', monospace;
   z-index: 2;
@@ -69,34 +75,35 @@ html[data-overlay-mode="margin"] canvas#game {
 
 #hud .hud-level-name {
   position: absolute;
-  top: 0;
+  top: calc(4px * var(--game-scale));
   left: 0;
   right: 0;
   text-align: center;
   color: #AADDFF;
-  font-size: clamp(10px, 1.4vw, 18px);
-  padding: 4px 0;
+  font-size: calc(10px * var(--game-scale));
   text-shadow: 1px 1px 0 #000;
 }
 
 #hud .hud-score {
   position: absolute;
-  top: 18px;
+  top: calc(16px * var(--game-scale));
   left: 50%;
   transform: translateX(-50%);
   color: #FFD700;
-  font-size: clamp(12px, 1.6vw, 22px);
+  font-size: calc(14px * var(--game-scale));
   font-weight: bold;
   text-shadow: 1px 1px 0 #000;
   white-space: nowrap;
 }
 
+/* Time sits at game-coord x=260, matching where the canvas HUD drew it
+   (between the H2O drops and the centered level-name/score column). */
 #hud .hud-time {
   position: absolute;
-  top: 8px;
-  left: clamp(260px, 32vw, 360px);
+  top: calc(10px * var(--game-scale));
+  left: calc(260px * var(--game-scale));
   color: #88DDFF;
-  font-size: clamp(11px, 1.3vw, 16px);
+  font-size: calc(12px * var(--game-scale));
   font-weight: bold;
   text-shadow: 1px 1px 0 #000;
 }
