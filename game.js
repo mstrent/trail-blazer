@@ -84,6 +84,11 @@ const layout = {
   },
 };
 layout.recompute();
+addEventListener('resize', () => layout.recompute());
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => layout.recompute());
+}
+addEventListener('orientationchange', () => layout.recompute());
 
 // Resize canvas to match viewport aspect ratio on mobile landscape
 function resizeCanvas() {
