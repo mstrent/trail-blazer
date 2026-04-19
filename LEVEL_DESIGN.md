@@ -389,6 +389,29 @@ every enemy must be reachable and stompable by the player. Before shipping a lev
 
 ---
 
+## Bigfoot Boss
+
+### Bigfoot ground-pound (hop-and-slam)
+
+The ground pound is a four-sub-phase animation tracked by `boss.poundSubPhase`:
+
+| Sub-phase | Duration (p1 / p2 / p3) | Behavior |
+|---|---|---|
+| squat | 8 / 7 / 6 ticks | Body squashes, anticipation |
+| rise  | 10 / 8 / 7 ticks | Bigfoot hops ~40 px off ground, arms raise |
+| hold  | 10 / 9 / 7 ticks | Held airborne, eyes glow orange — "jump now" |
+| slam  | 12 / 10 / 8 ticks | Fast descent. Impact = shockwave(s) spawn. |
+
+Each shockwave is a crescent ripple with a `60 × 40 px` hitbox centered on `sw.x` at `BOSS_GROUND_Y`. Waves travel until `maxTravel = 500 px` or a wall.
+
+**Phase 3 dual-wave:** ~33% of phase-3 pounds fire two crescents in opposite directions simultaneously (`boss.poundIsDual === true`). A second orange aura around Bigfoot during the `hold` sub-phase telegraphs the dual-wave.
+
+**Speeds:** 7 px/tick (phases 1–2), 8 px/tick (phase 3).
+
+**Vulnerability:** `stagger` state after impact — 28 / 22 / 18 ticks per phase. Bear spray connects only during stagger or in the air.
+
+---
+
 ## History of Placement Bugs Fixed
 
 | Issue | Root Cause | Fix Applied |
