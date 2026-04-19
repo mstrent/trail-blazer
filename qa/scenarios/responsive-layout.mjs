@@ -116,8 +116,14 @@ export default async function scenario(game) {
     'mobile-portrait', 'mobile-landscape', 'tablet-portrait', 'tablet-landscape',
   ]);
   const expectTouch = TOUCH_DEVICES.has(device);
-  assert(touchVisible === expectTouch,
-    `touch-controls display on '${device}' expected ${expectTouch}, got ${touchVisible}`);
+  // Playwright's Firefox context rejects hasTouch/isMobile, so (any-pointer: coarse)
+  // can't be emulated — the CSS rule that shows #touch-controls never matches.
+  // Skip the positive-touch check on Firefox and rely on chromium/webkit for it.
+  const browserName = process.env.QA_BROWSER || 'chromium';
+  if (!(expectTouch && browserName === 'firefox')) {
+    assert(touchVisible === expectTouch,
+      `touch-controls display on '${device}' expected ${expectTouch}, got ${touchVisible}`);
+  }
 
   // Page must not scroll. scrollWidth/scrollHeight should not exceed the
   // viewport client dimensions — a mismatch means something is forcing overflow.

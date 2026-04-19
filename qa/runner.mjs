@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, firefox, webkit } from 'playwright';
 import { resolve, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { GameClient } from './lib/game-client.mjs';
@@ -11,12 +11,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // whatever the scenario exports via `options.device`.
 let scenarioArg;
 let deviceOverride;
+let browserName = 'chromium';
 for (const arg of process.argv.slice(2)) {
   if (arg.startsWith('--device=')) {
     deviceOverride = arg.slice('--device='.length);
+  } else if (arg.startsWith('--browser=')) {
+    browserName = arg.slice('--browser='.length);
   } else if (!scenarioArg) {
     scenarioArg = arg;
   }
+}
+const BROWSERS = { chromium, firefox, webkit };
+const browserLauncher = BROWSERS[browserName];
+if (!browserLauncher) {
+  console.error(`Unknown browser "${browserName}". Options: chromium, firefox, webkit`);
+  process.exit(1);
 }
 
 if (!scenarioArg) {
@@ -33,12 +42,17 @@ const { default: scenario, options: scenarioOptions } = await import(
 const deviceName = deviceOverride || scenarioOptions?.device || DEFAULT_DEVICE;
 const devicePreset = resolveDevice(deviceName);
 process.env.QA_DEVICE = deviceName; // expose active device to scenarios
+process.env.QA_BROWSER = browserName;
 
 let browser;
 let exitCode = 0;
 try {
-  browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext(devicePreset);
+  browser = await browserLauncher.launch({ headless: true });
+  // Firefox doesn't accept isMobile/hasTouch in newContext — strip them.
+  const contextOptions = browserName === 'firefox'
+    ? Object.fromEntries(Object.entries(devicePreset).filter(([k]) => !['isMobile', 'hasTouch'].includes(k)))
+    : devicePreset;
+  const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
 
   const port = process.env.GAME_PORT || process.env.PORT || 3000;

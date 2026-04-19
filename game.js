@@ -157,13 +157,19 @@ const keys = {}, prev = {};
 // Firefox Android (and some other mobile browsers) don't extend the viewport
 // under system gesture bars via viewport-fit=cover alone. The Fullscreen API
 // reliably gives us edge-to-edge on every browser, but it requires a user
-// gesture. Attempt it once on the first touch-device interaction.
-let _fsAttempted = false;
+// gesture. Attempt it on user interactions until it succeeds. Multiple touch
+// signals cover browsers whose (any-pointer: coarse) behavior is inconsistent.
+function _isLikelyTouchDevice() {
+  if (navigator.maxTouchPoints > 0) return true;
+  if ('ontouchstart' in window) return true;
+  if (!window.matchMedia) return false;
+  return window.matchMedia('(any-pointer: coarse)').matches
+      || window.matchMedia('(pointer: coarse)').matches
+      || window.matchMedia('(hover: none)').matches;
+}
 function tryEnterFullscreenOnTouch() {
-  if (_fsAttempted) return;
   if (document.fullscreenElement || document.webkitFullscreenElement) return;
-  if (!window.matchMedia || !window.matchMedia('(any-pointer: coarse)').matches) return;
-  _fsAttempted = true;
+  if (!_isLikelyTouchDevice()) return;
   const el = document.documentElement;
   const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
   if (!req) return;
@@ -172,7 +178,10 @@ function tryEnterFullscreenOnTouch() {
     if (p && typeof p.catch === 'function') p.catch(() => {});
   } catch (_) { /* silently ignore */ }
 }
+// pointerdown covers mouse + stylus; touchend is the most reliable fullscreen
+// trigger on Firefox Android (tied strongly to user activation).
 addEventListener('pointerdown', tryEnterFullscreenOnTouch, true);
+addEventListener('touchend', tryEnterFullscreenOnTouch, true);
 addEventListener('keydown', tryEnterFullscreenOnTouch, true);
 
 addEventListener('keydown', e => {
