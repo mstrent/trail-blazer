@@ -61,28 +61,30 @@ Largely unchanged from current behavior:
 
 ### Attack 2: Eye Beam (NEW, phase 2 only)
 
-A new attack that adds a vertical-axis dodge skill (timed jump).
+A new attack that adds a positional-dodge skill (step out of the locked
+column during the telegraph).
 
 **State sequence:** `beamWind` (30 frames) → `beam` (40 frames) → `beamRecover` (28 frames).
 
 - **`beamWind` (30 frames):** Boss anchors mid-air at hover Y. Eyes glow
-  (reuse `eyeGlow` field, ramp 0 → 1 over 30 frames). A thin dashed red
-  warning line is drawn at the beam's eventual visual center
-  (`BOSS_GROUND_Y - 16`). The line is visible the entire windup,
-  gradually thickening and brightening — this is the player's read.
-- **`beam` (40 frames):** Solid horizontal red beam from boss eyes
-  extending to the far arena wall (full width across `0..BOSS_ARENA_W`),
-  visually centered at `BOSS_GROUND_Y - 16`.
-  Beam hitbox: `{ x: 0, y: BOSS_GROUND_Y - 24, w: BOSS_ARENA_W, h: 16 }`
-  (so the hitbox extends 8 px above and 8 px below the warning line).
-  Player must jump **above** the beam to avoid damage — a standing
-  player (feet at `BOSS_GROUND_Y`, head at `BOSS_GROUND_Y - 30`)
-  overlaps the beam's top edge at `-24`, so they take damage. A jump
-  that lifts feet above `-24` clears it, which is trivially within the
-  player's ~142 px max jump height — the dodge skill is *timing*, not
-  jump strength. Damage check every frame; `hurtTimer` ensures at most
-  one hit per beam. Boss is NOT vulnerable during `beam` (eyes are the
-  weapon).
+  (reuse `eyeGlow` field, ramp 0 → 1 over 30 frames). At windup start,
+  the boss locks `beamTargetX` to the player's current center X. A
+  pulsing red reticle (concentric rings + crosshair) is drawn on the
+  ground at `(beamTargetX, BOSS_GROUND_Y)` for the full 30 frames, with
+  faint dashed preview lines from each eye to the reticle. This is the
+  player's read: "step out of that column."
+- **`beam` (40 frames):** Two solid red beams shoot from each eye
+  (`boss.x + 43` and `boss.x + 57` in world coords, both at
+  `boss.y + 30` Y) and converge on the locked ground point
+  `(beamTargetX, BOSS_GROUND_Y)`. White-hot core lines, red glow, and
+  an orange impact disc at the ground.
+  Beam hitbox: `{ x: beamTargetX - 16, y: eyeY, w: 32, h: BOSS_GROUND_Y - eyeY }`
+  — a 32px-wide vertical column at the locked X, from eye-level to
+  ground. Player takes damage if they're in this column. Dodge: move
+  laterally out of the column during the windup (or stay out for the
+  full beam phase). Damage check every frame; `hurtTimer` ensures at
+  most one hit per beam. Boss is NOT vulnerable during `beam` (eyes are
+  the weapon).
 - **`beamRecover` (28 frames):** Boss is vulnerable. Eyes dim. No beam.
   After 28 frames, return to `hover`.
 
@@ -172,11 +174,13 @@ All changes are within `game.js`:
 
 ## Risks and Open Questions
 
-- **Eye beam height vs jump arc.** Beam Y = `BOSS_GROUND_Y - 24` puts the
-  hitbox top at `BOSS_GROUND_Y - 24` and bottom at `BOSS_GROUND_Y - 8`.
-  Player height is 30, so a standing player overlaps the beam. Max jump
-  height is ~142 px (4 tiles), so a well-timed jump easily clears it.
-  *Tuning may be needed* — verify in playtest the timing feels fair.
+- **Beam column width vs reaction time.** A 32-px column is narrow
+  enough to step out of in 30 frames (player walk speed 3.5 px/tick →
+  ~105 px coverage), but wide enough that the player can't hover at the
+  edge. *Tuning may be needed* — verify in playtest the dodge feels fair.
+- **Beam target locks at windup start.** The player gets the full 30-frame
+  windup as their dodge window. If they don't move, they get hit. This is
+  the intended skill check.
 - **Charge retreat near arena edges.** If the boss is already near the
   edge when it starts a charge windup, the retreat is clamped, so the
   visible windup motion is shorter. The windup *duration* is unchanged,
@@ -200,5 +204,5 @@ All changes are within `game.js`:
   remains realistic).
 - The charge attack reads as a coherent windup → strike → recover
   sequence in playtest (no "teleport" comments).
-- Eye beam can be cleanly dodged by a timed jump from any position in the
-  arena.
+- Eye beam can be cleanly dodged by stepping laterally out of the
+  reticle column during the 30-frame telegraph.

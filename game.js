@@ -1428,7 +1428,7 @@ function makeBossMothman() {
     chargeDir: 0,
     chargeRetreatPx: 0,
     chargeAnchorY: 410,
-    beamY: BOSS_GROUND_Y - 16,
+    beamTargetX: 0,
     beamProgress: 0,
     vulnerable: false,
     hitTimer: 0,
@@ -1552,6 +1552,9 @@ function updateMothman(boss) {
       boss.stateTimer = boss.phase === 2 ? 35 : 50;
     }
   } else if (boss.state === 'beamWind') {
+    if (boss.stateTimer === 30) {
+      boss.beamTargetX = player.x + player.w / 2;
+    }
     boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 30);
     boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
     boss.stateTimer--;
@@ -1565,7 +1568,13 @@ function updateMothman(boss) {
     boss.beamProgress = Math.min(1, boss.beamProgress + 1 / 40);
     boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
     if (player.hurtTimer === 0) {
-      const beamHit = { x: 0, y: boss.beamY - 8, w: BOSS_ARENA_W, h: 16 };
+      const eyeY = boss.y + 30;
+      const beamHit = {
+        x: boss.beamTargetX - 16,
+        y: eyeY,
+        w: 32,
+        h: BOSS_GROUND_Y - eyeY,
+      };
       if (aabb(player, beamHit)) hurtPlayer();
     }
     boss.stateTimer--;
@@ -1603,24 +1612,73 @@ function drawMothman(boss) {
   ctx.shadowBlur = 0;
 
   if (boss.state === 'beamWind' || boss.state === 'beam') {
-    const beamScreenY = boss.beamY - cam.y;
+    const eyeYworld = boss.y + 30;
+    const eyeYscreen = eyeYworld - cam.y;
+    const leftEyeX = boss.x + 43 - cam.x;
+    const rightEyeX = boss.x + 57 - cam.x;
+    const targetXscreen = boss.beamTargetX - cam.x;
+    const groundYscreen = BOSS_GROUND_Y - cam.y;
+
     if (boss.state === 'beamWind') {
-      ctx.strokeStyle = `rgba(255,40,40,${0.3 + boss.eyeGlow * 0.5})`;
-      ctx.lineWidth = 1 + boss.eyeGlow * 2;
-      ctx.setLineDash([8, 6]);
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.4);
+      ctx.strokeStyle = `rgba(255,40,40,${0.4 + boss.eyeGlow * 0.5})`;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(-cam.x, beamScreenY);
-      ctx.lineTo(BOSS_ARENA_W - cam.x, beamScreenY);
+      ctx.arc(targetXscreen, groundYscreen - 4, 18 + pulse * 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(targetXscreen, groundYscreen - 4, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(targetXscreen - 22, groundYscreen - 4);
+      ctx.lineTo(targetXscreen + 22, groundYscreen - 4);
+      ctx.moveTo(targetXscreen, groundYscreen - 22);
+      ctx.lineTo(targetXscreen, groundYscreen + 14);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255,40,40,${0.2 + boss.eyeGlow * 0.4})`;
+      ctx.lineWidth = 1 + boss.eyeGlow;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(leftEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen - 4);
+      ctx.moveTo(rightEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen - 4);
       ctx.stroke();
       ctx.setLineDash([]);
     } else {
-      ctx.fillStyle = 'rgba(255,40,40,0.85)';
       ctx.shadowColor = '#ff0000';
       ctx.shadowBlur = 16;
-      ctx.fillRect(-cam.x, beamScreenY - 8, BOSS_ARENA_W, 16);
+      ctx.strokeStyle = 'rgba(255,40,40,0.9)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(leftEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.moveTo(rightEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.stroke();
       ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.fillRect(-cam.x, beamScreenY - 2, BOSS_ARENA_W, 4);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(leftEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.moveTo(rightEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.stroke();
+
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = 'rgba(255,80,40,0.7)';
+      ctx.beginPath();
+      ctx.arc(targetXscreen, groundYscreen, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,200,0.9)';
+      ctx.beginPath();
+      ctx.arc(targetXscreen, groundYscreen, 6, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -5664,6 +5722,7 @@ window.trailBlazerDebug = {
       chargeDir: b.chargeDir ?? 0,
       chargeRetreatPx: b.chargeRetreatPx ?? 0,
       beamProgress: b.beamProgress ?? 0,
+      beamTargetX: b.beamTargetX ?? 0,
     };
   },
   pokeBoss(patch) {
