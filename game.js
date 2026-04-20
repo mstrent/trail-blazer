@@ -1467,7 +1467,7 @@ function updateMothman(boss) {
         const tx = px + spread;
         const ty = py;
         const dist = Math.hypot(tx - bx, ty - by) || 1;
-        const speed = boss.phase === 2 ? 5 : 4;
+        const speed = boss.phase === 2 ? 6 : 5;
         boss.orbs.push({
           x: bx, y: by,
           vx: (tx - bx) / dist * speed,
@@ -1476,7 +1476,7 @@ function updateMothman(boss) {
       }
       audio.sfxStun();
       boss.state = 'freeze';
-      boss.stateTimer = boss.phase === 2 ? 20 : 30;
+      boss.stateTimer = 22;
     }
   } else if (boss.state === 'freeze') {
     boss.vulnerable = true;
