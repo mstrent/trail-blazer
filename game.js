@@ -1418,7 +1418,7 @@ function makeBossMothman() {
     w: 100, h: 120,
     hp: 6,
     phase: 1,
-    state: 'hover',  // hover | fire | freeze | chargeWind | charge | stall
+    state: 'hover',  // hover | fire | freeze | chargeWind | charge | stall | beamWind | beam | beamRecover
     stateTimer: 90,
     hoverDir: 1,
     hoverSpeed: 1.2,
@@ -1428,6 +1428,8 @@ function makeBossMothman() {
     chargeDir: 0,
     chargeRetreatPx: 0,
     chargeAnchorY: 410,
+    beamY: BOSS_GROUND_Y - 16,
+    beamProgress: 0,
     vulnerable: false,
     hitTimer: 0,
   };
@@ -1539,6 +1541,38 @@ function updateMothman(boss) {
       boss.state = 'hover';
       boss.stateTimer = 50;
     }
+  } else if (boss.state === 'beamWind') {
+    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 30);
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.state = 'beam';
+      boss.stateTimer = 40;
+      boss.beamProgress = 0;
+      audio.sfxSpray();
+    }
+  } else if (boss.state === 'beam') {
+    boss.beamProgress = Math.min(1, boss.beamProgress + 1 / 40);
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
+    if (player.hurtTimer === 0) {
+      const beamHit = { x: 0, y: boss.beamY - 8, w: BOSS_ARENA_W, h: 16 };
+      if (aabb(player, beamHit)) hurtPlayer();
+    }
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.state = 'beamRecover';
+      boss.stateTimer = 28;
+      boss.vulnerable = true;
+      boss.eyeGlow = 0;
+    }
+  } else if (boss.state === 'beamRecover') {
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      boss.state = 'hover';
+      boss.stateTimer = 50;
+    }
   }
 }
 
@@ -1557,6 +1591,28 @@ function drawMothman(boss) {
     ctx.fill();
   });
   ctx.shadowBlur = 0;
+
+  if (boss.state === 'beamWind' || boss.state === 'beam') {
+    const beamScreenY = boss.beamY - cam.y;
+    if (boss.state === 'beamWind') {
+      ctx.strokeStyle = `rgba(255,40,40,${0.3 + boss.eyeGlow * 0.5})`;
+      ctx.lineWidth = 1 + boss.eyeGlow * 2;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.moveTo(-cam.x, beamScreenY);
+      ctx.lineTo(BOSS_ARENA_W - cam.x, beamScreenY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = 'rgba(255,40,40,0.85)';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 16;
+      ctx.fillRect(-cam.x, beamScreenY - 8, BOSS_ARENA_W, 16);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.fillRect(-cam.x, beamScreenY - 2, BOSS_ARENA_W, 4);
+    }
+  }
 
   ctx.save();
   ctx.translate(bx, by);
