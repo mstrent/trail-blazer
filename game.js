@@ -1416,7 +1416,7 @@ function makeBossMothman() {
     type: 'mothman',
     x: BOSS_ARENA_W / 2 - 50, y: 410,
     w: 100, h: 120,
-    hp: 5,
+    hp: 6,
     phase: 1,
     state: 'hover',  // hover | fire | freeze | chargeWind | charge | stall
     stateTimer: 90,
@@ -2100,7 +2100,7 @@ function updateBossProjectile() {
 
 function checkBossPhase(boss) {
   if (boss.type === 'mothman') {
-    if (boss.hp <= 2 && boss.phase === 1) boss.phase = 2;
+    if (boss.hp <= 3 && boss.phase === 1) boss.phase = 2;
   }
   if (boss.type === 'bigfoot') {
     if (boss.hp <= 5 && boss.phase === 1) boss.phase = 2;
@@ -4416,7 +4416,7 @@ function drawBossHUD() {
   const boss = bossArena.boss;
   const bossNames  = { thunderbird: 'THUNDERBIRD', mothman: 'MOTHMAN OF SHASTA', bigfoot: 'BIGFOOT' };
   const bossColors = { thunderbird: '#4488ff',     mothman: '#ff4444',           bigfoot: '#885533' };
-  const maxHps     = { thunderbird: 3,             mothman: 5,                   bigfoot: 8 };
+  const maxHps     = { thunderbird: 3,             mothman: 6,                   bigfoot: 8 };
 
   const color  = bossColors[boss.type];
   const maxHp  = maxHps[boss.type];
