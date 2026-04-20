@@ -60,16 +60,16 @@ const EXPECTATIONS = {
   },
   // tablet-landscape 1194x834: aspect 1.43. Natural letterbox fit leaves a
   // ~59px bottom margin — too small for touch buttons — so the touch-aware
-  // layout falls back to canvas (overlay) mode.
+  // layout falls back to canvas (overlay) mode. H_logical is capped at the
+  // level height (480) so the canvas doesn't extend into empty world space.
   'tablet-landscape': {
     validate(layout) {
       if (layout.overlayMode === 'canvas') {
         const expectedScale = 1194 / 800;
         assert(Math.abs(layout.scale - expectedScale) < 0.01,
           `canvas-mode scale should ~= ${expectedScale}, got ${layout.scale}`);
-        const expectedHLogical = Math.floor(834 / expectedScale);
-        assert(layout.H_logical === expectedHLogical,
-          `canvas-mode H_logical should == ${expectedHLogical}, got ${layout.H_logical}`);
+        assert(layout.H_logical === 480,
+          `canvas-mode H_logical should be capped at 480, got ${layout.H_logical}`);
       } else {
         assert(layout.H_logical === 480, 'margin-mode H_logical should be 480');
       }

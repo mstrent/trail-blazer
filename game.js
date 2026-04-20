@@ -73,11 +73,16 @@ const layout = {
     const mode = this._decideMode(viewportAspect, vw, vh);
     let scale, H_logical, displayW, displayH;
     if (mode === 'canvas') {
-      // Fit by width; camera pans vertically.
+      // Fit by width; camera pans vertically when level is taller than viewport.
       scale = vw / 800;
       H_logical = Math.floor(vh / scale);
+      // Levels are 15 rows (480 game-px) tall. If the scaled viewport is taller
+      // than the level, H_logical would exceed the world height — the camera
+      // clamp `[0, level.ROWS*TS - H]` collapses and the bottom of the canvas
+      // renders as an empty sky void. Cap at 480 and letterbox the excess.
+      if (H_logical > 480) H_logical = 480;
       displayW = vw;
-      displayH = vh;
+      displayH = Math.round(H_logical * scale);
     } else {
       // Fit entire 800x480 game with letterbox.
       scale = Math.min(vw / 800, vh / 480);
