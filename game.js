@@ -5194,7 +5194,7 @@ const audio = (() => {
     src.connect(f); f.connect(g); g.connect(masterGain);
     src.start(t); src.stop(t + dur);
   }
-  function sfxSpray()     { sfx(() => { noiseRamp(0.55, 0.26, 0.18, 4500); noiseRamp(0.55, 0.16, 0.20, 2400); }); }
+  function sfxSpray()     { sfx(() => { noiseRamp(0.55, 0.13, 0.18, 4500); noiseRamp(0.55, 0.08, 0.20, 2400); }); }
   function sfxBonus()     { sfx(() => { [523, 659, 784, 1047].forEach((f, i) => osc('sine', f, 0.2, 0.14, masterGain, ctx.currentTime + i * 0.08)); }); }
   function sfxGlissade()  { sfx(() => { noise(0.4, 0.16, 500); oscSweep('sawtooth', 260, 130, 0.4, 0.06); }); }
   function sfxStun()      { sfx(() => { oscSweep('sine', 400, 200, 0.18, 0.12); oscSweep('sine', 380, 190, 0.22, 0.08); }); }
