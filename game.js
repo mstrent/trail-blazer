@@ -5176,7 +5176,7 @@ const audio = (() => {
   function sfxCollect()   { sfx(() => { osc('sine', 880, 0.12, 0.15); osc('sine', 1320, 0.18, 0.12, masterGain, ctx.currentTime + 0.07); }); }
   function sfxHurt()      { sfx(() => { oscSweep('sawtooth', 320, 100, 0.25, 0.2); noise(0.15, 0.1, 600); }); }
   function sfxWater()     { sfx(() => { oscSweep('sine', 600, 300, 0.08, 0.08); oscSweep('sine', 500, 250, 0.08, 0.06); }); }
-  function sfxSpray()     { sfx(() => { noise(0.06, 0.32, 900); noise(0.40, 0.18, 3400); oscSweep('sawtooth', 140, 70, 0.28, 0.06); }); }
+  function sfxSpray()     { sfx(() => { noise(0.05, 0.30, 1500); noise(0.38, 0.22, 4200); scheduleNoise(0.34, 0.14, 2400, ctx.currentTime + 0.03); }); }
   function sfxBonus()     { sfx(() => { [523, 659, 784, 1047].forEach((f, i) => osc('sine', f, 0.2, 0.14, masterGain, ctx.currentTime + i * 0.08)); }); }
   function sfxGlissade()  { sfx(() => { noise(0.4, 0.16, 500); oscSweep('sawtooth', 260, 130, 0.4, 0.06); }); }
   function sfxStun()      { sfx(() => { oscSweep('sine', 400, 200, 0.18, 0.12); oscSweep('sine', 380, 190, 0.22, 0.08); }); }
