@@ -1,210 +1,233 @@
+/* ==================== RESET ==================== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
+/* ==================== BODY / LAYOUT ==================== */
+/* Lock the page to the viewport: no scrolling, no rubber-band, no
+   horizontal scrollbar from a stray `100vw` (which includes scrollbar width).
+   Explicit 100dvh on html (not just body) lets viewport-fit=cover extend the
+   initial containing block under Android's gesture bar — without it, the ICB
+   resolves to the visual viewport excluding system UI. */
+html, body {
   background: #1a1a2e;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
   font-family: 'Courier New', monospace;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
-canvas {
+html {
+  height: 100dvh;
+}
+
+body {
+  position: relative;
+  height: 100dvh;
+}
+
+/* ==================== CANVAS ==================== */
+canvas#game {
   display: block;
+  position: absolute;
+  left: var(--game-offset-x);
+  top: var(--game-offset-y);
+  width: var(--game-display-width);
+  height: var(--game-display-height);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  border: 4px solid #3a5a3a;
-  box-shadow: 0 0 30px rgba(58, 180, 58, 0.3);
-  /* Scale down on small screens while keeping aspect ratio */
-  width: min(800px, 100vw);
-  height: auto;
-  aspect-ratio: 800 / 480;
+  border: none;
+  background: #000;
+  z-index: 0;
 }
 
-/* ===== LANDSCAPE MOBILE: full-screen canvas + overlay controls ===== */
-@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-  body {
-    padding-bottom: 0 !important;
-    justify-content: center;
-    overflow: hidden;
-  }
-  canvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw !important;
-    height: 100vh !important;   /* fallback for older browsers */
-    height: 100dvh !important;  /* dvh = actual visible viewport, excludes Android browser chrome */
-    border: none;
-    box-shadow: none;
-    z-index: 0;
-  }
-  #controls { display: none; }
+/* Add a subtle frame only when the canvas doesn't fill the viewport */
+html[data-overlay-mode="margin"] canvas#game {
+  box-shadow: 0 0 30px rgba(58, 180, 58, 0.25);
 }
 
-#controls {
-  margin-top: 12px;
-  color: #8bc48b;
-  font-size: 12px;
-  text-align: center;
-  max-width: 800px;
-  opacity: 0.8;
+/* ==================== HUD (DOM OVERLAY) ====================
+   HUD positions and font sizes scale 1:1 with the canvas via --game-scale.
+   This keeps DOM text inside the canvas-drawn HUD strip (36 game-px tall)
+   and prevents the time/level-name overlap that happens when sizes scale
+   by vw but the HUD is sized to the canvas. */
+#hud {
+  position: absolute;
+  left: var(--game-offset-x);
+  top: var(--game-offset-y);
+  width: var(--game-display-width);
+  height: calc(36px * var(--game-scale));
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+  z-index: 2;
 }
 
-/* ===== TOUCH CONTROLS ===== */
-#touch-controls {
-  position: fixed;
-  bottom: 0;
+#hud .hud-level-name {
+  position: absolute;
+  top: calc(4px * var(--game-scale));
   left: 0;
   right: 0;
-  display: flex;
-  gap: 10px;
-  align-items: stretch;
-  padding: 10px 12px 16px;
-  height: clamp(160px, 40vw, 240px);
-  pointer-events: none;
-  /* Only show on touch devices */
-  display: none;
+  text-align: center;
+  color: #AADDFF;
+  font-size: calc(10px * var(--game-scale));
+  text-shadow: 1px 1px 0 #000;
 }
 
-@media (hover: none) and (pointer: coarse) {
-  #touch-controls { display: flex; }
-  #controls { display: none; }
-  body { padding-bottom: clamp(160px, 40vw, 240px); }
-}
-
-#touch-left {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  pointer-events: auto;
-  align-items: stretch;
-}
-
-#touch-right {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: auto;
-  align-items: stretch;
-}
-
-.touch-row {
-  flex: 1;
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.touch-btn {
-  flex: 1;
-  border-radius: 14px;
-  border: 2px solid rgba(58, 180, 58, 0.55);
-  background: rgba(10, 25, 10, 0.72);
-  color: #8bc48b;
-  font-size: clamp(22px, 6vw, 40px);
-  font-family: 'Courier New', monospace;
+#hud .hud-score {
+  position: absolute;
+  top: calc(16px * var(--game-scale));
+  left: 50%;
+  transform: translateX(-50%);
+  color: #FFD700;
+  font-size: calc(14px * var(--game-scale));
   font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+  white-space: nowrap;
+}
+
+/* Time sits at game-coord x=260, matching where the canvas HUD drew it
+   (between the H2O drops and the centered level-name/score column). */
+#hud .hud-time {
+  position: absolute;
+  top: calc(10px * var(--game-scale));
+  left: calc(260px * var(--game-scale));
+  color: #88DDFF;
+  font-size: calc(12px * var(--game-scale));
+  font-weight: bold;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ==================== TOUCH CONTROLS ==================== */
+#touch-controls {
+  display: none; /* shown below when touch pointer is available */
+  pointer-events: none;
+  z-index: 10;
+  font-family: 'Courier New', monospace;
+}
+
+@media (any-pointer: coarse) {
+  #touch-controls { display: block; }
+}
+
+/* Base button look. Highly see-through per design. */
+.touch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  border-radius: 14px;
+  border: 2px solid rgba(58, 180, 58, 0.30);
+  background: rgba(10, 25, 10, 0.28);
+  color: rgba(139, 196, 139, 0.70);
+  font-weight: bold;
+  font-family: inherit;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   -webkit-tap-highlight-color: transparent;
+  font-size: clamp(14px, 2.5vw, 28px);
 }
-
 .touch-btn:active {
   background: rgba(58, 180, 58, 0.35);
-  border-color: rgba(58, 180, 58, 0.9);
-}
-
-#btn-down {
-  font-size: clamp(11px, 3vw, 16px);
-  letter-spacing: 1px;
+  border-color: rgba(58, 180, 58, 0.70);
 }
 
 #btn-spray {
-  font-size: clamp(11px, 3vw, 16px);
+  font-size: clamp(10px, 1.6vw, 16px);
   letter-spacing: 1px;
-  color: #ff8800;
-  border-color: rgba(255, 136, 0, 0.55);
+  color: rgba(255, 136, 0, 0.75);
+  border-color: rgba(255, 136, 0, 0.30);
+}
+#btn-spray:active {
+  background: rgba(255, 136, 0, 0.35);
+  border-color: rgba(255, 136, 0, 0.70);
 }
 
-#btn-spray:active {
-  background: rgba(255, 136, 0, 0.3);
-  border-color: rgba(255, 136, 0, 0.9);
+#btn-down {
+  font-size: clamp(10px, 1.6vw, 16px);
+  letter-spacing: 1px;
 }
 
 .touch-btn-jump {
-  font-size: clamp(13px, 3.5vw, 20px);
+  font-size: clamp(11px, 1.8vw, 20px);
   letter-spacing: 2px;
-  color: #FFD700;
-  border-color: rgba(255, 215, 0, 0.6);
+  color: rgba(255, 215, 0, 0.80);
+  border-color: rgba(255, 215, 0, 0.40);
   border-width: 3px;
 }
-
 .touch-btn-jump:active {
-  background: rgba(255, 215, 0, 0.25);
-  border-color: rgba(255, 215, 0, 0.95);
+  background: rgba(255, 215, 0, 0.35);
+  border-color: rgba(255, 215, 0, 0.90);
 }
 
-/* Landscape touch: overlay controls on top of full-screen canvas.
-   Must come AFTER base button styles so overrides win by source order. */
-@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
-  #touch-controls {
+/* ===== Mode-aware touch-control positioning (only on touch-capable devices) ===== */
+@media (any-pointer: coarse) {
+  /* Overlay mode: buttons sit on top of the canvas in its bottom corners.
+     env(safe-area-inset-*) keeps them clear of Android gesture/status bars
+     when viewport-fit=cover lets the page extend under them. */
+  html[data-overlay-mode="canvas"] #touch-left {
+    position: fixed;
+    left: calc(var(--game-offset-x) + 8px + env(safe-area-inset-left, 0px));
+    bottom: calc(var(--margin-bottom) + 8px + env(safe-area-inset-bottom, 0px));
+    width: clamp(140px, 22vw, 220px);
+    height: clamp(60px, 10vw, 90px);
     display: flex;
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: auto;
-    padding: 0;
-    z-index: 10;
-    background: none;
-    pointer-events: none;
-    gap: 0;
-    justify-content: space-between;
+    flex-direction: row;
+    gap: 6px;
   }
-  #touch-left {
+  html[data-overlay-mode="canvas"] #touch-right {
     position: fixed;
-    bottom: 8px;
-    left: 8px;
-    width: clamp(108px, 21.6vw, 168px);
-    height: clamp(53px, 10.8vw, 78px);
+    right: calc(var(--margin-right) + 8px + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--margin-bottom) + 8px + env(safe-area-inset-bottom, 0px));
+    width: clamp(160px, 26vw, 240px);
+    height: clamp(90px, 16vw, 140px);
+    display: flex;
+    flex-direction: column;
     gap: 4px;
   }
-  #touch-right {
+  html[data-overlay-mode="canvas"] #touch-right .touch-row {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+  }
+  html[data-overlay-mode="canvas"] .touch-btn { flex: 1; }
+
+  /* Margin mode: buttons hug the bottom edge of the canvas so they are
+     easy to thumb-reach, not pinned to the screen bottom. Cap height so
+     buttons keep a reasonable aspect ratio on portrait devices. */
+  html[data-overlay-mode="margin"] #touch-controls {
     position: fixed;
-    bottom: 8px;
-    right: 8px;
-    width: clamp(140px, 26vw, 200px);
-    height: clamp(90px, 17vw, 130px);
-    gap: 3px;
+    left: 0;
+    right: 0;
+    top: calc(var(--game-offset-y) + var(--game-display-height));
+    bottom: auto;
+    height: min(var(--margin-bottom), clamp(150px, 42vw, 270px));
+    padding: 6px 10px;
+    padding-left: max(10px, env(safe-area-inset-left, 0px));
+    padding-right: max(10px, env(safe-area-inset-right, 0px));
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    justify-content: space-between;
+    align-items: stretch;
   }
-  .touch-btn {
-    background: rgba(10, 25, 10, 0.30);
-    border-color: rgba(58, 180, 58, 0.30);
-    font-size: clamp(14px, 3vw, 20px);
-    color: rgba(139, 196, 139, 0.7);
+  html[data-overlay-mode="margin"] #touch-left {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    max-width: 45%;
   }
-  .touch-btn:active {
-    background: rgba(58, 180, 58, 0.30);
+  html[data-overlay-mode="margin"] #touch-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 45%;
   }
-  #btn-spray {
-    border-color: rgba(255, 136, 0, 0.30);
-    color: rgba(255, 136, 0, 0.7);
+  html[data-overlay-mode="margin"] #touch-right .touch-row {
+    flex: 1;
+    display: flex;
+    gap: 6px;
   }
-  .touch-btn-jump {
-    border-color: rgba(255, 215, 0, 0.35);
-    border-width: 2px;
-    color: rgba(255, 215, 0, 0.7);
-  }
-  #btn-down, #btn-spray {
-    font-size: clamp(8px, 1.8vw, 11px);
-  }
-  .touch-btn-jump {
-    font-size: clamp(9px, 2vw, 12px);
-  }
+  html[data-overlay-mode="margin"] .touch-btn { flex: 1; }
 }

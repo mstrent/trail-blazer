@@ -12,32 +12,183 @@ canvas.width = W;
 canvas.height = H;
 const TS = 32; // tile size in pixels
 
-// Resize canvas to match viewport aspect ratio on mobile landscape
-function resizeCanvas() {
-  const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
-  const isLandscape = window.innerWidth > window.innerHeight;
-  if (isTouch && isLandscape) {
-    // Use visualViewport dimensions which match 100dvh/100dvw — the actual visible
-    // area excluding Android/iOS browser chrome (address bar, nav bar). This keeps
-    // the canvas logical size in sync with the CSS dvh sizing so content isn't clipped.
+// ==================== LAYOUT MODULE ====================
+// Unified viewport-to-game mapping. See docs/superpowers/specs/2026-04-18-responsive-layout-design.md.
+const GAME_ASPECT = 800 / 480;
+const PAN_THRESHOLD = 1.25;
+const LAYOUT_HYST = 0.05;
+// On touch devices, if margin-mode bottom letterbox would be smaller than
+// this, switch to canvas (overlay) mode so buttons don't get squeezed into
+// a tiny strip below the canvas.
+const TOUCH_MIN_BOTTOM_STRIP = 100;
+
+const layout = {
+  // Public read-only state (populated by recompute())
+  scale: 1,
+  H_logical: 480,
+  display: { w: 800, h: 480, x: 0, y: 0 },
+  margin: { top: 0, bottom: 0, left: 0, right: 0 },
+  overlayMode: 'margin', // 'margin' or 'canvas'
+
+  _getViewport() {
     const vp = window.visualViewport;
-    const vh = vp ? vp.height : window.innerHeight;
-    const vw = vp ? vp.width : window.innerWidth;
-    H = Math.min(480, Math.round(vh));
-    W = Math.round(vw);
-  } else {
+    const vw = Math.max(1, Math.round(vp ? vp.width : window.innerWidth));
+    const vh = Math.max(1, Math.round(vp ? vp.height : window.innerHeight));
+    return { vw, vh };
+  },
+
+  _isTouch() {
+    return typeof window.matchMedia === 'function'
+      && window.matchMedia('(any-pointer: coarse)').matches;
+  },
+
+  _decideMode(viewportAspect, vw, vh) {
+    // Hysteresis: asymmetric thresholds prevent flicker on live resize.
+    const enterCanvas = GAME_ASPECT * (PAN_THRESHOLD + LAYOUT_HYST);
+    const exitCanvas  = GAME_ASPECT * (PAN_THRESHOLD - LAYOUT_HYST);
+    let mode;
+    if (this.overlayMode === 'canvas') {
+      mode = viewportAspect > exitCanvas ? 'canvas' : 'margin';
+    } else {
+      mode = viewportAspect > enterCanvas ? 'canvas' : 'margin';
+    }
+    // On touch devices, margin-mode buttons sit in the bottom letterbox.
+    // When the letterbox is too small for them, overlay on the canvas instead.
+    if (mode === 'margin' && this._isTouch()) {
+      const scale = Math.min(vw / 800, vh / 480);
+      const bottomMargin = Math.floor((vh - Math.round(480 * scale)) / 2);
+      if (bottomMargin < TOUCH_MIN_BOTTOM_STRIP) mode = 'canvas';
+    }
+    return mode;
+  },
+
+  // Mirrors the margin-mode touch-controls CSS: clamp(150px, 42vw, 270px).
+  // Kept in sync manually — if the CSS changes, update this too.
+  _touchButtonStripHeight(vw) {
+    return Math.max(150, Math.min(270, Math.round(0.42 * vw)));
+  },
+
+  _compute(vw, vh) {
+    const viewportAspect = vw / vh;
+    const mode = this._decideMode(viewportAspect, vw, vh);
+    let scale, H_logical, displayW, displayH;
+    if (mode === 'canvas') {
+      // Fit by width; camera pans vertically when level is taller than viewport.
+      scale = vw / 800;
+      H_logical = Math.floor(vh / scale);
+      // Levels are 15 rows (480 game-px) tall. If the scaled viewport is taller
+      // than the level, H_logical would exceed the world height — the camera
+      // clamp `[0, level.ROWS*TS - H]` collapses and the bottom of the canvas
+      // renders as an empty sky void. Cap at 480 and letterbox the excess.
+      if (H_logical > 480) H_logical = 480;
+      displayW = vw;
+      displayH = Math.round(H_logical * scale);
+    } else {
+      // Fit entire 800x480 game with letterbox.
+      scale = Math.min(vw / 800, vh / 480);
+      H_logical = 480;
+      displayW = Math.round(800 * scale);
+      displayH = Math.round(480 * scale);
+    }
+    const offsetX = Math.floor((vw - displayW) / 2);
+    let offsetY;
+    if (mode === 'margin' && this._isTouch()) {
+      // Centre (canvas + button strip) together so the cluster doesn't
+      // feel bottom-heavy. Falls back to simple centring if there isn't
+      // room for the full strip height.
+      const buttonH = this._touchButtonStripHeight(vw);
+      const cluster = displayH + buttonH;
+      offsetY = cluster <= vh
+        ? Math.floor((vh - cluster) / 2)
+        : Math.floor((vh - displayH) / 2);
+    } else {
+      offsetY = Math.floor((vh - displayH) / 2);
+    }
+    return {
+      scale,
+      H_logical,
+      overlayMode: mode,
+      display: { w: displayW, h: displayH, x: offsetX, y: offsetY },
+      margin: {
+        top: offsetY,
+        bottom: vh - displayH - offsetY,
+        left: offsetX,
+        right: vw - displayW - offsetX,
+      },
+    };
+  },
+
+  recompute() {
+    const { vw, vh } = this._getViewport();
+    const next = this._compute(vw, vh);
+    Object.assign(this, next);
+
+    // Mutate game globals (read by camera clamp, draw code, etc.)
     W = 800;
-    H = 480;
-  }
-  canvas.width = W;
-  canvas.height = H;
+    H = next.H_logical;
+
+    // Canvas internal buffer is at logical resolution.
+    canvas.width = W;
+    canvas.height = H;
+
+    // Canvas CSS size drives display rendering (browser upscales).
+    canvas.style.width = next.display.w + 'px';
+    canvas.style.height = next.display.h + 'px';
+
+    // Write CSS custom properties for stylesheet consumption.
+    const root = document.documentElement;
+    root.style.setProperty('--game-scale', next.scale.toFixed(4));
+    root.style.setProperty('--game-display-width', next.display.w + 'px');
+    root.style.setProperty('--game-display-height', next.display.h + 'px');
+    root.style.setProperty('--game-offset-x', next.display.x + 'px');
+    root.style.setProperty('--game-offset-y', next.display.y + 'px');
+    root.style.setProperty('--margin-top', next.margin.top + 'px');
+    root.style.setProperty('--margin-bottom', next.margin.bottom + 'px');
+    root.style.setProperty('--margin-left', next.margin.left + 'px');
+    root.style.setProperty('--margin-right', next.margin.right + 'px');
+    root.dataset.overlayMode = next.overlayMode;
+  },
+};
+layout.recompute();
+addEventListener('resize', () => layout.recompute());
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => layout.recompute());
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
+addEventListener('orientationchange', () => layout.recompute());
 
 // ==================== INPUT ====================
 const keys = {}, prev = {};
+
+// Firefox Android (and some other mobile browsers) don't extend the viewport
+// under system gesture bars via viewport-fit=cover alone. The Fullscreen API
+// reliably gives us edge-to-edge on every browser, but it requires a user
+// gesture. Attempt it on user interactions until it succeeds. Multiple touch
+// signals cover browsers whose (any-pointer: coarse) behavior is inconsistent.
+function _isLikelyTouchDevice() {
+  if (navigator.maxTouchPoints > 0) return true;
+  if ('ontouchstart' in window) return true;
+  if (!window.matchMedia) return false;
+  return window.matchMedia('(any-pointer: coarse)').matches
+      || window.matchMedia('(pointer: coarse)').matches
+      || window.matchMedia('(hover: none)').matches;
+}
+function tryEnterFullscreenOnTouch() {
+  if (document.fullscreenElement || document.webkitFullscreenElement) return;
+  if (!_isLikelyTouchDevice()) return;
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+  if (!req) return;
+  try {
+    const p = req.call(el);
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch (_) { /* silently ignore */ }
+}
+// pointerdown covers mouse + stylus; touchend is the most reliable fullscreen
+// trigger on Firefox Android (tied strongly to user activation).
+addEventListener('pointerdown', tryEnterFullscreenOnTouch, true);
+addEventListener('touchend', tryEnterFullscreenOnTouch, true);
+addEventListener('keydown', tryEnterFullscreenOnTouch, true);
+
 addEventListener('keydown', e => {
   audio.init();
   keys[e.code] = true;
@@ -2671,6 +2822,30 @@ function advanceLevel() {
 
 // ==================== DRAWING ====================
 
+// ==================== DOM HUD UPDATE ====================
+const _hudEls = {
+  root: document.getElementById('hud'),
+  levelName: document.getElementById('hud-level-name'),
+  score: document.getElementById('hud-score'),
+  time: document.getElementById('hud-time'),
+};
+function updateHUD() {
+  const visible = game.state === 'playing';
+  if (_hudEls.root) _hudEls.root.style.display = visible ? 'block' : 'none';
+  if (!visible) return;
+
+  if (LEVELS[game.levelNum]) {
+    _hudEls.levelName.textContent = LEVELS[game.levelNum].name.toUpperCase();
+  }
+  if (player) {
+    _hudEls.score.textContent = `SCORE: ${player.score}`;
+  }
+  const timeSeconds = Math.floor(game.levelTick / 60);
+  const mm = Math.floor(timeSeconds / 60);
+  const ss = (timeSeconds % 60).toString().padStart(2, '0');
+  _hudEls.time.textContent = `TIME: ${mm}:${ss}`;
+}
+
 // Color palette
 const C = {
   skyTop:    '#5B9BD5',
@@ -3995,25 +4170,7 @@ function drawHUD() {
     ctx.fill();
   }
 
-  // Level name
-  ctx.fillStyle = '#AADDFF';
-  ctx.font = '10px Courier New';
-  ctx.textAlign = 'center';
-  ctx.fillText(LEVELS[game.levelNum].name.toUpperCase(), W / 2, 13);
-
-  // Score
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 14px Courier New';
-  ctx.fillText(`SCORE: ${player.score}`, W / 2, 28);
-
-  // Time
-  const timeSeconds = Math.floor(game.levelTick / 60);
-  const timeStr = `${Math.floor(timeSeconds / 60)}:${(timeSeconds % 60).toString().padStart(2, '0')}`;
-  ctx.fillStyle = '#88DDFF';
-  ctx.font = 'bold 12px Courier New';
-  ctx.textAlign = 'left';
-  ctx.fillText(`TIME: ${timeStr}`, 260, 22);
-  ctx.textAlign = 'right';
+  // Level name, score, and time are rendered by DOM HUD (updateHUD()).
 
   // Trail progress bar (not applicable in boss arenas)
   const progress = level ? clamp(player.x / (level.COLS * TS), 0, 1) : 0;
@@ -5244,6 +5401,7 @@ const audio = (() => {
 function loop() {
   update();
   draw();
+  updateHUD();
   requestAnimationFrame(loop);
 }
 
@@ -5348,6 +5506,15 @@ window.trailBlazerDebug = {
       playerScore: player ? player.score : null,
       enemyCount: enemies.filter(e => e.alive).length,
       itemCount: items.filter(i => !i.collected).length,
+    };
+  },
+  getLayout() {
+    return {
+      scale: layout.scale,
+      H_logical: layout.H_logical,
+      overlayMode: layout.overlayMode,
+      display: { ...layout.display },
+      margin: { ...layout.margin },
     };
   },
   forceBossAttack(attackName) {

@@ -2,19 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Trail Blazer: An Ultralight Backpacking Adventure</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    :root {
+      --game-scale: 1;
+      --game-display-width: 800px;
+      --game-display-height: 480px;
+      --game-offset-x: 0px;
+      --game-offset-y: 0px;
+      --margin-top: 0px;
+      --margin-bottom: 0px;
+      --margin-left: 0px;
+      --margin-right: 0px;
+    }
+    html[data-overlay-mode="canvas"] { /* styles wait for CSS rewrite */ }
+    html[data-overlay-mode="margin"]  { /* styles wait for CSS rewrite */ }
+  </style>
 </head>
 <body>
   <canvas id="game"></canvas>
-  <div id="controls">
-    <strong>Controls:</strong>
-    Arrow Keys / WASD = Move &nbsp;|&nbsp;
-    Z / Space = Jump &nbsp;|&nbsp;
-    Down + Move = Glissade (slide &amp; stun) &nbsp;|&nbsp;
-    X = Bear Spray (stun enemies) &nbsp;|&nbsp;
-    Stomp enemies by jumping on them!
+  <div id="hud" aria-hidden="true">
+    <div class="hud-level-name" id="hud-level-name"></div>
+    <div class="hud-score" id="hud-score">SCORE: 0</div>
+    <div class="hud-time" id="hud-time">TIME: 0:00</div>
   </div>
   <div id="touch-controls">
     <div id="touch-left">
