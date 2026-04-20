@@ -2047,6 +2047,7 @@ function updateBossPlayer() {
     const py = player.y + player.h / 2;
     bossArena.spray = { x: px, y: py, vx: 0, vy: -14, active: true };
     spawnParticles(px, player.y + 8, '#ff8800', 12, 4);
+    audio.sfxSpray();
   }
 
   player.vy = Math.min(player.vy + GRAVITY_FORCE, MAX_FALL);
@@ -2473,6 +2474,7 @@ function updatePlayer() {
     const sprayY = player.y - 10;
     const sprayRect = { x: sprayX, y: sprayY, w: 120, h: 50 };
     spawnParticles(player.x + player.w / 2, player.y + 8, '#ff8800', 12, 4);
+    audio.sfxSpray();
     enemies.forEach(e => {
       if (e.alive && e.stunTimer === 0 && aabb(e, sprayRect)) {
         e.stunTimer = 120;
@@ -5174,7 +5176,25 @@ const audio = (() => {
   function sfxCollect()   { sfx(() => { osc('sine', 880, 0.12, 0.15); osc('sine', 1320, 0.18, 0.12, masterGain, ctx.currentTime + 0.07); }); }
   function sfxHurt()      { sfx(() => { oscSweep('sawtooth', 320, 100, 0.25, 0.2); noise(0.15, 0.1, 600); }); }
   function sfxWater()     { sfx(() => { oscSweep('sine', 600, 300, 0.08, 0.08); oscSweep('sine', 500, 250, 0.08, 0.06); }); }
-  function sfxSpray()     { sfx(() => { noise(0.35, 0.18, 2000); oscSweep('sawtooth', 80, 60, 0.35, 0.08); }); }
+  // Slow-attack filtered noise: ramps in linearly, sustains, then decays — "sssshhh".
+  function noiseRamp(dur, peakGain, attack, filterFreq, startTime) {
+    const t = startTime !== undefined ? startTime : ctx.currentTime;
+    const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass'; f.frequency.value = filterFreq || 3000; f.Q.value = 0.5;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(peakGain, t + attack);
+    g.gain.setValueAtTime(peakGain, t + Math.min(attack + 0.15, dur * 0.75));
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f); f.connect(g); g.connect(masterGain);
+    src.start(t); src.stop(t + dur);
+  }
+  function sfxSpray()     { sfx(() => { noiseRamp(0.55, 0.13, 0.18, 4500); noiseRamp(0.55, 0.08, 0.20, 2400); }); }
   function sfxBonus()     { sfx(() => { [523, 659, 784, 1047].forEach((f, i) => osc('sine', f, 0.2, 0.14, masterGain, ctx.currentTime + i * 0.08)); }); }
   function sfxGlissade()  { sfx(() => { noise(0.4, 0.16, 500); oscSweep('sawtooth', 260, 130, 0.4, 0.06); }); }
   function sfxStun()      { sfx(() => { oscSweep('sine', 400, 200, 0.18, 0.12); oscSweep('sine', 380, 190, 0.22, 0.08); }); }
