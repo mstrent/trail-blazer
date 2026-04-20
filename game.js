@@ -1425,6 +1425,9 @@ function makeBossMothman() {
     orbs: [],
     eyeGlow: 0,
     chargeVx: 0,
+    chargeDir: 0,
+    chargeRetreatPx: 0,
+    chargeAnchorY: 410,
     vulnerable: false,
     hitTimer: 0,
   };
@@ -1486,25 +1489,35 @@ function updateMothman(boss) {
       if (boss.phase === 2 && Math.random() < 0.5) {
         boss.eyeGlow = 0;
         boss.state = 'chargeWind';
-        boss.stateTimer = 35;
+        boss.stateTimer = 30;
       } else {
         boss.state = 'hover';
         boss.stateTimer = 60 + (Math.random() * 30 | 0);
       }
     }
   } else if (boss.state === 'chargeWind') {
-    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 35);
+    if (boss.stateTimer === 30) {
+      boss.chargeDir = player.x + player.w / 2 < boss.x + boss.w / 2 ? -1 : 1;
+      boss.chargeAnchorY = boss.y;
+      boss.chargeRetreatPx = 0;
+    }
+    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 30);
+    const stepBack = 80 / 30;
+    const minX = 60;
+    const maxX = BOSS_ARENA_W - boss.w - 60;
+    const desiredX = boss.x - boss.chargeDir * stepBack;
+    boss.x = Math.max(minX, Math.min(maxX, desiredX));
+    boss.chargeRetreatPx += stepBack;
+    boss.y = boss.chargeAnchorY;
     boss.stateTimer--;
     if (boss.stateTimer <= 0) {
-      const dir = player.x < boss.x ? -1 : 1;
-      boss.chargeVx = dir * 14;
+      boss.chargeVx = boss.chargeDir * 14;
       boss.state = 'charge';
       boss.stateTimer = 50;
     }
   } else if (boss.state === 'charge') {
     boss.x += boss.chargeVx;
-    const targetY = BOSS_GROUND_Y - boss.h - 10;
-    boss.y += (targetY - boss.y) * 0.15;
+    boss.y = boss.chargeAnchorY;
 
     if (player.hurtTimer === 0 && aabb(player, boss)) {
       hurtPlayer();
@@ -1517,7 +1530,7 @@ function updateMothman(boss) {
       boss.eyeGlow = 0;
       boss.vulnerable = true;
       boss.state = 'stall';
-      boss.stateTimer = 25;
+      boss.stateTimer = 18;
     }
   } else if (boss.state === 'stall') {
     boss.stateTimer--;
