@@ -5618,10 +5618,33 @@ window.trailBlazerDebug = {
   },
   forceBossAttack(attackName) {
     if (!bossArena || !bossArena.boss) return false;
-    const valid = ['leap', 'groundpound', 'groundpound-dual', 'boulders'];
-    if (!valid.includes(attackName)) return false;
-    bossArena.boss.forcedNextAttack = attackName;
-    return true;
+    const boss = bossArena.boss;
+    if (boss.type === 'bigfoot') {
+      const valid = ['leap', 'groundpound', 'groundpound-dual', 'boulders'];
+      if (!valid.includes(attackName)) return false;
+      boss.forcedNextAttack = attackName;
+      return true;
+    }
+    if (boss.type === 'mothman') {
+      if (attackName === 'beam') {
+        boss.eyeGlow = 0;
+        boss.state = 'beamWind';
+        boss.stateTimer = 30;
+        return true;
+      }
+      if (attackName === 'charge') {
+        boss.eyeGlow = 0;
+        boss.state = 'chargeWind';
+        boss.stateTimer = 30;
+        return true;
+      }
+      if (attackName === 'orbs') {
+        boss.state = 'fire';
+        boss.stateTimer = 20;
+        return true;
+      }
+    }
+    return false;
   },
   getBossState() {
     if (!bossArena || !bossArena.boss) return null;
@@ -5638,6 +5661,9 @@ window.trailBlazerDebug = {
       shockwaves: (b.shockwaves || []).map(sw => ({
         x: sw.x, dir: sw.dir, speed: sw.speed, active: sw.active,
       })),
+      chargeDir: b.chargeDir ?? 0,
+      chargeRetreatPx: b.chargeRetreatPx ?? 0,
+      beamProgress: b.beamProgress ?? 0,
     };
   },
   pokeBoss(patch) {
