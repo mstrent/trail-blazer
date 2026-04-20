@@ -48,8 +48,8 @@ export default async function scenario(game) {
   await game.waitFrames(10);
   const afterNormal = await getNodeCount(game.page);
   const normalDelta = afterNormal - beforeNormal;
-  // sfxSpray creates: 2 buffer sources (noise burst + hiss) + 1 oscillator (sweep) = 3.
-  assert(normalDelta >= 3, `Normal-level spray created ${normalDelta} audio nodes, expected >=3`);
+  // sfxSpray creates 2 buffer sources (layered bandpass-noise hisses with slow attack).
+  assert(normalDelta >= 2, `Normal-level spray created ${normalDelta} audio nodes, expected >=2`);
   console.log(`Normal-level spray created ${normalDelta} audio nodes OK`);
 
   // --- Boss arena: Bigfoot (level 11) ---
@@ -65,7 +65,7 @@ export default async function scenario(game) {
   await game.waitFrames(10);
   const afterBoss = await getNodeCount(game.page);
   const bossDelta = afterBoss - beforeBoss;
-  assert(bossDelta >= 3, `Boss-arena spray created ${bossDelta} audio nodes, expected >=3`);
+  assert(bossDelta >= 2, `Boss-arena spray created ${bossDelta} audio nodes, expected >=2`);
   console.log(`Boss-arena spray created ${bossDelta} audio nodes OK`);
 
   console.log('Bear spray SFX scenario passed.');
