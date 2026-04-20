@@ -1488,10 +1488,20 @@ function updateMothman(boss) {
     boss.stateTimer--;
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
-      if (boss.phase === 2 && Math.random() < 0.5) {
-        boss.eyeGlow = 0;
-        boss.state = 'chargeWind';
-        boss.stateTimer = 30;
+      if (boss.phase === 2) {
+        const roll = Math.random();
+        if (roll < 0.35) {
+          boss.eyeGlow = 0;
+          boss.state = 'beamWind';
+          boss.stateTimer = 30;
+        } else if (roll < 0.60) {
+          boss.eyeGlow = 0;
+          boss.state = 'chargeWind';
+          boss.stateTimer = 30;
+        } else {
+          boss.state = 'hover';
+          boss.stateTimer = 35 + (Math.random() * 20 | 0);
+        }
       } else {
         boss.state = 'hover';
         boss.stateTimer = 60 + (Math.random() * 30 | 0);
@@ -1539,7 +1549,7 @@ function updateMothman(boss) {
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
       boss.state = 'hover';
-      boss.stateTimer = 50;
+      boss.stateTimer = boss.phase === 2 ? 35 : 50;
     }
   } else if (boss.state === 'beamWind') {
     boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 30);
@@ -1571,7 +1581,7 @@ function updateMothman(boss) {
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
       boss.state = 'hover';
-      boss.stateTimer = 50;
+      boss.stateTimer = boss.phase === 2 ? 35 : 50;
     }
   }
 }
