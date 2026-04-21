@@ -1416,15 +1416,20 @@ function makeBossMothman() {
     type: 'mothman',
     x: BOSS_ARENA_W / 2 - 50, y: 410,
     w: 100, h: 120,
-    hp: 5,
+    hp: 6,
     phase: 1,
-    state: 'hover',  // hover | fire | freeze | chargeWind | charge | stall
+    state: 'hover',  // hover | fire | freeze | chargeWind | charge | stall | beamWind | beam | beamRecover
     stateTimer: 90,
     hoverDir: 1,
     hoverSpeed: 1.2,
     orbs: [],
     eyeGlow: 0,
     chargeVx: 0,
+    chargeDir: 0,
+    chargeRetreatPx: 0,
+    chargeAnchorY: 410,
+    beamTargetX: 0,
+    beamProgress: 0,
     vulnerable: false,
     hitTimer: 0,
   };
@@ -1467,7 +1472,7 @@ function updateMothman(boss) {
         const tx = px + spread;
         const ty = py;
         const dist = Math.hypot(tx - bx, ty - by) || 1;
-        const speed = boss.phase === 2 ? 5 : 4;
+        const speed = boss.phase === 2 ? 6 : 5;
         boss.orbs.push({
           x: bx, y: by,
           vx: (tx - bx) / dist * speed,
@@ -1476,35 +1481,59 @@ function updateMothman(boss) {
       }
       audio.sfxStun();
       boss.state = 'freeze';
-      boss.stateTimer = boss.phase === 2 ? 20 : 30;
+      boss.stateTimer = 22;
     }
   } else if (boss.state === 'freeze') {
     boss.vulnerable = true;
     boss.stateTimer--;
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
-      if (boss.phase === 2 && Math.random() < 0.5) {
-        boss.eyeGlow = 0;
-        boss.state = 'chargeWind';
-        boss.stateTimer = 35;
+      if (boss.phase === 2) {
+        const roll = Math.random();
+        if (roll < 0.35) {
+          boss.eyeGlow = 0;
+          boss.state = 'beamWind';
+          boss.stateTimer = 30;
+        } else if (roll < 0.60) {
+          boss.eyeGlow = 0;
+          boss.state = 'chargeWind';
+          boss.stateTimer = 30;
+        } else {
+          boss.state = 'hover';
+          boss.stateTimer = 35 + (Math.random() * 20 | 0);
+        }
       } else {
         boss.state = 'hover';
         boss.stateTimer = 60 + (Math.random() * 30 | 0);
       }
     }
   } else if (boss.state === 'chargeWind') {
-    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 35);
+    if (boss.stateTimer === 30) {
+      boss.chargeDir = player.x + player.w / 2 < boss.x + boss.w / 2 ? -1 : 1;
+      boss.chargeAnchorY = boss.y;
+      boss.chargeRetreatPx = 0;
+    }
+    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 30);
+    const stepBack = 80 / 30;
+    const minX = 60;
+    const maxX = BOSS_ARENA_W - boss.w - 60;
+    const desiredX = boss.x - boss.chargeDir * stepBack;
+    boss.x = Math.max(minX, Math.min(maxX, desiredX));
+    boss.chargeRetreatPx += stepBack;
+    const liftT = 1 - boss.stateTimer / 30;
+    boss.y = boss.chargeAnchorY - 50 * liftT;
     boss.stateTimer--;
     if (boss.stateTimer <= 0) {
-      const dir = player.x < boss.x ? -1 : 1;
-      boss.chargeVx = dir * 14;
+      boss.chargeVx = boss.chargeDir * 14;
       boss.state = 'charge';
       boss.stateTimer = 50;
     }
   } else if (boss.state === 'charge') {
     boss.x += boss.chargeVx;
-    const targetY = BOSS_GROUND_Y - boss.h - 10;
-    boss.y += (targetY - boss.y) * 0.15;
+    const t = 1 - boss.stateTimer / 50;
+    const peakY = boss.chargeAnchorY - 50;
+    const bottomY = 580;
+    boss.y = peakY + (bottomY - peakY) * Math.sin(t * Math.PI);
 
     if (player.hurtTimer === 0 && aabb(player, boss)) {
       hurtPlayer();
@@ -1517,14 +1546,55 @@ function updateMothman(boss) {
       boss.eyeGlow = 0;
       boss.vulnerable = true;
       boss.state = 'stall';
-      boss.stateTimer = 25;
+      boss.stateTimer = 18;
     }
   } else if (boss.state === 'stall') {
     boss.stateTimer--;
     if (boss.stateTimer <= 0) {
       boss.vulnerable = false;
       boss.state = 'hover';
-      boss.stateTimer = 50;
+      boss.stateTimer = boss.phase === 2 ? 35 : 50;
+    }
+  } else if (boss.state === 'beamWind') {
+    if (boss.stateTimer === 30) {
+      boss.beamTargetX = player.x + player.w / 2;
+    }
+    boss.eyeGlow = Math.min(1, boss.eyeGlow + 1 / 30);
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.state = 'beam';
+      boss.stateTimer = 40;
+      boss.beamProgress = 0;
+      audio.sfxSpray();
+    }
+  } else if (boss.state === 'beam') {
+    boss.beamProgress = Math.min(1, boss.beamProgress + 1 / 40);
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
+    if (player.hurtTimer === 0) {
+      const eyeY = boss.y + 30;
+      const beamHit = {
+        x: boss.beamTargetX - 16,
+        y: eyeY,
+        w: 32,
+        h: BOSS_GROUND_Y - eyeY,
+      };
+      if (aabb(player, beamHit)) hurtPlayer();
+    }
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.state = 'beamRecover';
+      boss.stateTimer = 28;
+      boss.vulnerable = true;
+      boss.eyeGlow = 0;
+    }
+  } else if (boss.state === 'beamRecover') {
+    boss.y = 410 + Math.sin(game.tick * 0.03) * 25;
+    boss.stateTimer--;
+    if (boss.stateTimer <= 0) {
+      boss.vulnerable = false;
+      boss.state = 'hover';
+      boss.stateTimer = boss.phase === 2 ? 35 : 50;
     }
   }
 }
@@ -1544,6 +1614,77 @@ function drawMothman(boss) {
     ctx.fill();
   });
   ctx.shadowBlur = 0;
+
+  if (boss.state === 'beamWind' || boss.state === 'beam') {
+    const eyeYworld = boss.y + 30;
+    const eyeYscreen = eyeYworld - cam.y;
+    const leftEyeX = boss.x + 43 - cam.x;
+    const rightEyeX = boss.x + 57 - cam.x;
+    const targetXscreen = boss.beamTargetX - cam.x;
+    const groundYscreen = BOSS_GROUND_Y - cam.y;
+
+    if (boss.state === 'beamWind') {
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.4);
+      ctx.strokeStyle = `rgba(255,40,40,${0.4 + boss.eyeGlow * 0.5})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(targetXscreen, groundYscreen - 4, 18 + pulse * 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(targetXscreen, groundYscreen - 4, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(targetXscreen - 22, groundYscreen - 4);
+      ctx.lineTo(targetXscreen + 22, groundYscreen - 4);
+      ctx.moveTo(targetXscreen, groundYscreen - 22);
+      ctx.lineTo(targetXscreen, groundYscreen + 14);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255,40,40,${0.2 + boss.eyeGlow * 0.4})`;
+      ctx.lineWidth = 1 + boss.eyeGlow;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(leftEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen - 4);
+      ctx.moveTo(rightEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen - 4);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 16;
+      ctx.strokeStyle = 'rgba(255,40,40,0.9)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(leftEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.moveTo(rightEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(leftEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.moveTo(rightEyeX, eyeYscreen);
+      ctx.lineTo(targetXscreen, groundYscreen);
+      ctx.stroke();
+
+      ctx.shadowColor = '#ff8800';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = 'rgba(255,80,40,0.7)';
+      ctx.beginPath();
+      ctx.arc(targetXscreen, groundYscreen, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,200,0.9)';
+      ctx.beginPath();
+      ctx.arc(targetXscreen, groundYscreen, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
   ctx.save();
   ctx.translate(bx, by);
@@ -2100,7 +2241,7 @@ function updateBossProjectile() {
 
 function checkBossPhase(boss) {
   if (boss.type === 'mothman') {
-    if (boss.hp <= 2 && boss.phase === 1) boss.phase = 2;
+    if (boss.hp <= 3 && boss.phase === 1) boss.phase = 2;
   }
   if (boss.type === 'bigfoot') {
     if (boss.hp <= 5 && boss.phase === 1) boss.phase = 2;
@@ -4416,7 +4557,7 @@ function drawBossHUD() {
   const boss = bossArena.boss;
   const bossNames  = { thunderbird: 'THUNDERBIRD', mothman: 'MOTHMAN OF SHASTA', bigfoot: 'BIGFOOT' };
   const bossColors = { thunderbird: '#4488ff',     mothman: '#ff4444',           bigfoot: '#885533' };
-  const maxHps     = { thunderbird: 3,             mothman: 5,                   bigfoot: 8 };
+  const maxHps     = { thunderbird: 3,             mothman: 6,                   bigfoot: 8 };
 
   const color  = bossColors[boss.type];
   const maxHp  = maxHps[boss.type];
@@ -5539,10 +5680,33 @@ window.trailBlazerDebug = {
   },
   forceBossAttack(attackName) {
     if (!bossArena || !bossArena.boss) return false;
-    const valid = ['leap', 'groundpound', 'groundpound-dual', 'boulders'];
-    if (!valid.includes(attackName)) return false;
-    bossArena.boss.forcedNextAttack = attackName;
-    return true;
+    const boss = bossArena.boss;
+    if (boss.type === 'bigfoot') {
+      const valid = ['leap', 'groundpound', 'groundpound-dual', 'boulders'];
+      if (!valid.includes(attackName)) return false;
+      boss.forcedNextAttack = attackName;
+      return true;
+    }
+    if (boss.type === 'mothman') {
+      if (attackName === 'beam') {
+        boss.eyeGlow = 0;
+        boss.state = 'beamWind';
+        boss.stateTimer = 30;
+        return true;
+      }
+      if (attackName === 'charge') {
+        boss.eyeGlow = 0;
+        boss.state = 'chargeWind';
+        boss.stateTimer = 30;
+        return true;
+      }
+      if (attackName === 'orbs') {
+        boss.state = 'fire';
+        boss.stateTimer = 20;
+        return true;
+      }
+    }
+    return false;
   },
   getBossState() {
     if (!bossArena || !bossArena.boss) return null;
@@ -5559,6 +5723,10 @@ window.trailBlazerDebug = {
       shockwaves: (b.shockwaves || []).map(sw => ({
         x: sw.x, dir: sw.dir, speed: sw.speed, active: sw.active,
       })),
+      chargeDir: b.chargeDir ?? 0,
+      chargeRetreatPx: b.chargeRetreatPx ?? 0,
+      beamProgress: b.beamProgress ?? 0,
+      beamTargetX: b.beamTargetX ?? 0,
     };
   },
   pokeBoss(patch) {
