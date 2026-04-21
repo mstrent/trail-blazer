@@ -1520,7 +1520,8 @@ function updateMothman(boss) {
     const desiredX = boss.x - boss.chargeDir * stepBack;
     boss.x = Math.max(minX, Math.min(maxX, desiredX));
     boss.chargeRetreatPx += stepBack;
-    boss.y = boss.chargeAnchorY;
+    const liftT = 1 - boss.stateTimer / 30;
+    boss.y = boss.chargeAnchorY - 50 * liftT;
     boss.stateTimer--;
     if (boss.stateTimer <= 0) {
       boss.chargeVx = boss.chargeDir * 14;
@@ -1529,7 +1530,10 @@ function updateMothman(boss) {
     }
   } else if (boss.state === 'charge') {
     boss.x += boss.chargeVx;
-    boss.y = boss.chargeAnchorY;
+    const t = 1 - boss.stateTimer / 50;
+    const peakY = boss.chargeAnchorY - 50;
+    const bottomY = 580;
+    boss.y = peakY + (bottomY - peakY) * Math.sin(t * Math.PI);
 
     if (player.hurtTimer === 0 && aabb(player, boss)) {
       hurtPlayer();

@@ -99,20 +99,28 @@ unchanged) → `stall` (18 frames, was 25).
 
 - **`chargeWind` (30 frames):** Boss decides charge direction (toward
   player, same as today). Wings curl back, eyes glow up. Critically, the
-  boss now *physically retreats* in the **opposite** direction of the
-  charge:
+  boss now *physically coils* — retreats in the **opposite** direction of
+  the charge AND rises:
   - Retreat distance: **80 px** total over the 30 frames.
   - Per-frame X offset: `boss.x -= chargeDir * (80 / 30)` (using a stored
     `chargeRetreatPx` accumulator so we can clamp at arena edges).
-  - Boss Y stays at hover Y for the full retreat.
+  - Lift: boss Y eases up by **50 px** over the 30 frames
+    (`boss.y = chargeAnchorY - 50 * liftT`), reaching peak Y at the end
+    of the windup. Reads as the boss perching mid-air before the dive.
   - At `boss.x` near an arena edge, retreat is clamped (don't push
     out-of-bounds; the visible retreat distance shrinks but the windup
     duration is unchanged).
 - **`charge` (50 frames):** Boss launches forward at `chargeDir * 14`
-  px/tick from the retreated X. **Y stays at hover Y** for the entire
-  charge — no diagonal drop to ground level. Contact damage on overlap.
-  Charge ends when the timer expires OR boss exits the arena (existing
-  logic preserved).
+  px/tick from the retreated X. **Y follows a smooth sin arc** from the
+  raised peak Y down to a low Y of **580** (boss bottom = 700, ~20 px
+  above ground), then back up:
+  `boss.y = peakY + (bottomY - peakY) * Math.sin(t * π)` where
+  `t = 1 - stateTimer / 50`. The dive bottom (frame 25) overlaps the
+  player's standing hitbox (player covers y=660–690), making body
+  contact a real threat instead of a flyover. Contact damage on AABB
+  overlap. Charge ends when the timer expires OR boss exits the arena
+  (existing logic preserved). The arc is interpolated every frame, so
+  there is no snap.
 - **`stall` (18 frames):** Vulnerable. Boss freezes mid-arena where the
   charge ended. Then returns to `hover`.
 
@@ -142,10 +150,12 @@ phase-2 weights (40/35/25). In phase 1, the freeze always returns to hover.
 The "disjointed teleport" feel of the current charge comes from three
 breaks the rework addresses:
 
-1. **Motionless windup → visible motion windup.** The retreat motion gives
-   the player something to track; the boss visibly coils for the strike.
-2. **Y-snap → consistent Y.** Both windup and charge happen at hover Y.
-   No more diagonal drop.
+1. **Motionless windup → visible motion windup.** The retreat-and-rise
+   motion gives the player something to track; the boss visibly coils
+   for the strike.
+2. **Y-snap → continuous arc.** The dive Y is interpolated every frame
+   along a sin arc from peak to dive-bottom and back. No teleport, and
+   the body actually swoops through the player's hitbox at mid-arc.
 3. **Position snap-back → natural recovery.** The 18-frame stall happens
    wherever the charge ended; the next hover cycle smoothly resumes from
    that position (existing hover code clamps to arena bounds).

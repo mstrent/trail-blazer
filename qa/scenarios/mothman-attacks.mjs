@@ -28,18 +28,23 @@ export default async function scenario(game) {
   }
   assert(sawRetreat, 'boss did not retreat during chargeWind');
 
-  let chargeY = null;
+  let chargeMinY = Infinity;
+  let chargeMaxY = -Infinity;
+  let sawCharge = false;
   for (let i = 0; i < 60; i++) {
     await game.waitFrames(1);
     const s = await game.page.evaluate(() => window.trailBlazerDebug.getBossState());
     if (!s) continue;
     if (s.state === 'charge') {
-      if (chargeY === null) chargeY = s.y;
-      else assert(Math.abs(s.y - chargeY) < 5, `charge Y drifted: ${chargeY} → ${s.y}`);
+      sawCharge = true;
+      if (s.y < chargeMinY) chargeMinY = s.y;
+      if (s.y > chargeMaxY) chargeMaxY = s.y;
     }
     if (s.state === 'stall') break;
   }
-  assert(chargeY !== null, 'boss never entered charge state');
+  assert(sawCharge, 'boss never entered charge state');
+  assert(chargeMaxY - chargeMinY > 100, `charge did not swoop (Y range ${chargeMaxY - chargeMinY}px)`);
+  assert(chargeMaxY > 540, `charge dive too shallow to hit grounded player (max Y ${chargeMaxY})`);
 
   for (let i = 0; i < 60; i++) {
     await game.waitFrames(1);
