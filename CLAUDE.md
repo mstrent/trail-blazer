@@ -245,7 +245,7 @@ Available at `http://localhost:3000?debug=1` (or any time in the page):
 | `getState()` | Returns `{ state, levelNum, levelTick, playerX, playerY, playerLives, playerScore, enemyCount, itemCount }` |
 | `getLayout()` | Returns `{ scale, H_logical, overlayMode, display, margin }` from the layout module |
 | `forceBossAttack(name)` | Queues a boss attack on the active boss. Bigfoot: `'leap'`, `'groundpound'`, `'groundpound-dual'`, `'boulders'`. Mothman: `'beam'`, `'charge'`, `'orbs'`. Returns `false` if not in a boss fight or the name is invalid |
-| `getBossState()` | Returns `{ type, state, phase, hp, x, y, ... }` for the most recently loaded boss. It is **not** cleared when you leave the boss level, so check `getState().state === 'boss'` first. Returns `null` only before any boss has loaded |
+| `getBossState()` | Returns `{ type, state, phase, hp, x, y, ... }` for the active boss arena. Returns `null` once a trail level loads (and before any boss has loaded). The arena is kept through the post-fight results screen and a game over in the arena |
 | `pokeBoss(patch)` | `Object.assign`s `patch` onto the active boss (for setting up test states) |
 | `pokePlayer(patch)` | `Object.assign`s `patch` onto the player |
 

@@ -2881,6 +2881,7 @@ function loadLevel(num) {
   audio.stopBossMusic();
   game.levelNum = num;
   const def = LEVELS[num];
+  bossArena = null;   // initBossArena() repopulates it for boss entries
   if (def.isBoss) {
     level = null;
     items = [];
