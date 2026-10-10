@@ -1,7 +1,8 @@
 # Trail Blazer — Level Design Reference
 
 This document captures the physics constraints, tile rules, and hard-won lessons
-from building and debugging all 9 levels. Read it before designing new levels or
+from building and debugging all 9 trail levels. The three boss arenas (Thunderbird,
+Mothman, Bigfoot) are described under "Boss Arenas" below. Read it before designing new levels or
 adding enemies/objects to avoid repeating known pitfalls.
 
 ---
@@ -91,7 +92,7 @@ tile the enemy stands on at rest; physics settles them after spawn.
 | Marmot | `makeMarmot(tx, ty)` | 26 × 22 | `ty*32 − 4` | ±4 tiles | 100 |
 | Mouse (Micro Bear) | `makeMouse(tx, ty)` | 16 × 12 | `ty*32 + 8` | ±5 tiles | 200 |
 | Mosquito | `makeMosquito(tx, ty)` | 20 × 14 | `ty*32` (sine center) | whole level | 300 |
-| Heavy Hiker | `makeHiker(tx, ty)` | 24 × 36 | `ty*32 − 12` | ±3 tiles | 75 |
+| Heavy Packer | `makeHiker(tx, ty)` | 24 × 36 | `ty*32 − 12` | ±3 tiles | 75 |
 | Redneck | `makeRedneck(tx, ty)` | 28 × 40 | `ty*32 − 12` | ±4 tiles | 150 |
 
 ### Spawn placement rules
@@ -389,7 +390,35 @@ every enemy must be reachable and stompable by the player. Before shipping a lev
 
 ---
 
+## Boss Arenas
+
+Boss levels are `LEVELS[]` entries with `isBoss: true` (see CLAUDE.md, "Level Structure"). They
+don't use tile maps or spawn functions. Each one runs in a fixed arena:
+
+- Virtual arena is 800 × 800 px. Ground is at `BOSS_GROUND_Y = 720`. The player spawns at `BOSS_SPAWN_X/Y`.
+- Taking any damage clears `bossArena.noHit`. Surviving the fight without damage awards the +500 No Hit bonus.
+- Bear spray only damages a boss during its vulnerable window (`vulnerable: true`). The window is set by each attack.
+- Boss music is per boss (`audio.startBossMusic(bossType)`).
+
+### Boss 1: Thunderbird (after level 3)
+
+- **HP:** 3. Single phase, single attack.
+- **Attack: diving swoop.** Patrols the upper arena, telegraphs the swoop with a lightning flash, dives in a diagonal arc toward the player's X, then retreats.
+- **Escalation by HP:** telegraph and swoop durations shorten as HP drops. Telegraph is 30 / 20 / 12 ticks and swoop is 45 / 33 / 22 ticks at HP 3 / 2 / 1.
+- **Vulnerability:** two windows. Window A is before the swoop, while the boss is locked on and stationary. Window B is after the swoop, while it flies away to counterattack. It is invulnerable during the swoop itself.
+
+### Boss 2: Mothman of Shasta (after level 6)
+
+- **HP:** 6. Phase 1 runs from HP 6 to 4. Phase 2 starts at HP ≤ 3 (`checkBossPhase`).
+- **Orb spread** (both phases). Windup is 20 ticks, then 3 orbs aimed at the player with `i * 80` lateral offset. Orb speed is 5 in phase 1 and 6 in phase 2. Vulnerable for 22 ticks afterward.
+- **Eye beam** (phase 2 only). Vulnerable for 28 ticks afterward.
+- **Charge** (phase 2 only). Telegraphed by the eyes brightening, with a rebuilt windup. Vulnerable for 18 ticks afterward.
+- **Design intent:** phase 1 teaches the spray-during-freeze pattern with orbs alone. Both new attacks unlock together at HP ≤ 3.
+- Full rework rationale: `docs/superpowers/specs/2026-04-19-mothman-difficulty-rework-design.md`.
+
 ## Bigfoot Boss
+
+- **HP:** 8. Phase 2 starts at HP ≤ 5. Phase 3 (rage, 90-tick `rageTimer`) starts at HP ≤ 2.
 
 ### Bigfoot ground-pound (hop-and-slam)
 

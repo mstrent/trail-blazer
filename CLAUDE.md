@@ -15,7 +15,7 @@ There are no linting tools and no root-level package.json. The primary verificat
 
 ## Architecture
 
-The entire game is ~5400 lines of vanilla JavaScript in a single IIFE in `game.js`. There are no modules, no transpilation, no dependencies beyond Firebase (loaded via CDN in `index.html`). All rendering uses Canvas 2D primitives — no sprite sheets or image assets.
+The entire game is ~5750 lines of vanilla JavaScript in a single IIFE in `game.js`. There are no modules, no transpilation, no dependencies beyond Firebase (loaded via CDN in `index.html`). All rendering uses Canvas 2D primitives — no sprite sheets or image assets.
 
 ### File Structure
 
@@ -27,32 +27,34 @@ The entire game is ~5400 lines of vanilla JavaScript in a single IIFE in `game.j
 
 | Section | Line | Purpose |
 |---|---|---|
-| SETUP | 7 | Canvas init, responsive resize for mobile landscape |
-| INPUT | 39 | `keys`/`prev` objects, helper functions (`isLeft`, `isJump`, etc.) |
-| TILE TYPES | 57 | Constants: `T_EMPTY=0`, `T_SOLID=1`, `T_PLATFORM=2`, `T_WATER=3` |
-| UTILITIES | 63 | Generic helpers shared across sections |
-| LEVEL HELPERS | 72 | `makeMap()`, `set/hline/fill` tile-painting helpers |
-| LEVEL DEFINITIONS | 81 | `LEVELS[]` array — 9 level objects, each with `build()`, `spawnEnemies()`, `spawnTPBlooms()`, `spawnItems()` |
-| CAMERA | 847 | `cam` object, smooth-follow `updateCamera()` |
-| PARTICLES | 863 | Particle system for effects |
-| ITEMS | 901 | `ITEM_DEFS`, `makeItem()` with terrain-snap, `spawnItems()` |
-| FLOATING TEXT | 937 | Damage/score popup text overlay |
-| ENEMIES | 951 | Factory functions: `makeMarmot`, `makeMosquito`, `makeHiker`, `makeMouse`, `makeRedneck`, `makeTPBloom`, `makeBeerCan`, `makeTrash` |
-| BOSS ARENA | 1054 | Bigfoot boss state machine, ground-pound shockwaves, phase logic |
-| FISH | 1988 | Decorative fish auto-spawned from water tiles; tile-boundary patrol |
-| TRAIL RUNNERS | 2039 | Background animated hikers |
-| PLAYER | 2220 | `makePlayer()`, `updatePlayer()` — physics, movement, bear spray, glissade |
-| GAME STATE | 2529 | `game` object, `loadLevel()`, `initGame()`, `advanceLevel()` |
-| LEADERBOARD | 2546 | Firebase Firestore top-10, `fetchLeaderboard()`, `submitScore()` |
-| DRAWING | 2666 | All `draw*()` functions — color palette `C`, background parallax, terrain, HUD, enemies, player |
-| SCREENS | 4311 | `drawMenu()`, `drawGameOver()`, `drawLevelComplete()`, `drawWin()` |
-| DEBUG | 4672 | `dbg` flag, `isDebug()`, `warpToLevel()`, FPS tracking, `drawDebugOverlay()`, keydown shortcuts |
-| MAIN LOOP | 4769 | `update()` and `draw()` dispatch by `game.state`; `requestAnimationFrame` loop at ~60fps |
-| AUDIO | 4917 | Web Audio API synth — all sound effects generated procedurally, no audio files |
-| TOUCH CONTROLS | 5244 | Mobile button bindings |
-| INITIALS INPUT | 5295 | Player-name entry for leaderboard submission |
-| DEBUG API | 5320 | `window.trailBlazerDebug` — Playwright automation surface |
-| BOOT | 5383 | `fetchLeaderboard()`, starts `requestAnimationFrame` loop |
+| SETUP | 7 | Canvas element and context (`canvas`, `ctx`), logical size `W`/`H` (800×480), `TS` tile size |
+| LAYOUT MODULE | 15 | `layout` object — maps the browser viewport to the logical canvas (scale, margins, `margin` vs. `canvas` overlay mode for touch). Writes CSS vars that `style.css` consumes. See `docs/superpowers/specs/2026-04-18-responsive-layout-design.md` |
+| INPUT | 159 | `keys`/`prev` objects, helper functions (`isLeft`, `isJump`, etc.) |
+| TILE TYPES | 208 | Constants: `T_EMPTY=0`, `T_SOLID=1`, `T_PLATFORM=2`, `T_WATER=3` |
+| UTILITIES | 214 | Generic helpers shared across sections |
+| LEVEL HELPERS | 223 | `makeMap()`, `set/hline/fill` tile-painting helpers |
+| LEVEL DEFINITIONS | 232 | `LEVELS[]` array — 9 trail levels plus 3 boss-arena entries (`isBoss: true`). See "Level Structure" below |
+| CAMERA | 998 | `cam` object, smooth-follow `updateCamera()` |
+| PARTICLES | 1014 | Particle system for effects |
+| ITEMS | 1052 | `ITEM_DEFS`, `makeItem()` with terrain-snap, `spawnItems()` |
+| FLOATING TEXT | 1088 | Damage/score popup text overlay |
+| ENEMIES | 1102 | Factory functions: `makeMarmot`, `makeMosquito`, `makeHiker`, `makeMouse`, `makeRedneck`, `makeTPBloom`, `makeBeerCan`, `makeTrash` |
+| BOSS ARENA | 1205 | `initBossArena()`, shared arena constants (`BOSS_GROUND_Y`, `BOSS_SPAWN_X/Y`), and `makeBoss(type)` dispatch to `makeBossThunderbird` (1232), `makeBossMothman` (1414), `makeBigfoot` (1751) |
+| FISH | 2283 | Decorative fish auto-spawned from water tiles; tile-boundary patrol |
+| TRAIL RUNNERS | 2334 | Background animated hikers |
+| PLAYER | 2515 | `makePlayer()`, `updatePlayer()` — physics, movement, bear spray, glissade |
+| GAME STATE | 2825 | `game` object, `loadLevel()` (branches to boss arena for `isBoss` entries), `initGame()`, `advanceLevel()` |
+| LEADERBOARD | 2842 | Firebase Firestore top-10, `fetchLeaderboard()`, `submitScore()` |
+| DRAWING | 2966 | All `draw*()` functions — color palette `C`, background parallax, terrain, enemies, player |
+| DOM HUD UPDATE | 2968 | Level name, score, and time HUD live in `index.html` DOM elements; updated from game state (not drawn on the canvas) |
+| SCREENS | 4617 | `drawMenu()`, `drawGameOver()`, `drawLevelComplete()`, `drawWin()` |
+| DEBUG | 4978 | `dbg` flag, `isDebug()`, `warpToLevel()`, FPS tracking, `drawDebugOverlay()`, keydown shortcuts |
+| MAIN LOOP | 5075 | `update()` and `draw()` dispatch by `game.state`; `requestAnimationFrame` loop at ~60fps |
+| AUDIO | 5223 | Web Audio API synth — all sound effects generated procedurally, no audio files. `startBossMusic(bossType)` has a track per boss |
+| TOUCH CONTROLS | 5569 | Mobile button bindings |
+| INITIALS INPUT | 5620 | Player-name entry for leaderboard submission |
+| DEBUG API | 5645 | `window.trailBlazerDebug` — Playwright automation surface |
+| BOOT | 5744 | `setupTouch()`, `fetchLeaderboard()`, starts `requestAnimationFrame` loop |
 
 ### Game Loop
 
@@ -60,18 +62,22 @@ The entire game is ~5400 lines of vanilla JavaScript in a single IIFE in `game.j
 requestAnimationFrame → update() → draw()
 ```
 
-`update()` dispatches on `game.state`: `menu`, `playing`, `levelcomplete`, `gameover`, `win`, `enterInitials`. During `playing`, order is: player → enemies → beer cans → fish → trail runners → particles → float texts → camera → increment `levelTick`.
+`update()` dispatches on `game.state`: `menu`, `playing`, `boss`, `levelcomplete`, `gameover`, `win`, `enterInitials`. During `playing`, order is: player → enemies → beer cans → fish → trail runners → particles → float texts → camera → increment `levelTick`. During `boss`, the loop calls `updateBossArena()` instead; `draw()` dispatches to `drawBossArena()`.
 
 ### Level Structure
 
-Each entry in `LEVELS[]` has:
+`LEVELS[]` has 12 entries, in play order: trail 1, trail 2, trail 3, **Boss 1 (Thunderbird)**, trail 4, trail 5, trail 6, **Boss 2 (Mothman)**, trail 7, trail 8, trail 9, **Boss 3 (Bigfoot)**. Boss entries are in the same array so `warpToLevel`, `advanceLevel`, and level indexing treat them uniformly.
+
+Trail entries have:
 - `build()` — returns `{ map, COLS, ROWS }` using `makeMap()` helper; populates via `set/hline/fill`
 - `spawnEnemies()` — returns enemy objects from factory functions
 - `spawnItems()` — returns item objects via `makeItem(type, tx, ty)`
 - `spawnTPBlooms()` — returns bloom hazard objects via `makeTPBloom(tx, ty)`
 - Metadata: `name`, `subtitle`, `section`, `campName`, `goalTile`, `spawnTile`
 
-`loadLevel(num)` calls all four spawn functions plus `spawnFish()` and `spawnTrailRunners()`.
+Boss entries have `isBoss: true`, `bossType` (`'thunderbird'` | `'mothman'` | `'bigfoot'`), and the same display metadata (`name`, `subtitle`, `section`, `campName`), with `spawnTile`/`goalTile`/`goalFlagY` set to `null`. They have no `build()` or spawn functions.
+
+`loadLevel(num)` for a trail calls all four spawn functions plus `spawnFish()` and `spawnTrailRunners()`. For a boss it clears the level state, calls `initBossArena(def)` (which builds the boss and starts its music), and sets `game.state = 'boss'`.
 
 ### Tile Grid
 
@@ -80,7 +86,7 @@ Each entry in `LEVELS[]` has:
 - Map is stored as `Uint8Array` rows; base floor is always `fill(0, 11, COLS-1, 14, T_SOLID)`
 - Floor surface is tile row 11 (pixel y=352)
 
-### Physics Constants (defined near line 2220)
+### Physics Constants (defined near line 2515)
 
 | Constant | Value |
 |---|---|
@@ -111,6 +117,7 @@ See `SCORING.md` for full rationale. Key values:
 - Speed penalty: `floor(timeDiff * 2)` pts/sec over target
 - Leave No Trace: +1000 pts (all items collected)
 - Trail Angel: +1500 pts (all enemies defeated)
+- Boss No Hit: +500 pts (boss defeated without taking damage). Boss levels show "No Hit" on the results screen where trail levels show Leave No Trace.
 
 ## Adding a New Enemy Type
 
@@ -151,9 +158,15 @@ All work should follow this branch-based workflow:
 Press `Ctrl+Shift+D` in-game to toggle the debug overlay. It shows:
 - Colored hitbox outlines: player (red), enemies (orange), items (cyan), TP blooms (magenta)
 
-Press `Ctrl+1` through `Ctrl+9` (while overlay is on) to warp to any level. Lives and score are preserved across warps.
+Press a level shortcut (while overlay is on) to warp to any of the 12 `LEVELS[]` entries. Lives and score are preserved across warps:
 
-> **Note:** `Ctrl+1–9` conflicts with browser tab-switching shortcuts in some browsers. Use `window.trailBlazerDebug.warpToLevel(n)` from DevTools as a reliable alternative.
+| Keys | Level index |
+|---|---|
+| `Ctrl+1` … `Ctrl+9` | 0–8 |
+| `Ctrl+0` | 9 |
+| `Ctrl+Shift+1` / `Ctrl+Shift+2` | 10 / 11 |
+
+> **Note:** `Ctrl+1–9` and `Ctrl+0` conflict with browser tab-switching shortcuts in some browsers. Use `window.trailBlazerDebug.warpToLevel(n)` from DevTools as a reliable alternative.
 
 ### Playwright Automated QA
 
@@ -173,6 +186,8 @@ cd qa
 node runner.mjs scenarios/smoke.mjs
 # Emulate a mobile device (landscape touch UI, etc.):
 node runner.mjs --device=mobile-landscape scenarios/mobile-buttons.mjs
+# Run on another engine (chromium is the default; also firefox, webkit):
+node runner.mjs --browser=firefox scenarios/smoke.mjs
 ```
 
 **Device presets** live in `qa/lib/devices.mjs`:
@@ -180,8 +195,13 @@ node runner.mjs --device=mobile-landscape scenarios/mobile-buttons.mjs
 | Preset | Viewport | `hasTouch` / `isMobile` | Notes |
 |---|---|---|---|
 | `desktop` (default) | 1280x720 | false | Default for all existing scenarios. |
+| `desktop-fhd` | 1920x1080 | false | Full-HD desktop. |
+| `desktop-4k` | 3840x2160 | false | 4K desktop. |
+| `desktop-ultrawide` | 3440x1440 | false | Ultrawide desktop. |
 | `mobile-portrait` | 393x727 | true | Pixel-5-ish portrait; `(orientation: portrait)` matches. |
-| `mobile-landscape` | 844x390 | true | Pixel-5-ish landscape; activates the full-screen touch overlay. |
+| `mobile-landscape` | 844x390 | true | Pixel-5-ish landscape; activates the touch overlay. |
+| `tablet-portrait` | 768x1024 | true | iPad-ish portrait. |
+| `tablet-landscape` | 1194x834 | true | iPad-ish landscape. |
 
 The mobile presets set `hasTouch` + `isMobile` so the game's `(hover: none) and (pointer: coarse)` media query matches naturally — no CSS injection needed to see the touch controls.
 
@@ -218,11 +238,16 @@ Available at `http://localhost:3000?debug=1` (or any time in the page):
 
 | Method | Description |
 |--------|-------------|
-| `warpToLevel(n)` | Warp to level index `n` (0–8); preserves lives/score |
+| `warpToLevel(n)` | Warp to `LEVELS[]` index `n` (0–11, boss levels included); preserves lives/score |
 | `screenshot()` | Returns canvas as base64 PNG data URL |
 | `pressKey(code)` | Simulate keydown (e.g. `'ArrowRight'`) |
 | `releaseKey(code)` | Release simulated key |
 | `getState()` | Returns `{ state, levelNum, levelTick, playerX, playerY, playerLives, playerScore, enemyCount, itemCount }` |
+| `getLayout()` | Returns `{ scale, H_logical, overlayMode, display, margin }` from the layout module |
+| `forceBossAttack(name)` | Queues a boss attack on the active boss. Bigfoot: `'leap'`, `'groundpound'`, `'groundpound-dual'`, `'boulders'`. Mothman: `'beam'`, `'charge'`, `'orbs'`. Returns `false` if not in a boss fight or the name is invalid |
+| `getBossState()` | Returns `{ type, state, phase, hp, x, y, ... }` for the most recently loaded boss. It is **not** cleared when you leave the boss level, so check `getState().state === 'boss'` first. Returns `null` only before any boss has loaded |
+| `pokeBoss(patch)` | `Object.assign`s `patch` onto the active boss (for setting up test states) |
+| `pokePlayer(patch)` | `Object.assign`s `patch` onto the player |
 
 ## Firebase / Leaderboard
 
