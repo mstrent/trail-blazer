@@ -28,7 +28,7 @@ Then visit `http://localhost:3000`.
 
 ## Objective
 
-Navigate from the **trailhead to the summit flag** at the far right of each level. Hike southbound through 9 real PCT sections from the Northern Terminus in Washington to Castle Crags in California.
+Navigate from the **trailhead to the summit flag** at the far right of each level. Hike southbound through 9 real PCT sections from the Northern Terminus in Washington to Castle Crags in California. Three **boss encounters** interrupt the trail: a fight in a single arena that ends when you defeat the boss (see [Bosses](#bosses)).
 
 Collect ultralight gear along the way to build your score. Your score and lives carry forward between levels. Two special achievements provide bonus points:
 
@@ -49,10 +49,22 @@ Collect ultralight gear along the way to build your score. Your score and lives 
 | 🐿 Marmot | Patrols platforms, turns at ledges and walls | 100 |
 | 🐭 Micro Bear | Fast ground-dweller, speeds past platforms | 200 |
 | 🦟 Mosquito | Floats in a sine-wave pattern, reverses at walls | 300 |
-| 🧳 Heavy Hiker | Slow walker with a massive pack, patrols platforms | 75 |
+| 🧳 Heavy Packer | Slow walker with a massive pack, patrols platforms | 75 |
 | 🍺 Redneck | Loud flannel-wearing trouble; periodically throws beer cans, drops trash when stomped | 150 |
 
 All enemies can be stunned with **Bear Spray** or by landing on them while jumping. Stomp stunned enemies to defeat them and score points.
+
+## Bosses
+
+Each boss fight takes place in its own arena, between trail levels. The boss can only be hurt while it is vulnerable, so watch for its windows and spray then.
+
+| After level | Boss | Arena | HP | Fight |
+|-------------|------|-------|----|-------|
+| 3 · Glacier Peak | 🦅 Thunderbird | Cascade Crest, Washington | 3 | Swoops at you from above. Each dive is telegraphed by a lightning flash, and it gets faster as it loses HP. |
+| 6 · Bridge of the Gods | 🌙 Mothman of Shasta | Columbia River corridor, Oregon | 6 | Fires volleys of orbs. At 3 HP it adds an eye beam and a ground charge. |
+| 9 · Castle Crags | 🦶 Bigfoot | Castle Crags Wilderness, California | 8 | Hops and slams to send shockwaves along the ground. Escalates through three phases; the last adds dual-direction waves and a rage mode. |
+
+Beating a boss without taking any damage earns the **No Hit** bonus (+500). Boss levels show No Hit on the results screen where trail levels show Leave No Trace.
 
 ## Collectibles
 
@@ -75,6 +87,7 @@ Collect all items on a trail to earn the **Leave No Trace** award and a 1000-poi
 - **Achievements:** Earn bonuses for exceptional play:
   - **Leave No Trace:** Collect every item on a trail (+1000)
   - **Trail Angel:** Defeat every enemy on a trail (+1500)
+  - **No Hit:** Defeat a boss without taking damage (+500)
 
 ## Mobile Support
 
@@ -110,7 +123,7 @@ in Northern California. Difficulty escalates with each level.
 | 8 | Sky Lakes | Timberline Lodge → Mazama Village |
 | 9 | Castle Crags | Crater Lake → Castle Crags Summit |
 
-Each level includes:
+Boss arenas sit after levels 3, 6, and 9 (see [Bosses](#bosses)). Each trail level includes:
 - Solid terrain, boulder fields, and one-way platforms
 - Water hazards (river crossings — damage on contact)
 - Decorative fish swimming in rivers and lakes
@@ -122,7 +135,7 @@ Each level includes:
 ## Tech
 
 - **Pure HTML5 Canvas 2D** — all rendering uses canvas primitives (ellipses, rects, paths, gradients), no sprite sheets or image assets
-- **No frameworks, no dependencies** — ~3950 lines of vanilla JavaScript, single `game.js` file, no build step
+- **No frameworks** — ~5750 lines of vanilla JavaScript, single `game.js` file, no build step. Firebase (loaded from a CDN) is the only external dependency, used for the leaderboard
 - **Deterministic procedural generation** — background parallax layers use seeded PRNGs for consistent visuals
 - **Tile-based collision system** — 32px tile grid with tile types: solid, one-way platform, water, empty
 - **60 fps game loop** — `requestAnimationFrame` with fixed update and render stages

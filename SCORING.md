@@ -81,7 +81,7 @@ punished. 2pts/sec keeps the incentive to move but doesn't feel hostile to explo
 | Mouse (Micro Bear) | 200 | Fairly hard — fast and small hitbox |
 | Redneck | 150 | Medium — throws beer cans, requires approach caution |
 | Marmot | 100 | Medium — standard ground enemy |
-| Heavy Hiker | 75 | Easiest — slow and large, straightforward stomp |
+| Heavy Packer | 75 | Easiest — slow and large, straightforward stomp |
 
 Points reflect **kill difficulty**, not enemy threat. The Heavy Packer does the most
 damage and is the scariest enemy, but it's the easiest to stomp — slow, big hitbox,
@@ -101,6 +101,29 @@ consistently due to their sine-wave flight path.
 
 Together these total +2,500, which intentionally outweighs the max speed bonus (+500)
 by 5×, rewarding completionist play over pure speed.
+
+---
+
+## Boss Encounters
+
+Boss levels use the same speed formulas as trail levels, but with fixed target times
+instead of the sprint-derived ones (`bossDefeated()`, `game.js:2255`):
+
+| Boss | Target time |
+|---|---|
+| Thunderbird | 30 s |
+| Mothman of Shasta | 60 s |
+| Bigfoot | 90 s |
+
+Finishing exactly on target earns 50 pts, as in the trail formula. The speed bonus and the 2 pts/sec penalty otherwise work as described above.
+
+Boss levels show **No Hit** on the results screen where trail levels show Leave No Trace:
+
+| Achievement | Condition | Bonus |
+|---|---|---|
+| No Hit | Defeat the boss without taking any damage | +500 pts |
+
+Taking any hit during the fight, including one that costs no life, forfeits No Hit for that fight.
 
 ---
 
